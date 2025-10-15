@@ -222,13 +222,19 @@ function renderTabela(data) {
 
     const card = document.createElement("div");
     card.className = `unidade-card ${statusClass}`;
+    const unidade   = esc(item.unidade);
+    const tipologia = esc(item.tipologia);
+    const area      = esc(item.area);
+    const statusTxt = esc(item.status);
+    const url       = safeURL(item.imagem);
+
     card.innerHTML = `
       <div class="unidade-info">
-        <span><strong>Unidade:</strong> ${item.unidade}</span>
-        <span><strong>Tipologia:</strong> ${item.tipologia}</span>
-        <span><strong>Área:</strong> ${item.area}</span>
+        <span><strong>Unidade:</strong> ${unidade}</span>
+        <span><strong>Tipologia:</strong> ${tipologia}</span>
+        <span><strong>Área:</strong> ${area}</span>
         <span class="unidade-status"><strong>Status:</strong>
-          <span class="status-texto ${statusClass}">${item.status}</span>
+          <span class="status-texto ${statusClass}">${statusTxt}</span>
         </span>
       </div>
       <div class="acoes"></div>
@@ -663,4 +669,22 @@ function brl(v) {
   const n = Number(s.replace(/[^\d.-]/g, ""));
   if (isNaN(n)) return s;
   return n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+}
+
+// ADICIONE perto dos “UTIL”
+function esc(s) {
+  return String(s ?? '')
+    .replaceAll('&','&amp;')
+    .replaceAll('<','&lt;')
+    .replaceAll('>','&gt;')
+    .replaceAll('"','&quot;')
+    .replaceAll("'",'&#39;')
+    .replaceAll('`','&#96;');
+}
+// URL segura (só http/https)
+function safeURL(u) {
+  try {
+    const url = new URL(u, location.href);
+    return (url.protocol === 'http:' || url.protocol === 'https:') ? url.href : '';
+  } catch { return ''; }
 }

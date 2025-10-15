@@ -3,6 +3,18 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta http-equiv="Content-Security-Policy"
+        content="
+  default-src 'self';
+  img-src 'self' data: https:;
+  style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com;
+  script-src 'self' https://www.gstatic.com https://cdnjs.cloudflare.com 'unsafe-inline';
+  connect-src 'self' https://script.google.com https://www.googleapis.com https://firestore.googleapis.com;
+  frame-src 'self' https://www.google.com https://docs.google.com;
+  base-uri 'self'; form-action 'self' https://docs.google.com">
+  <meta name="referrer" content="strict-origin-when-cross-origin">
+  <meta http-equiv="X-Content-Type-Options" content="nosniff">
+
   <title>City Park • Torre Liberty</title>
 
   <!-- 1) Guard: colocar ANTES de qualquer outro script e, idealmente, antes do CSS também para evitar FOUC -->
@@ -295,30 +307,30 @@
 
     <div class="carousel">
       <div class="carousel-track">
-        <img src="img/PILOTIS.jpg"   alt="Pilotis"    class="carousel-image">
-        <img src="img/MEZANINO.jpg"  alt="Mezanino"   class="carousel-image">
-        <img src="img/COBERTURA LAZER.jpg" alt="CoberturaLazer"  class="carousel-image">
-        <img src="img/PAVIMENTO TIPO.jpg"     alt="Tipos"      class="carousel-image"> 
-        <img src="img/3 QUARTOS.jpg" alt="3Q"  class="carousel-image">
+        <img src="img/PILOTIS.png"   alt="Pilotis"    class="carousel-image">
+        <img src="img/MEZANINO.png"  alt="Mezanino"   class="carousel-image">
+        <img src="img/COBERTURA LAZER.png" alt="CoberturaLazer"  class="carousel-image">
+        <img src="img/PAVIMENTO TIPO.png"     alt="Tipos"      class="carousel-image"> 
+        <img src="img/3 QUARTOS.png" alt="3Q"  class="carousel-image">
         <img src="img/49 3 Quartos - City Park.jpg" alt="3Q-1"  class="carousel-image">
         <img src="img/50 3 Quartos - City Park.jpg" alt="3Q-2"  class="carousel-image">
         <img src="img/51 3 Quartos - City Park.jpg" alt="3Q-3"  class="carousel-image">
         <img src="img/52 3 Quartos - City Park.jpg" alt="3Q-4"  class="carousel-image">
-        <img src="img/2 QUARTOS.jpg" alt="2Q"  class="carousel-image">
+        <img src="img/2 QUARTOS.png" alt="2Q"  class="carousel-image">
         <img src="img/53 2 Quartos - City Park.jpg" alt="2Q-1"  class="carousel-image">
         <img src="img/54 2 Quartos - City Park.jpg" alt="2Q-2"  class="carousel-image">
         <img src="img/55 2 Quartos - City Park.jpg" alt="2Q-3"  class="carousel-image">
-        <img src="img/QUARTO E SALA.jpg" alt="Q&S"  class="carousel-image">
+        <img src="img/QUARTO E SALA.png" alt="Q&S"  class="carousel-image">
         <img src="img/56 Quarto e sala - City Park.jpg" alt="Q&S-1"  class="carousel-image">
         <img src="img/57 Quarto e sala - City Park.jpg" alt="Q&S-2"  class="carousel-image">
-        <img src="img/STUDIO.jpg" alt="Studio"  class="carousel-image">
+        <img src="img/STUDIO.png" alt="Studio"  class="carousel-image">
         <img src="img/58 Studio - City Park - v2.jpg" alt="Studio-1"  class="carousel-image">
         <img src="img/59 Studio - City Park.jpg" alt="Studio-2"  class="carousel-image">
-        <img src="img/COBERTURA.jpg" alt="Cobertura"  class="carousel-image">
-        <img src="img/LOFT.jpg" alt="Loft"  class="carousel-image">
+        <img src="img/COBERTURA.png" alt="Cobertura"  class="carousel-image">
+        <img src="img/LOFT.png" alt="Loft"  class="carousel-image">
         <img src="img/60 Loft - City Park.jpg" alt="Loft-1"  class="carousel-image">
         <img src="img/61 Loft - City Park.jpg" alt="Loft-2"  class="carousel-image">
-        <img src="img/LOFT MENOR.jpg" alt="LoftMenor"  class="carousel-image">
+        <img src="img/LOFT MENOR.png" alt="LoftMenor"  class="carousel-image">
         <img src="img/62 Loft - City Park.jpg" alt="LoftMenor-1"  class="carousel-image">
         <img src="img/63 Loft - City Park - v2.jpg" alt="LoftMenor-2"  class="carousel-image">
       </div>
@@ -355,7 +367,7 @@
   <section class="cta" style="--section-bg: url('/img/bg-03.png');">
     <h2>Agende uma Visita</h2>
     <p>Fale com nossos especialistas e conheça seu novo lar.</p>
-    <a href="https://wa.me/5582993175780" target="_blank" class="btn btn-primary">WhatsApp</a>
+    <a href="https://wa.me/5582993175780" target="_blank" rel="noopener noreferrer" class="btn btn-primary">WhatsApp</a>
   </section>
 
   <!-- ====================== FOOTER ====================== -->
@@ -365,7 +377,7 @@
       <img src="img/Logotipo Plano A Construtora 30 anos - horizontal - branco.png" alt="Plano A Construtora" class="footer-logo">
       <div class="social">
         <a href="https://www.facebook.com/planoa.arq.eng/" aria-label="Facebook"><i class="fa-brands fa-facebook"></i></a>
-        <a href="https://wa.me/5582993175780" aria-label="WhatsApp"><i class="fa-brands fa-whatsapp"></i></a>
+        <a href="https://wa.me/5582993175780" aria-label="WhatsApp" rel="noopener noreferrer"><i class="fa-brands fa-whatsapp"></i></a>
         <a href="#" aria-label="LinkedIn"><i class="fa-brands fa-linkedin"></i></a>
         <a href="https://www.instagram.com/planoaconstrutora/" aria-label="Instagram"><i class="fa-brands fa-instagram"></i></a>
         <a href="https://www.youtube.com/@Planoaconstrutora" aria-label="YouTube"><i class="fa-brands fa-youtube"></i></a>

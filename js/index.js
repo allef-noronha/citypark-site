@@ -1,56 +1,10 @@
 /* ========================= Helpers + Debug ========================= */
-const DEBUG = true;
+const DEBUG = false;
 const log = (...a) => DEBUG && console.debug("[LZR]", ...a);
 const $  = (sel, root = document) => root.querySelector(sel);
 const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
 
 document.addEventListener("DOMContentLoaded", () => {
-
-  // /* ===== Fundo global (uma ou várias artes) ===== */
-  // (function setupGlobalBackground(){
-  //   const bg = document.getElementById('pageBG');
-  //   if (!bg) return;
-
-  //   // Dica: renomeie os arquivos para evitar espaços (mais seguro)
-  //   const BG_IMAGES = [
-  //     '/img/bg-01.png',
-  //     '/img/bg-02.png',
-  //     '/img/bg-03.png',
-  //     '/img/bg-04.png'
-  //   ];
-
-  //   // aplica a imagem na CSS variable usada no ::before
-  //   const applyBG = (url) => {
-  //     bg.style.setProperty('--bg-url', `url("${url}")`);
-  //   };
-
-  //   // escolhe aleatoriamente ao carregar
-  //   let idx = Math.floor(Math.random() * BG_IMAGES.length);
-  //   applyBG(BG_IMAGES[idx]);
-
-  //   // --- (opcional) Rotacionar de tempos em tempos com cross-fade ---
-  //   const ROTATE = false;        // mude para true se quiser rotacionar
-  //   const EVERY_MS = 25000;      // 25s entre trocas (ajuste à vontade)
-
-  //   if (ROTATE && BG_IMAGES.length > 1){
-  //     setInterval(() => {
-  //       // próximo índice
-  //       idx = (idx + 1) % BG_IMAGES.length;
-
-  //       // fade out
-  //       bg.classList.add('is-fading');
-
-  //       // troca a imagem no meio do fade
-  //       setTimeout(() => {
-  //         applyBG(BG_IMAGES[idx]);
-  //         bg.classList.remove('is-fading'); // volta (fade in)
-  //       }, 400); // metade do .8s do CSS
-  //     }, EVERY_MS);
-  //   }
-
-  //   // (opcional) preload leve da próxima imagem para evitar “flash”
-  //   // const pre = new Image(); pre.src = BG_IMAGES[(idx + 1) % BG_IMAGES.length];
-  // })();
 
   log("DOM pronto ✅");
 

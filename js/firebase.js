@@ -11,7 +11,7 @@ import { getFirestore } from "https://www.gstatic.com/firebasejs/10.12.1/firebas
 
 // TODO: Cole aqui suas credenciais
 export const firebaseConfig = {
-  apiKey: "AIzaSyA968ZnVO7BfSAV6Ivz_yJsbclt8nsCCgY",
+  apiKey: "AIzaSyDFJ9VM2icvFAdW3SjT6ERzu8Btl9ZUvF0",
   authDomain: "city-park-25e9c.firebaseapp.com",
   projectId: "city-park-25e9c",
   storageBucket: "city-park-25e9c.firebasestorage.app",
