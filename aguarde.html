@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Em breve</title>
+  <meta name="robots" content="noindex,nofollow">
+
+  <!-- Guard (igual ao das outras páginas) -->
+  <script src="config/site.js"></script>
+  <script>
+    (function () {
+      try {
+        var cfg    = window.SITE || {};
+        var now    = Date.now();
+        var launch = cfg.launchAt ? new Date(cfg.launchAt).getTime() : 0;
+        var isLaunched = launch && now >= launch;
+        if (isLaunched) location.replace('index.html');
+      } catch (e) {}
+    })();
+  </script>
+
+  <style>
+    :root{ --bg:#0f1220; --card:#171a2b; --txt:#e6e8f0; --muted:#9aa3b2; --ac:#26AD7D; }
+    *{box-sizing:border-box} html,body{height:100%}
+    body{
+      margin:0; font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial;
+      background: radial-gradient(1200px 600px at 70% -10%, rgba(38,173,125,.18), transparent 60%),
+                  radial-gradient(1000px 500px at -10% 100%, rgba(111,130,255,.12), transparent 60%),
+                  var(--bg);
+      color:var(--txt); display:grid; place-items:center; padding:24px;
+    }
+    .card{
+      width:min(680px, 100%); background:linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.02));
+      border:1px solid rgba(255,255,255,.08); border-radius:20px; padding:32px 28px;
+      box-shadow:0 10px 40px rgba(0,0,0,.35); backdrop-filter: blur(8px); text-align:center;
+    }
+    .brand-head{
+      margin:6px 0 14px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+    }
+    .brand-head .brand-mark{
+      height:100px; width:auto;
+      filter: drop-shadow(0 1px 0 rgba(0,0,0,.25));
+    }
+    @media (min-width:640px){
+      .brand-head .brand-mark{ height:60px; }
+    }
+    h1{font-size:clamp(28px,4vw,40px); margin:0 0 8px}
+    p{margin:8px 0; color:var(--muted); line-height:1.6}
+    .timer{ display:grid; grid-template-columns: repeat(4, minmax(70px,1fr)); gap:12px; margin:18px auto 6px; max-width:520px;}
+    .box{ background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.12); border-radius:14px; padding:12px 10px; }
+    .num{ font-size:clamp(28px,6vw,40px); font-weight:800; line-height:1; }
+    .lbl{ font-size:12px; color:var(--muted); margin-top:6px; letter-spacing:.3px; text-transform:uppercase }
+    .spin{ width:40px; height:40px; border-radius:50%; border:3px solid rgba(255,255,255,.15); border-top-color:var(--ac);
+           margin:16px auto 0; animation:rot 1s linear infinite; }
+    @keyframes rot{ to { transform:rotate(360deg) } }
+    footer{margin-top:18px; font-size:13px; color:#8f96a6}
+    .logo{ font-weight:800; letter-spacing:.5px }
+    @media (max-width:420px){ .timer{ grid-template-columns: repeat(2, 1fr);} }
+  </style>
+</head>
+<body>
+  <main class="card" role="dialog" aria-labelledby="t1" aria-describedby="d1">
+    <div class="brand-head">
+      <img
+        src="img/CityPark-Branco.png"
+        alt="City Park"
+        class="brand-mark"
+        loading="lazy"
+      />
+    </div>
+    <h1 id="t1">Estamos chegando!</h1>
+    <p id="d1">Faltam:</p>
+
+    <div class="timer" aria-live="polite">
+      <div class="box"><div id="dd" class="num">--</div><div class="lbl">dias</div></div>
+      <div class="box"><div id="hh" class="num">--</div><div class="lbl">horas</div></div>
+      <div class="box"><div id="mm" class="num">--</div><div class="lbl">min</div></div>
+      <div class="box"><div id="ss" class="num">--</div><div class="lbl">seg</div></div>
+    </div>
+
+    <div class="spin" aria-hidden="true"></div>
+    <!-- <footer>Fale com a gente: <a href="mailto:comercialcityparkmcz@gmail.com ">comercialcityparkmcz@gmail.com</a></footer> -->
+    <footer class="brand">
+      <img
+        src="img/Logotipo Plano A Construtora 30 anos - horizontal - branco.png"
+        alt="Plano A Construtora"
+        height="60"
+        loading="lazy"
+      />
+    </footer>
+
+  </main>
+
+  <script>
+    (function(){
+      // usa a mesma data do config
+      var LAUNCH = (window.SITE && window.SITE.launchAt) ? new Date(window.SITE.launchAt) : null;
+      if(!LAUNCH) return;
+
+      var dd = document.getElementById('dd'),
+          hh = document.getElementById('hh'),
+          mm = document.getElementById('mm'),
+          ss = document.getElementById('ss');
+
+      function pad(n){ return (n<10?'0':'') + n; }
+
+      function tick(){
+        var now = new Date().getTime();
+        var t   = LAUNCH.getTime() - now;
+
+        if (t <= 0){
+          dd.textContent = '00'; hh.textContent = '00';
+          mm.textContent = '00'; ss.textContent = '00';
+          document.getElementById('t1').textContent = 'É hoje! 🎉';
+          // opcional: redirecionar quando chegar a hora
+          // location.replace('index.html');
+          clearInterval(iv);
+          return;
+        }
+        var d = Math.floor(t / (1000*60*60*24));
+        var h = Math.floor((t % (1000*60*60*24)) / (1000*60*60));
+        var m = Math.floor((t % (1000*60*60)) / (1000*60));
+        var s = Math.floor((t % (1000*60)) / 1000);
+
+        dd.textContent = pad(d);
+        hh.textContent = pad(h);
+        mm.textContent = pad(m);
+        ss.textContent = pad(s);
+      }
+      tick();
+      var iv = setInterval(tick, 1000);
+    })();
+  </script>
+</body>
+</html>

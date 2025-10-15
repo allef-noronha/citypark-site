@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Tabela de Vendas</title>
+
+  <!-- Guard do modo Em Breve: deve ser o 1º script do head -->
+  <script src="config/site.js"></script>
+  <script>
+    (function () {
+      try {
+        var cfg    = window.SITE || {};
+        var path   = location.pathname.toLowerCase();
+        var now    = Date.now();
+        var launch = cfg.launchAt ? new Date(cfg.launchAt).getTime() : 0;
+        var isLaunched = launch && now >= launch;
+
+        // se chegou a data, libera o site
+        var siteOpen = (cfg.open === true) || isLaunched;
+
+        var allow = (cfg.whitelist || []).some(function (w) {
+          w = String(w).toLowerCase().replace(/^\//,'');
+          return path.endsWith('/' + w) || path.includes('/' + w);
+        });
+
+        if (!siteOpen && !allow && !/\/aguarde\.html?$/.test(path)) {
+          location.replace('aguarde.html');
+        }
+      } catch (e) {}
+    })();
+  </script>
+
+
+  <!-- CSS -->
+  <link rel="stylesheet" href="css/theme.css" />
+  <link rel="stylesheet" href="css/vendas.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+  <!-- favicon “vazio” só para evitar 404 no dev -->
+  <link rel="icon" href="data:,">
+  <!--
+    NOTAS (vendas.html)
+    - Usa Firebase modular: os scripts JS são type="module".
+    - O modal de login/cadastro foi separado por classe .modal-login.
+  -->
+</head>
+
+<body>
+
+<header class="topo-vendas">
+  <div class="logo-topo">
+    <img src="img/logo.png" alt="City Park" class="logo-img">
+  </div>
+  
+  <div class="topo-botoes">
+    <!-- Ícone do usuário AGORA vem primeiro -->
+    <button class="icon-btn" id="btn-login" title="Entrar" aria-label="Entrar">
+      <i id="login-icon" class="fa-solid fa-user"></i>
+    </button>
+
+    <!-- Pill de saudação (aparece só quando logado) -->
+    <span id="user-greet" class="user-pill hidden" role="button" tabindex="0"
+          aria-haspopup="menu" aria-expanded="false"></span>
+
+    <!-- Demais ícones -->
+    <button class="icon-btn" id="btn-toggle-filtros" title="Mostrar filtros" aria-label="Mostrar filtros">
+      <i class="fa-solid fa-filter"></i>
+    </button>
+
+    <!-- NOVOS BOTÕES (só quando logado) -->
+    <a id="btn-folder" class="icon-btn require-logged"
+      href="files/folder.pdf"
+      download="Folder-CityPark.pdf"
+      title="Folder" aria-label="Folder">
+      <i class="fa-solid fa-folder"></i>
+    </a>
+
+    <a id="btn-material" class="icon-btn require-logged"
+      href="files/material-digital.pdf"
+      download="Material-Digital.pdf"
+      title="Material Digital" aria-label="Material Digital">
+      <i class="fa-solid fa-file-lines"></i>
+    </a>
+
+    <!-- /NOVOS BOTÕES -->
+
+    <a href="index.html" class="icon-btn" title="Página inicial" aria-label="Página inicial">
+      <i class="fa-solid fa-house"></i>
+    </a>
+  </div>
+
+
+  <!-- Dropdown do usuário (continua igual, fora do topo-botoes) -->
+  <div class="user-menu dropdown hidden" id="userMenu" role="menu" aria-hidden="true">
+    <button type="button" id="btnVerConta" class="dropdown-item" disabled>Ver conta</button>
+    <button type="button" id="btnSair" class="dropdown-item">Sair</button>
+  </div>
+</header>
+
+
+<!-- Modal Login/Cadastro -->
+<div id="loginModal" class="modal-login" aria-hidden="true" role="dialog" aria-modal="true" style="display:none;">
+  <div class="modal-card">
+    <button id="closeModal" class="close" aria-label="Fechar">&times;</button>
+
+    <!-- === LOGIN === -->
+    <div class="auth-view" id="authViewLogin">
+      <h2>Login</h2>
+      <form id="loginForm">
+        <input type="email" id="loginEmail" placeholder="E-mail" required>
+        <input type="password" id="loginPassword" placeholder="Senha" required>
+
+        <div class="auth-extra">
+          <button type="button" id="btnEsqueciSenha" class="link-btn">Esqueceu a senha?</button>
+        </div>
+
+        <button type="submit" class="btn-primary w-100" id="btnEntrar">LOG IN</button>
+      </form>
+
+      <p class="auth-switch">Não tem uma conta?
+        <button type="button" class="link-btn" id="linkToCadastro">Cadastre-se.</button>
+      </p>
+    </div>
+
+    <!-- === CADASTRO === -->
+    <div class="auth-view hidden" id="authViewCadastro">
+      <h2>Cadastro de Corretor</h2>
+      <form id="registerForm">
+        <input type="text" id="registerNome" placeholder="Nome completo" required>
+        <input type="text" id="registerCpf" placeholder="CPF" required>
+        <input type="text" id="registerCreci" placeholder="CRECI" required>
+        <input type="text" id="registerTelefone" placeholder="Telefone" required>
+        <input type="text" id="registerImobiliaria" placeholder="Imobiliária" required>
+        <input type="email" id="registerEmail" placeholder="E-mail" required>
+        <input type="password" id="registerPassword" placeholder="Senha" required>
+
+        <button type="submit" class="btn-primary w-100" id="btnCadastrar">Cadastrar</button>
+      </form>
+
+      <p class="auth-switch">Já tem conta?
+        <button type="button" class="link-btn" id="linkToLogin">Fazer login.</button>
+      </p>
+
+      <div id="alertAprovacaoPendente" class="alert" style="display:none; margin-top:1rem;">
+        Seu cadastro foi enviado e está em análise. Aguarde aprovação para enviar propostas.
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<section class="vendas-topo">
+  <h2>Tabela de Vendas</h2>
+</section>
+
+<section id="filtros" class="filtros oculto">
+  <div class="sticky-bar">
+    <form id="filtro-form">
+      <input type="text" id="filtro-unidade" placeholder="Filtrar por unidade" />
+      <select id="filtro-status">
+        <option value="">Todos os Status</option>
+        <option value="Vendido">Vendido</option>
+        <option value="Disponível">Disponível</option>
+        <option value="Reservado">Reservado</option>
+      </select>
+      <select id="filtro-tipologia">
+        <option value="">Todas as tipologias</option>
+        <option value="3 Quartos">3 Quartos</option>
+        <option value="2 Quartos">2 Quartos</option>
+        <option value="Studio">Studio</option>
+        <option value="Quarto/Sala">Quarto/Sala</option>
+        <option value="Loft">Loft</option>
+      </select>
+      <input type="number" id="filtro-valor" placeholder="Valor máximo (R$)" />
+    </form>
+  </div>
+</section>
+
+<main style="padding: 1rem;">
+  <div id="tabela-vendas"></div>
+</main>
+
+<div id="popup" class="popup">
+  <div id="popup-content" class="popup-content"></div>
+</div>
+
+<!-- ====================== FOOTER ====================== -->
+<footer class="footer-dark">
+  <div class="footer-top">
+    <p class="slogan">É <strong>Plano A</strong>, pode confiar.</p>
+    <img src="img/Logotipo Plano A Construtora 30 anos - horizontal - branco.png" alt="Plano A Construtora" class="footer-logo">
+    <div class="social">
+      <a href="https://www.facebook.com/planoa.arq.eng/" aria-label="Facebook"><i class="fa-brands fa-facebook"></i></a>
+      <a href="https://wa.me/5582993175780" aria-label="WhatsApp"><i class="fa-brands fa-whatsapp"></i></a>
+      <a href="#" aria-label="LinkedIn"><i class="fa-brands fa-linkedin"></i></a>
+      <a href="https://www.instagram.com/planoaconstrutora/" aria-label="Instagram"><i class="fa-brands fa-instagram"></i></a>
+      <a href="https://www.youtube.com/@Planoaconstrutora" aria-label="YouTube"><i class="fa-brands fa-youtube"></i></a>
+    </div>
+  </div>
+
+  <div class="footer-links">
+    <div>
+      <h4>Início</h4>
+      <a href="#torre-liberty">O empreendimento</a>
+      <a href="#lazer">Lazer</a>
+      <a href="#plantas">Plantas</a>
+    </div>
+    <div>
+      <h4>Institucional</h4>
+      <a href="#">Quem somos</a>
+      <a href="#">Missão e valores</a>
+    </div>
+    <div>
+      <h4>Empreendimentos</h4>
+      <a href="#">Hotelaria</a>
+      <a href="#">Comerciais</a>
+      <a href="#">Residenciais</a>
+      <a href="#">Saúde</a>
+    </div>
+    <div>
+      <h4>Contato</h4>
+      <a href="mailto:contato@planoa.com.br">E-mail</a>
+      <a href="tel:+5582999990000">Telefone</a>
+      <a href="#">Políticas de privacidade</a>
+    </div>
+  </div>
+
+  <div class="footer-bottom">
+    <p>© 2025 | Plano A Construtora | Todos os direitos reservados.</p>
+  </div>
+</footer>
+
+<script>
+  // Mostrar/ocultar filtros (UI)
+  const btnToggleFiltros = document.getElementById("btn-toggle-filtros");
+  const filtros = document.getElementById("filtros");
+  btnToggleFiltros.addEventListener("click", () => filtros.classList.toggle("oculto"));
+</script>
+
+<!-- Scripts modulares -->
+<script type="module" src="js/firebase.js"></script>
+<script type="module" src="js/auth.js"></script>
+<script type="module" src="js/vendas.js"></script>
+</body>
+</html>

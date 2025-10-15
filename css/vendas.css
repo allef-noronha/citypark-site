@@ -1,0 +1,325 @@
+/* ==========================================================================
+   VENDAS — topo, filtros, lista, popup, login modal, dropdown, user-pill
+   ========================================================================== */
+
+/* Container padrão da página de vendas */
+.vendas-topo,
+#filtros .sticky-bar,
+#tabela-vendas,
+#lista-unidades, .lista-unidades {
+  max-width: 1120px;
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: 16px;
+  padding-right: 16px;
+}
+
+/* Topo fixo (ícones) */
+.topo-vendas{
+  display:flex; justify-content:space-between; align-items:center;
+  padding:8px 20px; background:#fff; border-bottom:1px solid #ddd;
+}
+.topo-vendas .logo-img{ height:40px; }
+.topo-botoes{ display:flex; align-items:center; gap:10px; }
+
+.icon-btn{
+  background:none; border:0; font-size:1.5rem; cursor:pointer; color:#0056a3;
+  padding:.45rem; border-radius:0; box-shadow:none;
+  transition:transform .06s ease, color .2s ease;
+}
+.icon-btn:hover{ transform:none; }
+.icon-btn:hover i{ transform: scale(1.18); }
+.icon-btn i{ transition: all .2s ease; }
+.icon-btn.is-auth{ color:#1e90ff; } /* quando logado */
+
+/* Pill de saudação do usuário (solicitação do cliente) */
+.user-pill{
+  width: 150px; height: 30px;
+  display: inline-flex; align-items: center; justify-content: center;
+  padding: 0 .5rem;
+  border-radius: 9999px;
+  background: #eaf2ff;
+  border: 1px solid #d6e6ff;
+  color: #0b57d0;
+  font-weight: 700;
+  font-size: .95rem;
+  line-height: 1;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  cursor: pointer; user-select: none;
+}
+
+/* Título */
+.vendas-topo{ text-align:center; padding:2.5rem 1rem 1.25rem !important; }
+.vendas-topo h2{
+  font-size:2rem !important; font-weight:700 !important; color:var(--cor-preto);
+  margin:0 0 .75rem !important; padding-top:0 !important;
+}
+.vendas-topo h2::after{
+  content:""; display:block; width:60px; height:3px; background:var(--cor-verde);
+  margin:.35rem auto 0; border-radius:3px;
+}
+
+/* Filtros (sticky) */
+.filtros,
+#filtros .sticky-bar{
+  position:sticky; top:75px; background:#fff; z-index:999;
+  display:flex; flex-wrap:wrap; justify-content:center; gap:1rem;
+  max-width:1000px; margin:0 auto; padding:1rem;
+  box-shadow:0 2px 8px rgba(0,0,0,.05); transition:all .4s ease;
+}
+.filtros.oculto{ opacity:0; max-height:0; overflow:hidden; padding:0; box-shadow:none; }
+
+.sticky-bar form, #filtro-form{
+  display:flex; gap:1rem; justify-content:center; flex-wrap:wrap;
+  background:var(--cor-branca); padding:1rem; border-bottom:1px solid #ccc;
+}
+.sticky-bar input, .sticky-bar select,
+#filtro-form input[type="text"], #filtro-form input[type="number"], #filtro-form select{
+  appearance:none; -webkit-appearance:none; -moz-appearance:none;
+  padding:.55rem .7rem; border-radius:10px; border:1px solid #cbd5e1;
+  min-width:150px; background:#fff; box-shadow:0 1px 2px rgba(0,0,0,.04); font-size:.95rem;
+}
+#filtro-unidade{ min-width:220px; }
+#filtro-status, #filtro-tipologia{ min-width:180px; }
+#filtro-valor{ min-width:170px; }
+
+/* Cards de unidades */
+.unidade-card{
+  display:flex !important; justify-content:space-between !important; align-items:center !important;
+  background:#ffffff; border:1px solid #ddd; border-left:5px solid var(--cor-verde);
+  border-radius:12px; padding:1rem 1.5rem; margin:1rem auto; max-width:900px;
+  box-shadow:0 2px 6px rgba(0,0,0,0.04); transition:transform 0.2s ease;
+}
+.unidade-card:hover{ transform:translateY(-2px); }
+.unidade-info{ display:flex; flex-direction:column; gap:.2rem; min-width:0; flex:1 1 auto; }
+.unidade-info span{ font-size:.95rem; }
+.unidade-status{ font-weight:bold; }
+@media (max-width:768px){ .unidade-card{ flex-direction:row !important; gap:1rem; } }
+
+/* Status (cores) */
+.status-disponivel{ border-left:5px solid #26AD7D; }
+.status-reservado{ border-left:5px solid #FFA500; }
+.status-vendido  { border-left:5px solid #e74c3c; }
+.status-texto{ padding:0; margin:0; border:none; }
+.status-texto.status-disponivel{ color:#26AD7D; }
+.status-texto.status-reservado{ color:#FFA500; }
+.status-texto.status-vendido  { color:#e74c3c; }
+
+/* Botões de ação */
+button.ver-btn, .ver-btn{
+  padding:.6rem 1rem; border:none; border-radius:8px; background-color:var(--cor-azul);
+  color:#fff; font-weight:bold; cursor:pointer;
+}
+button.ver-btn:hover, .ver-btn:hover{ background-color:#003080; }
+
+/* Popup (plantas/condições) */
+#popup{
+  display:none; position:fixed; top:0; left:0; width:100%; height:100%;
+  background:rgba(0,0,0,0.6); justify-content:center; align-items:center; z-index:9999;
+}
+#popup-content{
+  background:#fff; padding:2rem; border-radius:10px; max-width:500px; width:90%;
+  box-shadow:0 10px 30px rgba(0,0,0,.25);
+}
+.planta-popup{ width:100%; max-width:500px; margin:1rem auto; display:block; border-radius:10px; box-shadow:0 2px 8px rgba(0,0,0,0.15); }
+.popup-botoes{ display:flex; justify-content:center; gap:.5rem; margin-top:1rem; flex-wrap:wrap; }
+
+/* Login Modal (compat) */
+#loginModal{
+  position: fixed; inset: 0; display: none;
+  align-items: center; justify-content: center;
+  background: rgba(0,0,0,.55); z-index: 1000;
+}
+#loginModal[aria-hidden="false"]{ display:flex; }
+#loginModal .modal-card,
+#loginModal .modal-content,
+#loginModal > div{
+  background: #fff; width: min(520px, 92vw);
+  border-radius: 16px; padding: 1.25rem 1.25rem 1.5rem; position: relative;
+  box-shadow: 0 10px 30px rgba(0,0,0,.25);
+}
+#loginModal h2{ margin: 0 0 .75rem; font-weight: 700; }
+#loginModal input[type="email"],
+#loginModal input[type="password"],
+#loginModal input[type="text"]{
+  width: 100%; padding: .65rem .8rem; margin: .4rem 0;
+  border: 1px solid #cbd5e1; border-radius: 10px; font-size: .95rem; background: #fff;
+  box-shadow: 0 1px 2px rgba(0,0,0,.04);
+}
+#loginModal .btn-primary{
+  width: 100%; background: #155ab6; color: #fff; border: 0; border-radius: 10px;
+  padding: .6rem 1rem; font-weight: 700; cursor: pointer; margin-top: .5rem;
+}
+#loginModal .btn-primary:hover{ filter: brightness(.96); }
+#loginModal .auth-extra{ text-align: right; margin-top: .25rem; }
+#loginModal .link-btn{ background: none; border: 0; color: var(--cor-azul); text-decoration: underline; cursor: pointer; padding: .25rem 0; }
+#loginModal .auth-switch{ text-align: center; margin-top: .75rem; }
+#loginModal .close{ position: absolute; top: .5rem; right: .6rem; background: transparent; border: 0; font-size: 1.4rem; line-height: 1; cursor: pointer; color: #64748b; }
+#loginModal .close:hover{ color: #0f172a; }
+
+/* Dropdown do usuário */
+#userMenu{
+  position: absolute; right: 1rem; top: 58px;
+  background: #fff; border: 1px solid #e2e8f0; border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(0,0,0,.08); min-width: 180px; padding: .4rem; z-index: 1001;
+  display: none;
+}
+#userMenu[aria-hidden="false"]{ display: block; }
+#userMenu.hidden{ display: none !important; }
+#userMenu button{
+  width: 100%; text-align: left; background: transparent; border: 0;
+  padding: .6rem .7rem; border-radius: 8px; cursor: pointer; font-size: .95rem; color: #0f172a;
+}
+#userMenu button:hover{ background:#f1f5f9; }
+#btnVerConta:disabled{ opacity:.6; cursor: default; }
+
+/* ===== POPUP / MODAL – layout responsivo ===== */
+.popup {
+  position: fixed;
+  inset: 0;
+  display: none;                 /* flex quando aberto (JS) */
+  align-items: center;
+  justify-content: center;
+  padding: clamp(8px, 2vw, 24px);
+  background: rgba(0,0,0,.6);
+  z-index: 9999;
+}
+.popup-content {
+  background: #fff;
+  width: min(980px, 100%);
+  max-height: min(92vh, 1100px);
+  overflow: auto;
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 10px 30px rgba(0,0,0,.25);
+}
+.popup-botoes {
+  display: flex;
+  gap: .5rem;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-top: 1rem;
+}
+
+/* iframe do Google Forms ocupa bem a tela mas sem “vazar” */
+.forms-iframe {
+  width: 100%;
+  height: min(80vh, 1200px);
+  border: 0;
+  display: block;
+}
+
+/* imagem da planta dentro do popup */
+.planta-popup {
+  width: 100%;
+  height: auto;
+  display: block;
+  border-radius: 10px;
+  box-shadow: 0 2px 8px rgba(0,0,0,.15);
+}
+
+/* evita rolagem do body quando a modal/popup está aberta */
+body.menu-open {
+  overflow: hidden;
+}
+
+.popup--condicoes .popup-content { width: min(500px, 96vw); }
+.popup--planta    .popup-content { width: min(1000px, 96vw); }
+.popup--form      .popup-content { width: min(1200px, 96vw); }
+
+.popup--form .forms-iframe {
+  height: min(82vh, 1300px);
+}
+
+/* --- Zoomable lightbox para planta --- */
+.zoom-wrap {
+  position: relative;
+  overflow: hidden;           /* oculta quando arrastar pra fora */
+  background: #0b0b0b;        /* fundo mais escuro atrás da imagem */
+  border-radius: 10px;
+  max-height: 82vh;
+  height: clamp(300px, 70vh, 900px);
+}
+
+.zoom-stage {
+  width: 100%;
+  height: 100%;
+  touch-action: none;         /* permite pinch/drag */
+  cursor: grab;
+}
+
+.zoom-stage:active { cursor: grabbing; }
+
+.zoom-img {
+  user-select: none;
+  -webkit-user-drag: none;
+  will-change: transform;
+  transform-origin: 0 0;      /* facilita o cálculo de pan/zoom */
+  max-width: none;            /* importante: não limitar por width:100% */
+}
+
+/* Controles de zoom */
+.zoom-controls {
+  display: flex;
+  gap: .4rem;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-top: .75rem;
+}
+
+.zoom-btn {
+  border: 0;
+  border-radius: 8px;
+  padding: .5rem .8rem;
+  font-weight: 700;
+  background: #0f766e;
+  color: #fff;
+  cursor: pointer;
+}
+.zoom-btn:hover { filter: brightness(.95); }
+
+/* ===== Lightbox fullscreen para planta ===== */
+.fsbox {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,.92);
+  display: none;                   /* block quando abrir */
+  z-index: 10000;
+}
+.fsbox.open { display: block; }
+
+.fsbox-head {
+  display:flex; align-items:center; justify-content:space-between;
+  padding: 10px 14px; color:#fff;
+}
+
+.fsbox-title { font-weight:700; font-size:1rem; }
+
+.fsbox-close {
+  background: transparent; border:0; color:#fff; font-size:1.6rem;
+  cursor: pointer; line-height:1;
+}
+
+.fsstage-wrap {
+  position: absolute;
+  inset: 48px 10px 10px 10px;             /* espaço para o cabeçalho */
+  border-radius: 10px; overflow: hidden; background:#0b0b0b;
+}
+
+.fsstage { width:100%; height:100%; touch-action:none; cursor:grab; }
+.fsstage:active { cursor:grabbing; }
+
+.fsimg { user-select:none; -webkit-user-drag:none; max-width:none; transform-origin:0 0; }
+
+.fscontrols {
+  position: absolute; left:50%; bottom: 18px; transform: translateX(-50%);
+  display:flex; gap:.5rem; flex-wrap:wrap;
+}
+.fsbtn {
+  border:0; border-radius:8px; padding:.5rem .8rem; font-weight:700; color:#fff; cursor:pointer;
+  background:#0f766e;
+}
+.fsbtn:hover { filter:brightness(.95); }
+
+/* Mostrar elementos apenas quando logado */
+.require-logged{ display:none !important; }
+body[data-logged="true"] .require-logged{ display:inline-flex !important; }

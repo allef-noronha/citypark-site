@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>City Park • Torre Liberty</title>
+
+  <!-- 1) Guard: colocar ANTES de qualquer outro script e, idealmente, antes do CSS também para evitar FOUC -->
+  <script src="config/site.js"></script>
+  <script>
+    (function () {
+      try {
+        var cfg    = window.SITE || {};
+        var path   = location.pathname.toLowerCase();
+        var now    = Date.now();
+        var launch = cfg.launchAt ? new Date(cfg.launchAt).getTime() : 0;
+        var isLaunched = launch && now >= launch;
+
+        // se chegou a data, libera o site
+        var siteOpen = (cfg.open === true) || isLaunched;
+
+        var allow = (cfg.whitelist || []).some(function (w) {
+          w = String(w).toLowerCase().replace(/^\//,'');
+          return path.endsWith('/' + w) || path.includes('/' + w);
+        });
+
+        if (!siteOpen && !allow && !/\/aguarde\.html?$/.test(path)) {
+          location.replace('aguarde.html');
+        }
+      } catch (e) {}
+    })();
+  </script>
+
+  <!-- CSS e demais assets -->
+  <link rel="stylesheet" href="css/theme.css" />
+  <link rel="stylesheet" href="css/index.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+  <link rel="icon" href="data:,">
+</head>
+
+<body class="has-top-nav">
+  <!-- ======================= NAV FIXO ======================= -->
+  <header class="top-nav fixed" id="siteHeader">
+    <div class="nav-container">
+      <div class="logo">
+        <img src="img/CityPark-Branco.png" alt="City Park" class="logo-img">
+      </div>
+
+      <nav class="nav-links" aria-label="Menu principal">
+        <a href="#torre-liberty">O Empreendimento</a>
+        <a href="#lazer">Lazer</a>
+        <a href="#plantas">Plantas</a>
+        <a href="vendas.html" class="btn btn-outline">Tabela de Vendas</a>
+      </nav>
+
+      <!-- Botão hambúrguer (mostra só no mobile via CSS) -->
+      <button class="hamburger" id="hamburger"
+              aria-label="Abrir menu"
+              aria-haspopup="true"
+              aria-controls="mobileMenu"
+              aria-expanded="false">
+        <i class="fa-solid fa-bars" aria-hidden="true"></i>
+      </button>
+    </div>
+  </header>
+
+  <!-- MENU MOBILE: overlay + drawer lateral -->
+  <div id="mobileMenu" class="mobile-overlay" aria-hidden="true">
+    <nav class="mobile-drawer" role="dialog" aria-modal="true" aria-label="Menu">
+      <button class="mobile-close" id="mobileClose" aria-label="Fechar menu">&times;</button>
+      <a href="#torre-liberty">O Empreendimento</a>
+      <a href="#lazer">Lazer</a>
+      <a href="#plantas">Plantas</a>
+      <a href="vendas.html">Tabela de Vendas</a>
+    </nav>
+  </div>
+
+  <!-- ======================= HERO ======================= -->
+  <section class="hero">
+    <!-- Vídeo de fundo com poster e fallback de imagem -->
+    <video class="hero-video"
+          autoplay
+          muted
+          loop
+          playsinline
+          preload="metadata"
+          poster="img/hero-poster.jpg">
+      <source src="media/hero.webm" type="video/webm">
+      <source src="media/hero.mp4"  type="video/mp4">
+      <!-- Fallback visual (se <video> não for suportado) -->
+      <img class="hero-fallback" src="img/hero-poster.jpg" alt="City Park">
+    </video>
+
+    <noscript>
+      <!-- Fallback quando JS estiver desabilitado -->
+      <img class="hero-fallback" src="img/hero-poster.jpg" alt="City Park">
+    </noscript>
+
+    <div class="hero-overlay">
+      <div class="hero-content">
+        <!-- seu conteúdo opcional aqui -->
+        <!-- <h2>Não é apenas lazer. É um estilo de vida!</h2> -->
+      </div>
+    </div>
+  </section>
+
+  <!-- ================== TORRE LIBERTY / FICHA ================ -->
+  <!-- bg-01 nesta seção -->
+  <section id="torre-liberty"
+           class="section ficha bg-art"
+           style="--section-bg: url('/img/PAG_5.png');">
+    <h2 class="titulo-centro">TORRE LIBERTY</h2>
+    <p class="subtitulo-centro">O EMPREENDIMENTO</p>
+
+    <div class="ficha-grid">
+      <div class="ficha-col">
+        <h3>Visão Geral</h3>
+        <ul>
+          <li>2 Subsolos</li>
+          <li>1 Mezanino</li>
+          <li>20 Pavimentos Tipo</li>
+          <li>1 Cobertura</li>
+          <li>389 Unidades</li>
+          <li>5 Tipologias</li>
+          <li>2 Terminações</li>
+        </ul>
+      </div>
+
+      <div class="ficha-col">
+        <h3>Terminação A</h3>
+        <ul>
+          <li>Dois Quartos</li>
+          <li>Três Quartos</li>
+          <li>Loft</li>
+        </ul>
+      </div>
+
+      <div class="ficha-col">
+        <h3>Terminação B</h3>
+        <ul>
+          <li>Studio</li>
+          <li>Quarto Sala</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================== TEASER PARA LAZER ================== -->
+  <section class="teaser-lazer" aria-label="+5000 m², 36 ambientes, 8 opções">
+    <div class="teaser-grid">
+      <div class="teaser-item">
+        <div class="t-num">
+          <span class="prefix">+</span>5.000<span class="unit">m²</span>
+        </div>
+        <p class="t-text">de Áreas de Lazer</p>
+      </div>
+
+      <div class="teaser-item">
+        <div class="t-num">40</div>
+        <p class="t-text">Ambientes<br>Exclusivos</p>
+      </div>
+
+      <div class="teaser-item">
+        <div class="t-num">08</div>
+        <p class="t-text">Opções para<br>Relaxar</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============== LAZER COM SEGMENTOS / TABS + ROW-SLIDER ============== -->
+  <section id="lazer" class="section lazer-tabs">
+    <div class="lazer-header-band">
+      <div class="lazer-header">
+        <h2>Espaços City</h2>
+
+        <!-- Pills (desktop) -->
+        <div class="tabs tabs-desktop" role="tablist" aria-label="Segmentos de lazer">
+          <button id="tab-exercitar" class="tab active" data-tab="exercitar" role="tab" aria-selected="true" aria-controls="panel-exercitar">BEM-ESTAR</button>
+          <button id="tab-relaxar"   class="tab" data-tab="relaxar"   role="tab" aria-selected="false" aria-controls="panel-relaxar">CELEBRAR</button>
+          <button id="tab-trabalhar" class="tab" data-tab="trabalhar" role="tab" aria-selected="false" aria-controls="panel-trabalhar">CRIATIVIDADE</button>
+          <button id="tab-familia"   class="tab" data-tab="familia"   role="tab" aria-selected="false" aria-controls="panel-familia">PRATICIDADE</button>
+        </div>
+
+        <!-- Select (mobile) -->
+        <label class="tabs-mobile" for="tabsSelect">
+          <span class="sr-only">Segmento</span>
+          <select id="tabsSelect" class="tabs-select" aria-label="Segmento de lazer">
+            <option value="exercitar" selected>Bem-estar</option>
+            <option value="relaxar">Celebrar</option>
+            <option value="trabalhar">Criatividade</option>
+            <option value="familia">Praticidade</option>
+          </select>
+        </label>
+      </div>
+      <div class="lazer-divider"></div>
+    </div>
+
+    <!-- Exercitar -->
+    <div class="tab-panel" id="panel-exercitar" role="tabpanel" aria-labelledby="tab-exercitar">
+      <div class="row-slider" data-rowslider>
+        <button class="row-arrow prev" aria-label="Anterior">‹</button>
+        <div class="slider-track" data-track>
+          <figure class="card"><img src="img/BEM-ESTAR/10 Acesso principal - City Park 7.jpg" alt="Acesso principal"></figure>
+          <figure class="card"><img src="img/BEM-ESTAR/11 Lounge de acesso principal - City Park.jpg" alt="Lounge"></figure>
+          <figure class="card"><img src="img/BEM-ESTAR/18 Lazer Pilotis - City Park.jpg" alt="Lazer Pilotis"></figure>
+          <figure class="card"><img src="img/BEM-ESTAR/19 Espaço Gamer - City Park.jpg" alt="Espaço Gamer"></figure>
+          <figure class="card"><img src="img/BEM-ESTAR/20 Brinquedoteca - City Park.jpg" alt="Brinquedoteca"></figure>
+          <figure class="card"><img src="img/BEM-ESTAR/21 Playground - City Park.jpg" alt="Playground"></figure>
+          <figure class="card"><img src="img/BEM-ESTAR/22 Quadra Poliesportiva - City Park.jpg" alt="Quadra Poliesportiva"></figure>
+          <figure class="card"><img src="img/BEM-ESTAR/23 Quadra Beach Tennis - City Park 7.jpg" alt="Quadra Beach Tennis"></figure>
+          <figure class="card"><img src="img/BEM-ESTAR/24 City Garden - City Park.jpg" alt="City Garden"></figure>
+          <figure class="card"><img src="img/BEM-ESTAR/27 Acesso Fitness - City Park.jpg" alt="Acesso Fitness"></figure>
+          <figure class="card"><img src="img/BEM-ESTAR/28 Fitness Club - City Park.jpg" alt="Fitness Club"></figure>
+          <figure class="card"><img src="img/BEM-ESTAR/29 Pilates - City Park.jpg" alt="Pilates"></figure>
+          <figure class="card"><img src="img/BEM-ESTAR/36 Piscina - City Park.jpg" alt="Piscina"></figure>
+          <figure class="card"><img src="img/BEM-ESTAR/37 Piscina - City Park.jpg" alt="Piscina"></figure>
+          <figure class="card"><img src="img/BEM-ESTAR/38 Piscina - City Park.jpg" alt="Piscina"></figure>
+          <figure class="card"><img src="img/BEM-ESTAR/41 SPA - City Park - v2.jpg" alt="SPA"></figure>
+          <figure class="card"><img src="img/BEM-ESTAR/42 SPA - City Park.jpg" alt="SPA"></figure>
+          <figure class="card"><img src="img/BEM-ESTAR/43 Massagem - City Park.jpg" alt="Massagem"></figure>
+          <figure class="card"><img src="img/BEM-ESTAR/44 Deck Piscina - City Park.jpg" alt="Deck Piscina"></figure>
+        </div>
+        <button class="row-arrow next" aria-label="Próximo">›</button>
+      </div>
+    </div>
+
+    <!-- Relaxar -->
+    <div class="tab-panel hidden" id="panel-relaxar" role="tabpanel" aria-labelledby="tab-relaxar" aria-hidden="true">
+      <div class="row-slider" data-rowslider>
+        <button class="row-arrow prev" aria-label="Anterior">‹</button>
+        <div class="slider-track" data-track>
+          <figure class="card"><img src="img/CELEBRAR/34 Sport Bar - City Park.jpg"  alt="Sport Bar"></figure>
+          <figure class="card"><img src="img/CELEBRAR/35 Salão de festas - City Park.jpg"  alt="Salão de Festas"></figure>
+          <figure class="card"><img src="img/CELEBRAR/39 Piscina - City Park.jpg"  alt="Piscina"></figure>
+          <figure class="card"><img src="img/CELEBRAR/45 City Club - City Park.jpg"  alt="City Club"></figure>
+          <figure class="card"><img src="img/CELEBRAR/46 City Club - City Park.jpg"  alt="City Club"></figure>
+          <figure class="card"><img src="img/CELEBRAR/47 City Gourmet - City Park.jpg"  alt="City Gourmet"></figure>
+          <figure class="card"><img src="img/CELEBRAR/48 City Chef - City Park.jpg"  alt="City Chef"></figure>
+        </div>
+        <button class="row-arrow next" aria-label="Próximo">›</button>
+      </div>
+    </div>
+
+    <!-- Trabalhar -->
+    <div class="tab-panel hidden" id="panel-trabalhar" role="tabpanel" aria-labelledby="tab-trabalhar" aria-hidden="true">
+      <div class="row-slider" data-rowslider>
+        <button class="row-arrow prev" aria-label="Anterior">‹</button>
+        <div class="slider-track" data-track>
+          <figure class="card"><img src="img/CRIATIVIDADE/30 Coworking - City Park.jpg"  alt="Coworking"></figure>
+          <figure class="card"><img src="img/CRIATIVIDADE/31 Workspace 01 - City Park.jpg"  alt="Workspace"></figure>
+          <figure class="card"><img src="img/CRIATIVIDADE/32 Workspace 04 - City Park.jpg"  alt="Workspace"></figure>
+          <figure class="card"><img src="img/CRIATIVIDADE/33 Studio Podcast - City Park.jpg"  alt="Studio Podcast"></figure>
+        </div>
+        <button class="row-arrow next" aria-label="Próximo">›</button>
+      </div>
+    </div>
+
+    <!-- Família -->
+    <div class="tab-panel hidden" id="panel-familia" role="tabpanel" aria-labelledby="tab-familia" aria-hidden="true">
+      <div class="row-slider" data-rowslider>
+        <button class="row-arrow prev" aria-label="Anterior">‹</button>
+        <div class="slider-track" data-track>
+          <figure class="card"><img src="img/PRATICIDADE/06 Empório Gourmet - City Park 7.jpg" alt="Empório Gourmet"></figure>
+          <figure class="card"><img src="img/PRATICIDADE/12 Recepção - City Park.jpg" alt="Recepção"></figure>
+          <figure class="card"><img src="img/PRATICIDADE/13 Espaço Beauty - City Park.jpg" alt="Espaço Beauty"></figure>
+          <figure class="card"><img src="img/PRATICIDADE/14 City Market - City Park.jpg" alt="City Market"></figure>
+          <figure class="card"><img src="img/PRATICIDADE/15 Lavanderia - City Park.jpg" alt="Lavanderia"></figure>
+          <figure class="card"><img src="img/PRATICIDADE/16 Delivery - City Park.png" alt="Delivery"></figure>
+          <figure class="card"><img src="img/PRATICIDADE/17 Drone Parking - City Park.jpg" alt="Drone"></figure>
+          <figure class="card"><img src="img/PRATICIDADE/25 Petwash - City Park - v2.jpg" alt="Petwash"></figure>
+          <figure class="card"><img src="img/PRATICIDADE/26 Espaço Pet - City Park.jpg" alt="Espaço Pet"></figure>
+        </div>
+        <button class="row-arrow next" aria-label="Próximo">›</button>
+      </div>
+    </div>
+
+    <!-- Modal fullscreen da seção Lazer -->
+    <div class="modal-carousel" id="lazerModal" role="dialog" aria-modal="true" aria-hidden="true" tabindex="-1">
+      <button class="close-modal" id="lazerClose" aria-label="Fechar">&times;</button>
+      <img class="modal-content" id="lazerModalImg" alt="Visualização" />
+      <div class="modal-nav">
+        <button class="modal-prev" id="lazerPrev" aria-label="Anterior">&#10094;</button>
+        <button class="modal-next" id="lazerNext" aria-label="Próximo">&#10095;</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== PLANTAS ====================== -->
+  <!-- bg-02 nesta seção -->
+  <section id="plantas"
+           class="section carousel-section bg-art"
+           style="--section-bg: url('/img/PAG_2.png');">
+    <h2>Plantas Inteligentes</h2>
+    <p>Design inteligente, conforto e funcionalidade para você viver do seu jeito.</p>
+
+    <div class="carousel">
+      <div class="carousel-track">
+        <img src="img/PILOTIS.jpg"   alt="Pilotis"    class="carousel-image">
+        <img src="img/MEZANINO.jpg"  alt="Mezanino"   class="carousel-image">
+        <img src="img/COBERTURA LAZER.jpg" alt="CoberturaLazer"  class="carousel-image">
+        <img src="img/PAVIMENTO TIPO.jpg"     alt="Tipos"      class="carousel-image"> 
+        <img src="img/3 QUARTOS.jpg" alt="3Q"  class="carousel-image">
+        <img src="img/49 3 Quartos - City Park.jpg" alt="3Q-1"  class="carousel-image">
+        <img src="img/50 3 Quartos - City Park.jpg" alt="3Q-2"  class="carousel-image">
+        <img src="img/51 3 Quartos - City Park.jpg" alt="3Q-3"  class="carousel-image">
+        <img src="img/52 3 Quartos - City Park.jpg" alt="3Q-4"  class="carousel-image">
+        <img src="img/2 QUARTOS.jpg" alt="2Q"  class="carousel-image">
+        <img src="img/53 2 Quartos - City Park.jpg" alt="2Q-1"  class="carousel-image">
+        <img src="img/54 2 Quartos - City Park.jpg" alt="2Q-2"  class="carousel-image">
+        <img src="img/55 2 Quartos - City Park.jpg" alt="2Q-3"  class="carousel-image">
+        <img src="img/QUARTO E SALA.jpg" alt="Q&S"  class="carousel-image">
+        <img src="img/56 Quarto e sala - City Park.jpg" alt="Q&S-1"  class="carousel-image">
+        <img src="img/57 Quarto e sala - City Park.jpg" alt="Q&S-2"  class="carousel-image">
+        <img src="img/STUDIO.jpg" alt="Studio"  class="carousel-image">
+        <img src="img/58 Studio - City Park - v2.jpg" alt="Studio-1"  class="carousel-image">
+        <img src="img/59 Studio - City Park.jpg" alt="Studio-2"  class="carousel-image">
+        <img src="img/COBERTURA.jpg" alt="Cobertura"  class="carousel-image">
+        <img src="img/LOFT.jpg" alt="Loft"  class="carousel-image">
+        <img src="img/60 Loft - City Park.jpg" alt="Loft-1"  class="carousel-image">
+        <img src="img/61 Loft - City Park.jpg" alt="Loft-2"  class="carousel-image">
+        <img src="img/LOFT MENOR.jpg" alt="LoftMenor"  class="carousel-image">
+        <img src="img/62 Loft - City Park.jpg" alt="LoftMenor-1"  class="carousel-image">
+        <img src="img/63 Loft - City Park - v2.jpg" alt="LoftMenor-2"  class="carousel-image">
+      </div>
+      <button class="carousel-btn prev" aria-label="Anterior">&#10094;</button>
+      <button class="carousel-btn next" aria-label="Próximo">&#10095;</button>
+      <div class="carousel-dots"></div>
+
+      <div class="modal-carousel" role="dialog" aria-modal="true" aria-hidden="true">
+        <button class="close-modal" aria-label="Fechar">&times;</button>
+        <img class="modal-content" alt="Visualização" />
+        <div class="modal-nav">
+          <button class="modal-prev" aria-label="Anterior">&#10094;</button>
+          <button class="modal-next" aria-label="Próximo">&#10095;</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- =================== LOCALIZAÇÃO ==================== -->
+  <section id="location" class="section location bg-art" style="--section-bg: url('/img/PAG_6.png');">
+    <h2>Localização Estratégica</h2>
+    <p>Viva no coração do complexo Parque Shopping, onde conveniência e sofisticação se encontram.</p>
+    <iframe
+      width="100%" height="400"
+      style="border:0; border-radius:8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);"
+      loading="lazy" allowfullscreen
+      referrerpolicy="no-referrer-when-downgrade"
+      src="https://www.google.com/maps?q=-9.625895073263798,-35.702591061609354&z=17&output=embed">
+    </iframe>
+  </section>
+
+  <!-- ======================== CTA ======================= -->
+  <!-- bg-03 nesta seção -->
+  <section class="cta" style="--section-bg: url('/img/bg-03.png');">
+    <h2>Agende uma Visita</h2>
+    <p>Fale com nossos especialistas e conheça seu novo lar.</p>
+    <a href="https://wa.me/5582993175780" target="_blank" class="btn btn-primary">WhatsApp</a>
+  </section>
+
+  <!-- ====================== FOOTER ====================== -->
+  <footer class="footer-dark">
+    <div class="footer-top">
+      <p class="slogan">É <strong>Plano A</strong>, pode confiar.</p>
+      <img src="img/Logotipo Plano A Construtora 30 anos - horizontal - branco.png" alt="Plano A Construtora" class="footer-logo">
+      <div class="social">
+        <a href="https://www.facebook.com/planoa.arq.eng/" aria-label="Facebook"><i class="fa-brands fa-facebook"></i></a>
+        <a href="https://wa.me/5582993175780" aria-label="WhatsApp"><i class="fa-brands fa-whatsapp"></i></a>
+        <a href="#" aria-label="LinkedIn"><i class="fa-brands fa-linkedin"></i></a>
+        <a href="https://www.instagram.com/planoaconstrutora/" aria-label="Instagram"><i class="fa-brands fa-instagram"></i></a>
+        <a href="https://www.youtube.com/@Planoaconstrutora" aria-label="YouTube"><i class="fa-brands fa-youtube"></i></a>
+      </div>
+    </div>
+
+    <div class="footer-links">
+      <div>
+        <h4>Início</h4>
+        <a href="#torre-liberty">O empreendimento</a>
+        <a href="#lazer">Lazer</a>
+        <a href="#plantas">Plantas</a>
+      </div>
+      <div>
+        <h4>Institucional</h4>
+        <a href="#">Quem somos</a>
+        <a href="#">Missão e valores</a>
+      </div>
+      <div>
+        <h4>Empreendimentos</h4>
+        <a href="#">Hotelaria</a>
+        <a href="#">Comerciais</a>
+        <a href="#">Residenciais</a>
+        <a href="#">Saúde</a>
+      </div>
+      <div>
+        <h4>Contato</h4>
+        <a href="mailto:contato@planoa.com.br">E-mail</a>
+        <a href="tel:+5582999990000">Telefone</a>
+        <a href="#">Políticas de privacidade</a>
+      </div>
+    </div>
+
+    <div class="footer-bottom">
+      <p>© 2025 | Plano A Construtora | Todos os direitos reservados.</p>
+    </div>
+  </footer>
+
+  <!-- Scripts -->
+  <script src="js/index.js" defer></script>
+
+</body>
+</html>
