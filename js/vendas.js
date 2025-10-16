@@ -247,9 +247,32 @@ function renderTabela(data) {
       const btnVer = document.createElement("button");
       btnVer.className = "ver-btn";
       btnVer.textContent = "VER";
-      btnVer.addEventListener("click", () => mostrarDetalhes(index));
+
+      btnVer.addEventListener("click", () => {
+        // Bloqueia se não aprovado
+        if (!window.corretorPodePropor || !window.corretorPodePropor()) {
+          alert("Seu acesso ainda não foi aprovado pelo setor comercial.");
+          return;
+        }
+        mostrarDetalhes(index);
+      });
+
+      // (opcional) botão começa desabilitado até saber se o corretor pode propor
+      if (!window.corretorPodePropor || !window.corretorPodePropor()) {
+        btnVer.disabled = true;
+        btnVer.classList.add("ver-btn--disabled");
+      }
+
       acoes.appendChild(btnVer);
     }
+
+    // if (mode !== 2) {
+    //   const btnVer = document.createElement("button");
+    //   btnVer.className = "ver-btn";
+    //   btnVer.textContent = "VER";
+    //   btnVer.addEventListener("click", () => mostrarDetalhes(index));
+    //   acoes.appendChild(btnVer);
+    // }
 
     tabelaEl.appendChild(card);
   });
