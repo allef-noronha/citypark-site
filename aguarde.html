@@ -3,11 +3,12 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
+  <!-- CSP somente do "aguarde": precisa liberar inline pq usamos 2 scripts inline -->
   <meta http-equiv="Content-Security-Policy"
         content="
           default-src 'self';
           img-src 'self' data: https://*.tile.openstreetmap.org;
-          script-src 'self';
+          script-src 'self' 'unsafe-inline';
           style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com;
           font-src  'self' https://cdnjs.cloudflare.com data:;
           connect-src 'self';
@@ -16,16 +17,15 @@
   <title>Em breve</title>
   <meta name="robots" content="noindex,nofollow">
 
-  <!-- Guard (igual ao das outras páginas) -->
-  <script src="config/site.js"></script>
+  <!-- Guard (igual ao das outras páginas) + cache-buster para evitar cache -->
+  <script src="config/site.js?v=20251015"></script>
   <script>
     (function () {
       try {
-        var cfg    = window.SITE || {};
-        var now    = Date.now();
-        var launch = cfg.launchAt ? new Date(cfg.launchAt).getTime() : 0;
-        var isLaunched = launch && now >= launch;
-        if (isLaunched) location.replace('index.html');
+        var cfg = window.SITE || {};
+        var now = Date.now();
+        var launch = cfg.launchTs || (cfg.launchAt ? Date.parse(cfg.launchAt) : 0);
+        if (launch && now >= launch) location.replace('index.html');
       } catch (e) {}
     })();
   </script>
@@ -47,17 +47,10 @@
     }
     .brand-head{
       margin:6px 0 14px;
-      display:flex;
-      align-items:center;
-      justify-content:center;
+      display:flex; align-items:center; justify-content:center;
     }
-    .brand-head .brand-mark{
-      height:100px; width:auto;
-      filter: drop-shadow(0 1px 0 rgba(0,0,0,.25));
-    }
-    @media (min-width:640px){
-      .brand-head .brand-mark{ height:60px; }
-    }
+    .brand-head .brand-mark{ height:100px; width:auto; filter: drop-shadow(0 1px 0 rgba(0,0,0,.25)); }
+    @media (min-width:640px){ .brand-head .brand-mark{ height:60px; } }
     h1{font-size:clamp(28px,4vw,40px); margin:0 0 8px}
     p{margin:8px 0; color:var(--muted); line-height:1.6}
     .timer{ display:grid; grid-template-columns: repeat(4, minmax(70px,1fr)); gap:12px; margin:18px auto 6px; max-width:520px;}
@@ -75,12 +68,7 @@
 <body>
   <main class="card" role="dialog" aria-labelledby="t1" aria-describedby="d1">
     <div class="brand-head">
-      <img
-        src="img/CityPark-Branco.png"
-        alt="City Park"
-        class="brand-mark"
-        loading="lazy"
-      />
+      <img src="img/CityPark-Branco.png" alt="City Park" class="brand-mark" loading="lazy" />
     </div>
     <h1 id="t1">Estamos chegando!</h1>
     <p id="d1">Faltam:</p>
@@ -101,48 +89,70 @@
         loading="lazy"
       />
     </footer>
-
   </main>
 
+  <!-- Contador robusto -->
   <script>
-    (function(){
-      // usa a mesma data do config
-      var LAUNCH = (window.SITE && window.SITE.launchAt) ? new Date(window.SITE.launchAt) : null;
-      if(!LAUNCH) return;
+  (function(){
+    var cfg = window.SITE || {};
 
-      var dd = document.getElementById('dd'),
-          hh = document.getElementById('hh'),
-          mm = document.getElementById('mm'),
-          ss = document.getElementById('ss');
-
-      function pad(n){ return (n<10?'0':'') + n; }
-
-      function tick(){
-        var now = new Date().getTime();
-        var t   = LAUNCH.getTime() - now;
-
-        if (t <= 0){
-          dd.textContent = '00'; hh.textContent = '00';
-          mm.textContent = '00'; ss.textContent = '00';
-          document.getElementById('t1').textContent = 'É hoje! 🎉';
-          // opcional: redirecionar quando chegar a hora
-          // location.replace('index.html');
-          clearInterval(iv);
-          return;
+    function resolveTargetTs() {
+      if (typeof cfg.launchTs === 'number') return cfg.launchTs;
+      if (cfg.launchAt) {
+        var t = Date.parse(cfg.launchAt);
+        if (!isNaN(t)) return t;
+        // fallback para formatos tipo "YYYY-MM-DD HH:mm:ss -0300"
+        var m = String(cfg.launchAt).match(
+          /(\d{4})[-/](\d{2})[-/](\d{2})[ T](\d{2}):(\d{2})(?::(\d{2}))?\s*(?:GMT)?([+-]\d{2}:?\d{2})?/
+        );
+        if (m) {
+          var y=+m[1], M=(+m[2]-1), d=+m[3], h=+m[4], min=+m[5], s=+(m[6]||0);
+          if (m[7]) { // com fuso
+            var off = m[7].replace(':',''); // ex: -0300
+            var sign = off[0]==='-'?-1:1, oh=+off.slice(1,3), om=+off.slice(3,5);
+            var utcTs = Date.UTC(y,M,d,h,min,s);
+            return utcTs - sign * ((oh*60+om)*60*1000);
+          }
+          return new Date(y,M,d,h,min,s).getTime();
         }
-        var d = Math.floor(t / (1000*60*60*24));
-        var h = Math.floor((t % (1000*60*60*24)) / (1000*60*60));
-        var m = Math.floor((t % (1000*60*60)) / (1000*60));
-        var s = Math.floor((t % (1000*60)) / 1000);
-
-        dd.textContent = pad(d);
-        hh.textContent = pad(h);
-        mm.textContent = pad(m);
-        ss.textContent = pad(s);
       }
-      tick();
-      var iv = setInterval(tick, 1000);
-    })();
+      return NaN;
+    }
+
+    var dd = document.getElementById('dd'),
+        hh = document.getElementById('hh'),
+        mm = document.getElementById('mm'),
+        ss = document.getElementById('ss');
+
+    function setDash(){ dd.textContent = hh.textContent = mm.textContent = ss.textContent = '— —'; }
+
+    var target = resolveTargetTs();
+    if (!target || isNaN(target)) { setDash(); return; }
+
+    function pad(n){ return String(n).padStart(2,'0'); }
+
+    function tick(){
+      var now = Date.now();
+      var diff = Math.max(0, Math.floor((target - now)/1000));
+      if (diff <= 0){
+        dd.textContent = hh.textContent = mm.textContent = ss.textContent = '00';
+        document.getElementById('t1').textContent = 'É hoje! 🎉';
+        // location.replace('index.html'); // se quiser redirecionar automaticamente
+        clearInterval(iv);
+        return;
+      }
+      var d = Math.floor(diff/86400);
+      var h = Math.floor((diff%86400)/3600);
+      var m = Math.floor((diff%3600)/60);
+      var s = diff%60;
+      dd.textContent = pad(d);
+      hh.textContent = pad(h);
+      mm.textContent = pad(m);
+      ss.textContent = pad(s);
+    }
+    tick();
+    var iv = setInterval(tick, 1000);
+  })();
   </script>
 </body>
 </html>
