@@ -1,0 +1,211 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="
+    default-src 'self';
+    img-src 'self' data:;
+    style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com;
+    font-src  'self' https://cdnjs.cloudflare.com data:;
+    script-src 'self';
+    connect-src 'self'
+      https://script.google.com
+      https://script.googleapis.com
+      https://script.googleusercontent.com
+      https://*.googleusercontent.com
+      https://www.googleapis.com
+      https://docs.google.com
+      https://docs.googleusercontent.com
+      https://spreadsheets.google.com;
+  ">
+  <title>Tabela de Vendas • Resumo</title>
+  <link rel="stylesheet" href="css/theme.css">
+  <link rel="stylesheet" href="css/vendas.css">
+  <link rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"
+        referrerpolicy="no-referrer">
+  <link rel="icon" href="data:,">
+  <style>
+    :root{ --card-bg:#fff; --head-bg:#f6f6f6; --txt:#222; }
+
+    .wrap{max-width:1200px;margin:40px auto;padding:0 16px}
+    .topbar{display:flex;gap:8px;align-items:center;justify-content:space-between;margin-bottom:12px}
+    .btn{padding:.6rem .9rem;border-radius:8px;border:1px solid #d6d6d6;background:#fff;cursor:pointer}
+    .badge{font-size:.875rem;color:#666}
+
+    /* Botões do topo */
+    header.top-nav .nav-links{margin-left:auto}
+    header.top-nav .nav-links a{margin-left:8px}
+    .icon-btn{
+      width:40px;height:40px;display:inline-grid;place-items:center;
+      border:1px solid #d6d6d6;border-radius:10px;background:#fff;cursor:pointer;
+    }
+    .icon-btn i{font-size:16px;line-height:1;color:#333}
+    .icon-btn:hover{background:#f7f7f7}
+
+    /* ===== TABELA ===== */
+    table.tv{
+      width:100%;
+      border-collapse:collapse;
+      background:var(--card-bg);
+      border-radius:12px;
+      overflow:hidden;
+      table-layout:fixed;               /* grade estável */
+      color:var(--txt);
+    }
+
+    /* Larguras consistentes por coluna */
+    col.c1{width:9%}  /* Unidade  */
+    col.c2{width:13%}  /* Tipologia*/
+    col.c3{width:9%}  /* Área     */
+    col.c4{width:15%}  /* Preço    */
+    col.c5{width:11%}  /* Sinal    */
+    col.c6{width:11%}  /* 80 parc. */
+    col.c7{width:11%}  /* 12 inter */
+    col.c8{width:11%}   /* Chaves   */
+    col.c9{width:10%}   /* Status   */
+
+    thead th{background:var(--head-bg);padding:12px;font-weight:700;white-space:normal;line-height:1.25}
+    tbody td{padding:10px;border-top:1px solid #eee;vertical-align:middle}
+
+    /* Alinhamentos */
+    thead th, tbody td{text-align:center}
+    thead th:nth-child(1), thead th:nth-child(2),
+    tbody td:nth-child(1), tbody td:nth-child(2){ text-align:left }
+
+    /* Banner: UMA célula que cobre todas as colunas */
+    .thead-brand th{
+      background:#fff;border-top:none;padding:16px 16px 8px;
+    }
+    .brandbar{
+      display:flex;align-items:center;justify-content:space-between;gap:16px;
+    }
+    .brandbar .left,
+    .brandbar .right{flex:0 0 auto;display:flex;align-items:center}
+    .brandbar .left img{height:44px}
+    .brandbar .right img{height:44px}
+    .brandbar .center{
+      flex:1 1 auto;text-align:center
+    }
+    .brandbar h1{
+      margin:0 0 6px;font-size:28px;letter-spacing:.6px
+    }
+    .brandbar .subtitle{
+      font-size:14px;color:#555;line-height:1.35
+    }
+
+    /* Status colorido */
+    .status{font-weight:600}
+    .status.disponivel{color:#1a7f50}
+    .status.reservado{color:#b28400}
+    .status.vendido{color:#b32525}
+
+    /* ===== IMPRESSÃO ===== */
+    @media print{
+      @page{ size:A4 portrait; margin:8mm 8mm 10mm 8mm; }
+      html,body{ margin:0;padding:0; -webkit-print-color-adjust:exact; print-color-adjust:exact; background:#fff !important; }
+      .wrap{ margin:0; padding:0; }
+      /* não mostra topo e header, mas mantém o carimbo */
+      .topbar, header.top-nav{ display:none !important; }
+
+      /* estilinho do carimbo na impressão */
+      #stamp{
+        display:block !important;
+        font-size:10px;
+        color:#444;
+        margin:0 0 6px 0;   /* encosta na tabela */
+      }
+
+
+      thead{ display:table-header-group; }
+      tfoot{ display:table-footer-group; }
+
+      table.tv{ border-radius:0; font-size:11px; }
+      table.tv th, table.tv td{ padding:6px 8px; }
+
+      .thead-brand th{ padding:10px 8px 6px; }
+      .brandbar .left img,
+      .brandbar .right img{ height:28px }
+      .brandbar h1{ font-size:18px;margin:0 0 2px }
+      .brandbar .subtitle{ font-size:11px }
+    }
+  </style>
+</head>
+<body class="has-top-nav">
+  <header class="top-nav fixed">
+    <div class="nav-container">
+      <div class="logo"><img src="img/CityPark-Branco.png" alt="City Park" class="logo-img"></div>
+      <nav class="nav-links" aria-label="Atalhos">
+        <a href="vendas.html" class="icon-btn" title="Tabela de Vendas" aria-label="Tabela de Vendas"><i class="fa-solid fa-table"></i></a>
+        <a href="index.html" class="icon-btn" title="Página inicial" aria-label="Página inicial"><i class="fa-solid fa-house"></i></a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <div class="topbar" style="margin-top:72px">
+      <h1 style="margin:0">Tabela de Vendas — Resumo</h1>
+      <div><button class="btn" id="btnPrint">Imprimir / Salvar PDF</button></div>
+    </div>
+
+    <div class="badge" id="stamp">Carregando…</div>
+
+    <div class="table-area">
+      <table id="tv" class="tv">
+        <!-- Larguras fixas por coluna -->
+        <colgroup>
+          <col class="c1"><col class="c2"><col class="c3"><col class="c4"><col class="c5">
+          <col class="c6"><col class="c7"><col class="c8"><col class="c9">
+        </colgroup>
+
+        <thead>
+          <!-- Banner (1 TH cobrindo 9 colunas) -->
+          <tr class="thead-brand">
+            <th colspan="9">
+              <div class="brandbar">
+                <div class="left">
+                  <!-- Atualize o caminho da logo da construtora -->
+                  <img src="img/Logo-PlanoA-30-anos-08.png" alt="Plano A Construtora">
+                </div>
+                <div class="center">
+                  <h1>TABELA DE VENDAS</h1>
+                  <div class="subtitle">
+                    Prazo de entrega: Dezembro/2029<br>
+                    Localização: Complexo Parque Shopping Maceió
+                  </div>
+                </div>
+                <div class="right">
+                  <!-- Atualize o caminho da logo City Park -->
+                  <img src="img/logo.png" alt="City Park">
+                </div>
+              </div>
+            </th>
+          </tr>
+
+          <!-- Cabeçalho das colunas -->
+          <tr class="thead-cols">
+            <th>Unidade</th>
+            <th>Tipologia</th>
+            <th>Área (m²)</th>
+            <th>Preço à vista</th>
+            <th>Sinal (20%)</th>
+            <th>80 parc. mensais</th>
+            <th>12 intercal. semestrais</th>
+            <th>Chaves</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+
+        <tbody id="tvBody"><!-- linhas via JS --></tbody>
+      </table>
+    </div>
+  </main>
+
+  <script>
+    // imprimir
+    document.getElementById('btnPrint')?.addEventListener('click', ()=> window.print());
+  </script>
+  <script src="js/tabela.js" defer></script>
+</body>
+</html>
