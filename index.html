@@ -11,7 +11,7 @@
       style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com;
       font-src  'self' https://cdnjs.cloudflare.com data:;
       connect-src 'self';
-      frame-src 'self' https://www.google.com;
+      frame-src 'self' https://www.google.com https://www.youtube.com https://www.youtube-nocookie.com;
     ">
 
   <meta name="referrer" content="strict-origin-when-cross-origin">
@@ -156,42 +156,58 @@
   </section>
 
   <!-- ================== TORRE LIBERTY / FICHA ================ -->
-  <!-- bg-01 nesta seção -->
   <section id="torre-liberty"
-           class="section ficha bg-art"
-           style="--section-bg: url('/img/PAG_5.png');">
+          class="section ficha bg-art"
+          style="--section-bg: url('/img/PAG_5.png');">
     <h2 class="titulo-centro">TORRE LIBERTY</h2>
     <p class="subtitulo-centro">O EMPREENDIMENTO</p>
 
-    <div class="ficha-grid">
-      <div class="ficha-col">
-        <h3>Visão Geral</h3>
-        <ul>
-          <li>2 Subsolos</li>
-          <li>1 Mezanino</li>
-          <li>20 Pavimentos Tipo</li>
-          <li>1 Cobertura</li>
-          <li>389 Unidades</li>
-          <li>5 Tipologias</li>
-          <li>2 Terminações</li>
-        </ul>
+    <div class="ficha-layout">
+      <div class="ficha-video">
+        <div class="video-embed">
+          <iframe
+            src="https://www.youtube-nocookie.com/embed/ZKaa7vFFefQ?rel=0"
+            title="Vídeo de lançamento do City Park"
+            loading="lazy"
+            referrerpolicy="strict-origin-when-cross-origin"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+            allowfullscreen>
+          </iframe>
+        </div>
+
+
       </div>
 
-      <div class="ficha-col">
-        <h3>Terminação A</h3>
-        <ul>
-          <li>Dois Quartos</li>
-          <li>Três Quartos</li>
-          <li>Loft</li>
-        </ul>
-      </div>
+      <div class="ficha-grid">
+        <div class="ficha-col">
+          <h3>Visão Geral</h3>
+          <ul>
+            <li>2 Subsolos</li>
+            <li>1 Mezanino</li>
+            <li>20 Pavimentos Tipo</li>
+            <li>1 Cobertura</li>
+            <li>389 Unidades</li>
+            <li>5 Tipologias</li>
+            <li>2 Terminações</li>
+          </ul>
+        </div>
 
-      <div class="ficha-col">
-        <h3>Terminação B</h3>
-        <ul>
-          <li>Studio</li>
-          <li>Quarto Sala</li>
-        </ul>
+        <div class="ficha-col">
+          <h3>Terminação A</h3>
+          <ul>
+            <li>Dois Quartos</li>
+            <li>Três Quartos</li>
+            <li>Loft</li>
+          </ul>
+        </div>
+
+        <div class="ficha-col">
+          <h3>Terminação B</h3>
+          <ul>
+            <li>Studio</li>
+            <li>Quarto Sala</li>
+          </ul>
+        </div>
       </div>
     </div>
   </section>
@@ -413,7 +429,9 @@
   <footer class="footer-dark">
     <div class="footer-top">
       <p class="slogan">É <strong>Plano A</strong>, pode confiar.</p>
-      <img src="img/Logotipo Plano A Construtora 30 anos - horizontal - branco.png" alt="Plano A Construtora" class="footer-logo">
+      <a href="https://planoaconstrutora.com.br/" class="footer-logo-link" aria-label="Ir para o site da Plano A Construtora">
+        <img src="img/Logotipo Plano A Construtora 30 anos - horizontal - branco.png" alt="Plano A Construtora" class="footer-logo">
+      </a>
       <div class="social">
         <a href="https://www.facebook.com/planoa.arq.eng/" aria-label="Facebook"><i class="fa-brands fa-facebook"></i></a>
         <a href="https://wa.me/5582993175780" aria-label="WhatsApp" rel="noopener noreferrer"><i class="fa-brands fa-whatsapp"></i></a>
