@@ -146,8 +146,18 @@
   <main class="wrap">
     <div class="topbar" style="margin-top:72px">
       <h1 style="margin:0">Tabela de Vendas — Resumo</h1>
-      <div><button class="btn" id="btnPrint">Imprimir / Salvar PDF</button></div>
-      <div><button class="btn" id="btnPrint">Imprimir / Salvar PDF</button></div>
+      <!-- Botão de Filtro -->
+      <div class="topbar-actions">
+        <label for="statusFilter" class="sr-only">Filtrar por status</label>
+        <select id="statusFilter" class="btn" aria-label="Filtrar por status">
+          <option value="todos">Todos os Status</option>
+          <option value="disponivel">Disponível</option>
+          <option value="reservados">Reservados</option>
+          <option value="vendidos">Vendidos</option>
+        </select>
+        <button class="btn" id="btnPrint">Imprimir / Salvar PDF</button>
+      </div>
+      <!-- Fim Botão de Filtro -->
     </div>
 
     <div class="badge" id="stamp">Carregando…</div>
