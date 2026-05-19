@@ -31,8 +31,14 @@
 
     .wrap{max-width:1200px;margin:40px auto;padding:0 16px}
     .topbar{display:flex;gap:8px;align-items:center;justify-content:space-between;margin-bottom:12px}
+    .topbar-actions{display:flex;gap:8px;align-items:center;justify-content:flex-end;flex-wrap:wrap}
     .btn{padding:.6rem .9rem;border-radius:8px;border:1px solid #d6d6d6;background:#fff;cursor:pointer}
+    #statusFilter{min-width:180px}
     .badge{font-size:.875rem;color:#666}
+    @media (max-width:700px){
+      .topbar{align-items:flex-start;flex-direction:column}
+      .topbar-actions{width:100%;justify-content:flex-start}
+    }
 
     /* Botões do topo */
     header.top-nav .nav-links{margin-left:auto}
@@ -146,18 +152,16 @@
   <main class="wrap">
     <div class="topbar" style="margin-top:72px">
       <h1 style="margin:0">Tabela de Vendas — Resumo</h1>
-      <!-- Botão de Filtro -->
       <div class="topbar-actions">
         <label for="statusFilter" class="sr-only">Filtrar por status</label>
         <select id="statusFilter" class="btn" aria-label="Filtrar por status">
-          <option value="todos">Todos os Status</option>
+          <option value="">Todos os status</option>
           <option value="disponivel">Disponível</option>
-          <option value="reservados">Reservados</option>
-          <option value="vendidos">Vendidos</option>
+          <option value="reservado">Reservado</option>
+          <option value="vendido">Vendido</option>
         </select>
         <button class="btn" id="btnPrint">Imprimir / Salvar PDF</button>
       </div>
-      <!-- Fim Botão de Filtro -->
     </div>
 
     <div class="badge" id="stamp">Carregando…</div>
@@ -213,10 +217,6 @@
     </div>
   </main>
 
-  <script>
-    // imprimir
-    document.getElementById('btnPrint')?.addEventListener('click', ()=> window.print());
-  </script>
   <script src="js/tabela.js" defer></script>
 </body>
 </html>

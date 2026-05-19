@@ -320,6 +320,6 @@ body.menu-open {
 }
 .fsbtn:hover { filter:brightness(.95); }
 
-/* Mostrar elementos apenas quando logado */
-.require-logged{ display:none !important; }
-body[data-logged="true"] .require-logged{ display:inline-flex !important; }
+/* Mostrar elementos apenas quando corretor aprovado */
+[data-require-approved]{ display:none !important; }
+body[data-approved="true"] [data-require-approved]{ display:inline-flex !important; }
