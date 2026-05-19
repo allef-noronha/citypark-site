@@ -1,6 +1,6 @@
 // js/vendas.js — Tabela, filtros, popup e formulário (modal ou nova guia)
 // ------------------------------------------------------------------
-// - Card: apenas "VER" (visitante pode ocultar via HideMode).
+// - Card: "VER" só aparece para corretor aprovado (e pode ser ocultado para visitante via HideMode).
 // - Modal: "Enviar Proposta" (só logado + aprovado + Disponível).
 // - HideMode só vale para visitante (não logado):
 //     "ver" | 2       -> esconde VER (visitante não vê botão)
@@ -242,26 +242,12 @@ function renderTabela(data) {
 
     const acoes = card.querySelector(".acoes");
 
-    // ► ÚNICO CTA no card: VER (pode ser ocultado pelo HideMode para visitante)
-    if (mode !== 2) {
+    // ► ÚNICO CTA no card: VER (somente aprovado; no visitante ainda respeita HideMode)
+    if (aprovado && mode !== 2) {
       const btnVer = document.createElement("button");
       btnVer.className = "ver-btn";
       btnVer.textContent = "VER";
-
-      btnVer.addEventListener("click", () => {
-        // Bloqueia se não aprovado
-        if (!window.corretorPodePropor || !window.corretorPodePropor()) {
-          alert("Seu acesso ainda não foi aprovado pelo setor comercial.");
-          return;
-        }
-        mostrarDetalhes(index);
-      });
-
-      // (opcional) botão começa desabilitado até saber se o corretor pode propor
-      if (!window.corretorPodePropor || !window.corretorPodePropor()) {
-        btnVer.disabled = true;
-        btnVer.classList.add("ver-btn--disabled");
-      }
+      btnVer.addEventListener("click", () => mostrarDetalhes(index));
 
       acoes.appendChild(btnVer);
     }
