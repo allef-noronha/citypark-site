@@ -321,5 +321,6 @@ body.menu-open {
 .fsbtn:hover { filter:brightness(.95); }
 
 /* Mostrar elementos apenas quando corretor aprovado */
-[data-require-approved]{ display:none !important; }
-body[data-approved="true"] [data-require-approved]{ display:inline-flex !important; }
+[data-require-approved],
+[data-require-approved][aria-hidden="true"]{ display:none !important; }
+body[data-approved="true"] [data-require-approved]:not([aria-hidden="true"]){ display:inline-flex !important; }

@@ -100,6 +100,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   initFormTargetToggle();
 
   const data = await fetchWebApp();
+  if (!data) return;
   listaCompleta = data;
   renderTabela(data);
 });
@@ -109,9 +110,9 @@ document.addEventListener("DOMContentLoaded", async () => {
 // ========================================================================
 async function fetchWebApp() {
   try {
-    const res = await fetch(CONFIG.webAppURL, { cache: "no-store" });
+    const res = await fetch(CONFIG.webAppURL, { cache: "no-store", credentials: "omit" });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const rows = await res.json();
+    const rows = normalizeResponse(await readResponse(res));
     return rows
       .map((r) => ({
         unidade: r["UNIDADE"],
@@ -124,17 +125,35 @@ async function fetchWebApp() {
         status: r["STATUS"],
         tipologia: r["TIPOLOGIA"],
         imagem: r["IMAGEM"],
+        _raw: r,
       }))
-      .map((it) => ({
-        ...it,
-        preco:
-          typeof it.preco === "number"
-            ? it.preco.toLocaleString("pt-BR", {
-                style: "currency",
-                currency: "BRL",
-              })
-            : it.preco,
-      }));
+      .map((it) => {
+        const raw = it._raw || {};
+        const preco = valueOr(
+          it.preco,
+          pick(raw, ["PREÇO À VISTA", "PRECO A VISTA", "PRECO À VISTA", "PREÃ‡O Ã€ VISTA", "Preço", "Preco", "preco"])
+        );
+
+        return {
+          unidade: valueOr(it.unidade, pick(raw, ["UNIDADE", "Unidade", "unidade"])),
+          preco:
+            typeof preco === "number"
+              ? preco.toLocaleString("pt-BR", {
+                  style: "currency",
+                  currency: "BRL",
+                })
+              : preco,
+          area: valueOr(it.area, pick(raw, ["ÁREA", "AREA", "ÃREA", "Área", "area"])),
+          sinal: valueOr(it.sinal, pick(raw, ["SINAL", "Sinal", "sinal"])),
+          parcela: valueOr(it.parcela, pick(raw, ["80 PARC. MENSAIS", "80 PARC MENSAIS", "80 PARC", "80 parcelas", "80 PARCELAS"])),
+          intercalada: valueOr(it.intercalada, pick(raw, ["12 INTERCAL. SEMESTRAIS", "12 INTERCAL SEMESTRAIS", "12 INTERCALADAS"])),
+          chaves: valueOr(it.chaves, pick(raw, ["CHAVES", "Chaves", "chaves"])),
+          status: valueOr(it.status, pick(raw, ["STATUS", "Status", "status"])),
+          tipologia: valueOr(it.tipologia, pick(raw, ["TIPOLOGIA", "Tipologia", "tipologia"])),
+          imagem: valueOr(it.imagem, pick(raw, ["IMAGEM", "Imagem", "imagem"])),
+        };
+      })
+      .filter((it) => it.unidade || it.tipologia || it.status);
   } catch (err) {
     console.error("[vendas] erro ao carregar dados:", err);
     if (tabelaEl) {
@@ -144,8 +163,79 @@ async function fetchWebApp() {
           <br>Verifique a publicação do Web App e tente novamente.
         </div>`;
     }
+    return null;
+  }
+}
+
+async function readResponse(res) {
+  const contentType = res.headers.get("content-type") || "";
+  if (contentType.includes("application/json")) return res.json();
+
+  const text = await res.text();
+  if (!text.trim()) return [];
+
+  try {
+    return JSON.parse(text);
+  } catch {
+    throw new Error("A resposta do Web App nao esta em JSON valido.");
+  }
+}
+
+function normalizeResponse(data) {
+  if (Array.isArray(data)) {
+    if (!data.length) return [];
+    if (Array.isArray(data[0])) return rowsFromMatrix(data);
+    if (typeof data[0] === "object") return data;
     return [];
   }
+
+  const candidates = ["rows", "data", "values", "resultado", "result"];
+  for (const key of candidates) {
+    const value = data?.[key];
+    if (!Array.isArray(value)) continue;
+    if (value.length && Array.isArray(value[0])) return rowsFromMatrix(value);
+    return value;
+  }
+
+  return [];
+}
+
+function rowsFromMatrix(matrix) {
+  const headers = (matrix[0] || []).map(String);
+  return matrix.slice(1).map((row) => {
+    const obj = {};
+    headers.forEach((header, index) => {
+      obj[header] = row[index];
+    });
+    return obj;
+  });
+}
+
+function pick(obj, keys) {
+  if (!obj) return "";
+
+  for (const key of keys) {
+    if (obj[key] !== undefined && obj[key] !== null && obj[key] !== "") {
+      return obj[key];
+    }
+  }
+
+  const entries = Object.entries(obj);
+  const wanted = keys.map(normalizeFieldName);
+  for (const [key, value] of entries) {
+    if (value === undefined || value === null || value === "") continue;
+    if (wanted.includes(normalizeFieldName(key))) return value;
+  }
+
+  return "";
+}
+
+function valueOr(value, fallback) {
+  return value === undefined || value === null || value === "" ? fallback : value;
+}
+
+function normalizeFieldName(value) {
+  return normaliza(value).replace(/[^a-z0-9]/g, "");
 }
 
 // ========================================================================
@@ -201,16 +291,22 @@ function initFiltrosForm() {
 // ========================================================================
 // RENDERIZAÇÃO DOS CARDS
 // ========================================================================
-function renderTabela(data) {
+function renderTabela(data = []) {
   if (!tabelaEl) return;
 
   tabelaEl.innerHTML = "";
-  listaFiltrada = data;
+  listaFiltrada = Array.isArray(data) ? data : [];
 
   const logged = isLogged();
+  const aprovado = isAprovado();
   const mode = logged ? 0 : getHideMode(); // hide só para visitante
 
-  data.forEach((item, index) => {
+  if (!listaFiltrada.length) {
+    tabelaEl.innerHTML = `<div class="alert">Nenhuma unidade encontrada.</div>`;
+    return;
+  }
+
+  listaFiltrada.forEach((item, index) => {
     const s = normaliza(item.status);
     const statusClass = s.includes("disponivel")
       ? "status-disponivel"
@@ -585,7 +681,6 @@ function enableZoom(stageEl, imgEl) {
   }, { passive: false });
 
   window.addEventListener("touchend", () => {
-    if (e?.touches?.length === 0) { /* noop */ }
     tracking = false; dragging = false; lastPt = null;
   });
 

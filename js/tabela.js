@@ -121,7 +121,7 @@
     });
 
     tbody.appendChild(frag);
-    stamp.textContent = `Atualizado agora: ${new Date().toLocaleString('pt-BR')} • Filtro: ${statusLabel()} • ${rows.length} unidade(s)`;
+    stamp.textContent = `Atualizado agora: ${new Date().toLocaleString('pt-BR')}`;
   }
 
   async function load() {
