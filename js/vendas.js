@@ -66,6 +66,7 @@ const isDisponivel = (status) => normaliza(status).includes("disponivel");
 // ===== ESTADO LOCAL =====
 let listaCompleta = [];
 let listaFiltrada = [];
+let carregandoDados = false;
 
 // ===== UI REFS =====
 const btnToggleFiltros = document.getElementById("btn-toggle-filtros");
@@ -89,6 +90,7 @@ const btnFormTarget = document.getElementById("btn-form-target");
 
 // ===== AUTH EVENTS =====
 window.addEventListener("auth-changed", () => {
+  if (carregandoDados) return;
   renderTabela((listaFiltrada && listaFiltrada.length) ? listaFiltrada : listaCompleta);
 });
 
@@ -99,7 +101,11 @@ document.addEventListener("DOMContentLoaded", async () => {
   initPopupEscapes();
   initFormTargetToggle();
 
+  mostrarCarregandoDados();
+  carregandoDados = true;
   const data = await fetchWebApp();
+  carregandoDados = false;
+
   if (!data) return;
   listaCompleta = data;
   renderTabela(data);
@@ -108,6 +114,17 @@ document.addEventListener("DOMContentLoaded", async () => {
 // ========================================================================
 // DADOS
 // ========================================================================
+function mostrarCarregandoDados() {
+  if (!tabelaEl) return;
+
+  tabelaEl.innerHTML = `
+    <div class="loading-dados" role="status" aria-live="polite">
+      <span class="loading-spinner" aria-hidden="true"></span>
+      <span>Carregando dados...</span>
+    </div>
+  `;
+}
+
 async function fetchWebApp() {
   try {
     const res = await fetch(CONFIG.webAppURL, { cache: "no-store", credentials: "omit" });
@@ -264,6 +281,11 @@ function initFiltrosForm() {
   if (!f.form) return;
 
   f.form.addEventListener("input", () => {
+    if (carregandoDados) {
+      mostrarCarregandoDados();
+      return;
+    }
+
     const unidade = (f.unidade?.value || "").toLowerCase();
     const status = (f.status?.value || "").toLowerCase();
     const tipo = (f.tipologia?.value || "").toLowerCase();

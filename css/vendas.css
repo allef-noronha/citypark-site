@@ -84,6 +84,38 @@
 #filtro-valor{ min-width:170px; }
 
 /* Cards de unidades */
+.loading-dados{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:.75rem;
+  background:#fff;
+  border:1px solid #ddd;
+  border-left:5px solid var(--cor-azul);
+  border-radius:8px;
+  padding:1rem 1.25rem;
+  margin:1rem auto;
+  max-width:900px;
+  color:#0f172a;
+  font-weight:700;
+  box-shadow:0 2px 6px rgba(0,0,0,0.04);
+}
+.loading-spinner{
+  width:20px;
+  height:20px;
+  border:3px solid #dbeafe;
+  border-top-color:var(--cor-azul);
+  border-radius:50%;
+  flex:0 0 auto;
+  animation:vendas-spin .8s linear infinite;
+}
+@keyframes vendas-spin{
+  to{ transform:rotate(360deg); }
+}
+@media (prefers-reduced-motion: reduce){
+  .loading-spinner{ animation:none; }
+}
+
 .unidade-card{
   display:flex !important; justify-content:space-between !important; align-items:center !important;
   background:#ffffff; border:1px solid #ddd; border-left:5px solid var(--cor-verde);

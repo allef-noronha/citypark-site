@@ -1,0 +1,64 @@
+/* Tour guiado */
+.tour-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  z-index: 9998;
+}
+
+.tour-box {
+  position: fixed;
+  max-width: 320px;
+  background: #fff;
+  color: #222;
+  padding: 18px;
+  border-radius: 12px;
+  box-shadow: 0 10px 35px rgba(0, 0, 0, 0.25);
+  z-index: 10000;
+}
+
+.tour-box h3 {
+  margin: 0 0 8px;
+  font-size: 18px;
+}
+
+.tour-box p {
+  margin: 0 0 16px;
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.tour-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.tour-actions button {
+  padding: 8px 12px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+#tourSkip {
+  background: #ddd;
+}
+
+#tourNext {
+  background: #1f6feb;
+  color: white;
+}
+
+.tour-highlight {
+  position: relative;
+  z-index: 9999;
+  outline: 3px solid #1f6feb;
+  border-radius: 8px;
+  box-shadow: 0 0 0 6px rgba(31, 111, 235, 0.25);
+}
+
+.hidden {
+  display: none;
+}
+
