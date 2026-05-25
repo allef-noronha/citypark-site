@@ -42,6 +42,15 @@
   }
 }
 
+/* Navbar */
+.nav-links a{
+  transition: all 0.3s ease;;
+}
+
+.nav-links a:hover{
+  color: var(--cor-verde);
+}
+
 /* Hero */
 .hero{
   position: relative;
