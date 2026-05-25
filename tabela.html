@@ -154,6 +154,14 @@
   .print-btn i{
     font-size:14px;
   }
+  
+  body {
+    visibility: hidden;
+  }
+
+  html.page-authorized body {
+    visibility: visible;
+  }  
 
     /* ===== IMPRESSÃO ===== */
     @media print{
@@ -274,6 +282,7 @@
     </div>
   </main>
 
+  <script type="module" src="js/guard-aprovado.js"></script>
   <script src="js/tabela.js" defer></script>
 </body>
 </html>
