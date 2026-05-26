@@ -8,8 +8,9 @@
     img-src 'self' data:;
     style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com;
     font-src  'self' https://cdnjs.cloudflare.com data:;
-    script-src 'self';
+    script-src 'self' https://www.gstatic.com;
     connect-src 'self'
+      https://*.googleapis.com
       https://script.google.com
       https://script.googleapis.com
       https://script.googleusercontent.com
@@ -190,7 +191,11 @@
 <body class="has-top-nav">
   <header class="top-nav fixed">
     <div class="nav-container">
-      <div class="logo"><img src="img/CityPark-Branco.png" alt="City Park" class="logo-img"></div>
+      <div class="logo">
+        <a href="index.html">
+          <img src="img/CityPark-Branco.png" alt="City Park" class="logo-img">
+        </a>
+      </div>
       <nav class="nav-links" aria-label="Atalhos">
         <a href="vendas.html" class="icon-btn" title="Tabela de Vendas" aria-label="Tabela de Vendas"><i class="fa-solid fa-table"></i></a>
         <a href="index.html" class="icon-btn" title="Página inicial" aria-label="Página inicial"><i class="fa-solid fa-house"></i></a>
