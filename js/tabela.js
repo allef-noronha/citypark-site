@@ -9,6 +9,9 @@
   const $ = (s) => document.querySelector(s);
   const tbody = $('#tvBody');
   const stamp = $('#stamp');
+  const statusFilter = $('#statusFilter');
+
+  let allRows = [];
 
   const esc = (x) =>
     String(x ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -20,8 +23,15 @@
     return Number.isFinite(n) ? n.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) : String(v);
   };
 
+  const normalizeStatus = (s) =>
+    String(s || '')
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .trim();
+
   const clsStatus = (s) => {
-    const k = String(s || '').toLowerCase();
+    const k = normalizeStatus(s);
     if (k.includes('vend')) return 'vendido';
     if (k.includes('reserv')) return 'reservado';
     return 'disponivel';
@@ -62,6 +72,23 @@
     for (const k of keys) if (obj[k] != null && obj[k] !== '') return obj[k];
     return '';
   };
+
+  function statusLabel() {
+    return statusFilter?.selectedOptions?.[0]?.textContent || 'Todos os status';
+  }
+
+  function getStatus(row) {
+    return pick(row, ['STATUS', 'Status', 'status']);
+  }
+
+  function applyFilter() {
+    const selected = normalizeStatus(statusFilter?.value || '');
+    const rows = selected
+      ? allRows.filter((row) => clsStatus(getStatus(row)) === selected)
+      : allRows;
+
+    render(rows);
+  }
 
   function render(rows) {
     tbody.innerHTML = '';
@@ -112,14 +139,15 @@
         try { data = JSON.parse(txt); } catch { data = []; }
       }
 
-      const rows = normalizeResponse(data);
-      render(rows);
+      allRows = normalizeResponse(data);
+      applyFilter();
     } catch (e) {
       console.error('[tabela] erro:', e);
       stamp.textContent = 'Falha ao carregar a tabela. Tente recarregar a página.';
     }
   }
 
+  statusFilter?.addEventListener('change', applyFilter);
   $('#btnPrint')?.addEventListener('click', () => window.print());
 
   load();

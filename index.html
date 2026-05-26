@@ -90,17 +90,21 @@
 </head>
 
 <body class="has-top-nav">
-  <!-- ======================= NAV FIXO ======================= -->
+<!-- ======================= NAV FIXO ======================= -->
   <header class="top-nav fixed" id="siteHeader">
     <div class="nav-container">
       <div class="logo">
-        <img src="img/CityPark-Branco.png" alt="City Park" class="logo-img">
+        <a href="index.html" aria-label="Ir para a página inicial">
+          <img src="img/CityPark-Branco.png" alt="City Park" class="logo-img"></a>
       </div>
 
       <nav class="nav-links" aria-label="Menu principal">
         <a href="#torre-liberty">O Empreendimento</a>
         <a href="#lazer">Lazer</a>
         <a href="#plantas">Plantas</a>
+        <a href="https://planoaconstrutora.com.br/" class="nav-link" target="_blank" rel="noopener noreferrer">
+          Conheça a Construtora <i class="fa-solid fa-arrow-up-right-from-square" style="font-size: 0.8em; margin-left: 2px;" aria-hidden="true"></i>
+        </a>
         <a href="vendas.html" class="btn btn-outline">Tabela de Vendas</a>
       </nav>
 
@@ -119,9 +123,12 @@
   <div id="mobileMenu" class="mobile-overlay" aria-hidden="true">
     <nav class="mobile-drawer" role="dialog" aria-modal="true" aria-label="Menu">
       <button class="mobile-close" id="mobileClose" aria-label="Fechar menu">&times;</button>
-      <a href="#torre-liberty">O Empreendimento</a>
+      <a href="#torre-liberty">Empreendimento</a>
       <a href="#lazer">Lazer</a>
       <a href="#plantas">Plantas</a>
+      <a href="https://planoaconstrutora.com.br/" target="_blank" rel="noopener noreferrer">
+        Conheça a Construtora <i class="fa-solid fa-arrow-up-right-from-square" style="font-size: 0.8em; margin-left: 6px;" aria-hidden="true"></i>
+      </a>
       <a href="vendas.html">Tabela de Vendas</a>
     </nav>
   </div>
@@ -429,7 +436,7 @@
   <footer class="footer-dark">
     <div class="footer-top">
       <p class="slogan">É <strong>Plano A</strong>, pode confiar.</p>
-      <a href="https://planoaconstrutora.com.br/" class="footer-logo-link" aria-label="Ir para o site da Plano A Construtora">
+      <a href="https://planoaconstrutora.com.br/" class="footer-logo-link" target="_blank" aria-label="Ir para o site da Plano A Construtora">
         <img src="img/Logotipo Plano A Construtora 30 anos - horizontal - branco.png" alt="Plano A Construtora" class="footer-logo">
       </a>
       <div class="social">
@@ -469,9 +476,21 @@
     </div> -->
 
     <div class="footer-bottom">
-      <p>© 2025 | Plano A Construtora | Todos os direitos reservados.</p>
+      <p>© 2026 | Plano A Construtora | Todos os direitos reservados.</p>
     </div>
   </footer>
+
+  <!-- Tour Guiado -->
+  <div id="tourOverlay" class="tour-overlay hidden"></div>
+    <div id="tourBox" class="tour-box hidden">
+      <h3 id="tourTitle"></h3>
+      <p id="tourText"></p>
+
+      <div class="tour-actions">
+        <button id="tourSkip">Pular</button>
+        <button id="tourNext">Próximo</button>
+      </div>
+    </div>
 
   <!-- Scripts -->
   <script src="js/index.js" defer></script>

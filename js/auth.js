@@ -26,6 +26,12 @@ import {
 let usuarioAtual = null;
 let dadosCorretorCache = null;
 
+function permissaoAtiva(valor) {
+  if (valor === true || valor === 1) return true;
+  if (typeof valor === "string") return valor.trim().toLowerCase() === "true";
+  return false;
+}
+
 // Idioma dos e-mails (reset de senha etc.)
 auth.languageCode = "pt_br";
 
@@ -247,9 +253,28 @@ onAuthStateChanged(auth, async (user) => {
 
   // helper: gating de elementos que exigem aprovado=true
   const aplicarGating = (aprovado) => {
+    const liberado = permissaoAtiva(aprovado);
+
     document.querySelectorAll("[data-require-approved]").forEach((el) => {
-      el.toggleAttribute("disabled", !aprovado);
-      el.classList.toggle("hidden", !aprovado);
+      if (!el.dataset.authorizedHref && el.getAttribute("href")) {
+        el.dataset.authorizedHref = el.getAttribute("href");
+      }
+
+      el.hidden = !liberado;
+      el.toggleAttribute("disabled", !liberado);
+      el.classList.toggle("hidden", !liberado);
+      el.setAttribute("aria-hidden", String(!liberado));
+      el.setAttribute("aria-disabled", String(!liberado));
+
+      if (el.tagName === "A") {
+        if (liberado) {
+          if (el.dataset.authorizedHref) el.setAttribute("href", el.dataset.authorizedHref);
+          el.removeAttribute("tabindex");
+        } else {
+          el.removeAttribute("href");
+          el.setAttribute("tabindex", "-1");
+        }
+      }
     });
   };
 
@@ -261,7 +286,7 @@ onAuthStateChanged(auth, async (user) => {
     } catch (e) {
       console.error("[auth] erro ao obter corretor:", e);
     }
-    const aprovado = !!dadosCorretorCache?.aprovado;
+    const aprovado = permissaoAtiva(dadosCorretorCache?.aprovado);
 
     // ► marque estado no <body>
     document.body.dataset.logged = "true";
@@ -374,7 +399,7 @@ btnSair?.addEventListener("click", async () => {
 // ------------------------------------------------------------------
 /** API global (usada em vendas.js) */
 // ------------------------------------------------------------------
-window.corretorPodePropor = () => !!(usuarioAtual && dadosCorretorCache?.aprovado === true);
+window.corretorPodePropor = () => !!(usuarioAtual && permissaoAtiva(dadosCorretorCache?.aprovado));
 window.dadosCorretor      = () => dadosCorretorCache;
 window.fazerLogout        = async () => { await signOut(auth); };
 

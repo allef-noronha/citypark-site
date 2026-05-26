@@ -31,8 +31,14 @@
 
     .wrap{max-width:1200px;margin:40px auto;padding:0 16px}
     .topbar{display:flex;gap:8px;align-items:center;justify-content:space-between;margin-bottom:12px}
+    .topbar-actions{display:flex;gap:8px;align-items:center;justify-content:flex-end;flex-wrap:wrap}
     .btn{padding:.6rem .9rem;border-radius:8px;border:1px solid #d6d6d6;background:#fff;cursor:pointer}
+    #statusFilter{min-width:180px}
     .badge{font-size:.875rem;color:#666}
+    @media (max-width:700px){
+      .topbar{align-items:flex-start;flex-direction:column}
+      .topbar-actions{width:100%;justify-content:flex-start}
+    }
 
     /* Botões do topo */
     header.top-nav .nav-links{margin-left:auto}
@@ -100,6 +106,55 @@
     .status.disponivel{color:#1a7f50}
     .status.reservado{color:#b28400}
     .status.vendido{color:#b32525}
+    .filter-select-wrap{
+    position:relative;
+    display:inline-flex;
+    align-items:center;
+    width:180px;
+    height:38px;
+  }
+
+  .filter-select-wrap i{
+    position:absolute;
+    left:12px;
+    font-size:13px;
+    color:#111;
+    pointer-events:none;
+    z-index:1;
+  }
+
+  .filter-select{
+    width:100%;
+    height:100%;
+    padding:0 34px 0 34px;
+    border:1px solid #d6d6d6;
+    border-radius:8px;
+    background:#fff;
+    font-size:14px;
+    font-weight:600;
+    color:#111;
+    cursor:pointer;
+  }
+
+  .filter-select:focus{
+    outline:none;
+    border-color:#aaa;
+    box-shadow:0 0 0 3px rgba(0,0,0,.06);
+  }
+
+  .print-btn{
+    display:inline-flex;
+    align-items:center;
+    gap:7px;
+    height:38px;
+    padding:.5rem .85rem;
+    font-weight:600;
+  }
+
+  .print-btn i{
+    font-size:14px;
+  }
+  
 
     /* ===== IMPRESSÃO ===== */
     @media print{
@@ -146,7 +201,25 @@
   <main class="wrap">
     <div class="topbar" style="margin-top:72px">
       <h1 style="margin:0">Tabela de Vendas — Resumo</h1>
-      <div><button class="btn" id="btnPrint">Imprimir / Salvar PDF</button></div>
+      
+      <div class="topbar-actions">
+        <div class="filter-select-wrap">
+          <i class="fa-solid fa-filter" aria-hidden="true"></i>
+          
+          <label for="statusFilter" class="sr-only">Filtrar por status</label>
+          <select id="statusFilter" class="filter-select" aria-label="Filtrar por status">
+            <option value="">Todos os status</option>
+            <option value="disponivel">Disponível</option>
+            <option value="reservado">Reservado</option>
+            <option value="vendido">Vendido</option>
+          </select>
+        </div>
+
+        <button class="btn print-btn" id="btnPrint" type="button">
+          <i class="fa-solid fa-file-pdf" aria-hidden="true"></i>
+          <span>Imprimir / Salvar PDF</span>
+        </button>
+      </div>
     </div>
 
     <div class="badge" id="stamp">Carregando…</div>
@@ -202,10 +275,7 @@
     </div>
   </main>
 
-  <script>
-    // imprimir
-    document.getElementById('btnPrint')?.addEventListener('click', ()=> window.print());
-  </script>
+  <script type="module" src="js/guard-aprovado.js"></script>
   <script src="js/tabela.js" defer></script>
 </body>
 </html>

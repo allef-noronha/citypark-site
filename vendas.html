@@ -79,7 +79,9 @@
 
 <header class="topo-vendas">
   <div class="logo-topo">
-    <img src="img/logo.png" alt="City Park" class="logo-img">
+    <a href="index.html" aria-label="City Park - Página inicial">
+      <img src="img/logo.png" alt="City Park" class="logo-img">
+    </a>
   </div>
   
   <div class="topo-botoes">
@@ -97,9 +99,9 @@
       <i class="fa-solid fa-filter"></i>
     </button>
 
-    <!-- NOVOS BOTÕES (só quando logado) -->
+    <!-- NOVOS BOTÕES (só quando aprovado) -->
 
-    <a id="btn-folder" class="icon-btn require-logged"
+    <a id="btn-folder" class="icon-btn" data-require-approved
       href="tabela.html"
       title="Tabela Resumo" aria-label="Tabela Resumo">
       <i class="fa-solid fa-table-list"></i>
@@ -111,7 +113,7 @@
       title="Material Digital" aria-label="Material Digital">
       <i class="fa-solid fa-file-lines"></i>
     </a> -->
-    <a id="btn-material" class="icon-btn require-logged"
+    <a id="btn-material" class="icon-btn" data-require-approved
       href="https://drive.google.com/drive/folders/1LnuR5-yl-6MRkxO8EKRoLaCic02-yuQl?usp=sharing"
       target="_blank" rel="noopener noreferrer"
       title="Material Digital (Google Drive)" aria-label="Material Digital (Google Drive)">
@@ -213,7 +215,12 @@
 </section>
 
 <main style="padding: 1rem;">
-  <div id="tabela-vendas"></div>
+  <div id="tabela-vendas">
+    <div class="loading-dados" role="status" aria-live="polite">
+      <span class="loading-spinner" aria-hidden="true"></span>
+      <span>Carregando dados...</span>
+    </div>
+  </div>
 </main>
 
 <div id="popup" class="popup">
@@ -226,43 +233,15 @@
     <p class="slogan">É <strong>Plano A</strong>, pode confiar.</p>
     <img src="img/Logotipo Plano A Construtora 30 anos - horizontal - branco.png" alt="Plano A Construtora" class="footer-logo">
     <div class="social">
-      <a href="https://www.facebook.com/planoa.arq.eng/" aria-label="Facebook"><i class="fa-brands fa-facebook"></i></a>
       <a href="https://wa.me/5582993175780" aria-label="WhatsApp" rel="noopener noreferrer"><i class="fa-brands fa-whatsapp"></i></a>
-      <!-- <a href="#" aria-label="LinkedIn"><i class="fa-brands fa-linkedin"></i></a> -->
       <a href="https://www.instagram.com/planoaconstrutora/" aria-label="Instagram"><i class="fa-brands fa-instagram"></i></a>
       <a href="https://www.youtube.com/@Planoaconstrutora" aria-label="YouTube"><i class="fa-brands fa-youtube"></i></a>
+      <a href="https://www.facebook.com/planoa.arq.eng/" aria-label="Facebook"><i class="fa-brands fa-facebook"></i></a>
     </div>
   </div>
 
-  <!-- <div class="footer-links">
-    <div>
-      <h4>Início</h4>
-      <a href="#torre-liberty">O empreendimento</a>
-      <a href="#lazer">Lazer</a>
-      <a href="#plantas">Plantas</a>
-    </div>
-    <div>
-      <h4>Institucional</h4>
-      <a href="#">Quem somos</a>
-      <a href="#">Missão e valores</a>
-    </div>
-    <div>
-      <h4>Empreendimentos</h4>
-      <a href="#">Hotelaria</a>
-      <a href="#">Comerciais</a>
-      <a href="#">Residenciais</a>
-      <a href="#">Saúde</a>
-    </div>
-    <div>
-      <h4>Contato</h4>
-      <a href="mailto:contato@planoa.com.br">E-mail</a>
-      <a href="tel:+5582999990000">Telefone</a>
-      <a href="#">Políticas de privacidade</a>
-    </div>
-  </div> -->
-
   <div class="footer-bottom">
-    <p>© 2025 | Plano A Construtora | Todos os direitos reservados.</p>
+    <p>© 2026 | Plano A Construtora | Todos os direitos reservados.</p>
   </div>
 </footer>
 
