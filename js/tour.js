@@ -1,3 +1,5 @@
+// AINDA EM DESENVOLVIMENTO - GUIA DE USO DO SITE
+
 const tourSteps = [
     {
         selector: ".navbar",
