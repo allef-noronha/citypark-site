@@ -7,7 +7,6 @@ Este é o site oficial do empreendimento **City Park**, desenvolvido em HTML, CS
 ## 🔗 Acesse o site
 
 [www.cityparkmcz.com.br](http://www.cityparkmcz.com.br)  
-*(substitua com o link real quando publicado)*
 
 ---
 
