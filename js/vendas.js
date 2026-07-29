@@ -12,20 +12,15 @@
 //   com zoom (wheel/dblclick), pan (arrastar) e pinch (touch).
 // ------------------------------------------------------------------
 
+import { db } from "./firebase.js";
+import {
+  collection,
+  getDocs
+} from "https://www.gstatic.com/firebasejs/10.12.1/firebase-firestore.js";
+
 // ===== CONFIG =====
 const CONFIG = {
-  webAppURL:
-    "https://script.google.com/macros/s/AKfycbwD1zCtYAD_UMaFv9rF63QWJ-RYqZbTv5RbRSVCoUqpZB8WFnOqJAhdqCmd_kxhneewoA/exec",
-  formsBase:
-    "https://docs.google.com/forms/d/e/1FAIpQLSeN0R7Xh48HVat7Zr4ibVh6PAwipC1DNnYPe8bwF01tfGZiBg/viewform",
-  formMap: {
-    unidade: "entry.348844169",
-    nome: "entry.999901423",
-    creci: "entry.1967387475",
-    telefone: "entry.752267382",
-    email: "entry.598155835",
-    imobiliaria: "entry.1725417675",
-  },
+  formsBase: "formulario.html",
 
   // 🔧 HideMode (apenas para visitante / não logado)
   ctaHideMode: 2, // "ver"|2 = esconde VER; "proposta"|1 = esconde Enviar Proposta; 0 = nada
@@ -127,57 +122,33 @@ function mostrarCarregandoDados() {
 
 async function fetchWebApp() {
   try {
-    const res = await fetch(CONFIG.webAppURL, { cache: "no-store", credentials: "omit" });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const rows = normalizeResponse(await readResponse(res));
-    return rows
-      .map((r) => ({
-        unidade: r["UNIDADE"],
-        preco: r["PREÇO À VISTA"],
-        area: r["ÁREA"],
-        sinal: r["SINAL"],
-        parcela: r["80 PARC. MENSAIS"],
-        intercalada: r["12 INTERCAL. SEMESTRAIS"],
-        chaves: r["CHAVES"],
-        status: r["STATUS"],
-        tipologia: r["TIPOLOGIA"],
-        imagem: r["IMAGEM"],
-        _raw: r,
-      }))
-      .map((it) => {
-        const raw = it._raw || {};
-        const preco = valueOr(
-          it.preco,
-          pick(raw, ["PREÇO À VISTA", "PRECO A VISTA", "PRECO À VISTA", "PREÃ‡O Ã€ VISTA", "Preço", "Preco", "preco"])
-        );
-
+    const snapshot = await getDocs(collection(db, "unidades"));
+    return snapshot.docs
+      .map((docSnapshot) => {
+        const unit = docSnapshot.data();
+        const values = unit.valores || {};
         return {
-          unidade: valueOr(it.unidade, pick(raw, ["UNIDADE", "Unidade", "unidade"])),
-          preco:
-            typeof preco === "number"
-              ? preco.toLocaleString("pt-BR", {
-                  style: "currency",
-                  currency: "BRL",
-                })
-              : preco,
-          area: valueOr(it.area, pick(raw, ["ÁREA", "AREA", "ÃREA", "Área", "area"])),
-          sinal: valueOr(it.sinal, pick(raw, ["SINAL", "Sinal", "sinal"])),
-          parcela: valueOr(it.parcela, pick(raw, ["80 PARC. MENSAIS", "80 PARC MENSAIS", "80 PARC", "80 parcelas", "80 PARCELAS"])),
-          intercalada: valueOr(it.intercalada, pick(raw, ["12 INTERCAL. SEMESTRAIS", "12 INTERCAL SEMESTRAIS", "12 INTERCALADAS"])),
-          chaves: valueOr(it.chaves, pick(raw, ["CHAVES", "Chaves", "chaves"])),
-          status: valueOr(it.status, pick(raw, ["STATUS", "Status", "status"])),
-          tipologia: valueOr(it.tipologia, pick(raw, ["TIPOLOGIA", "Tipologia", "tipologia"])),
-          imagem: valueOr(it.imagem, pick(raw, ["IMAGEM", "Imagem", "imagem"])),
+          id: docSnapshot.id,
+          unidade: unit.unidade || docSnapshot.id,
+          preco: fromCents(values.precoAVistaCentavos),
+          area: unit.areaM2,
+          sinal: fromCents(values.sinalCentavos),
+          parcela: fromCents(values.parcelasMensaisCentavos),
+          intercalada: fromCents(values.intercaladasSemestraisCentavos),
+          chaves: fromCents(values.chavesCentavos),
+          status: statusLabel(unit.status),
+          tipologia: unit.tipologia,
+          imagem: unit.imagem
         };
       })
-      .filter((it) => it.unidade || it.tipologia || it.status);
+      .sort((a, b) => String(a.unidade).localeCompare(String(b.unidade), "pt-BR", { numeric: true }));
   } catch (err) {
     console.error("[vendas] erro ao carregar dados:", err);
     if (tabelaEl) {
       tabelaEl.innerHTML = `
         <div class="alert">
           Não foi possível carregar a Tabela de Vendas agora.
-          <br>Verifique a publicação do Web App e tente novamente.
+          <br>Tente recarregar a página em alguns instantes.
         </div>`;
     }
     return null;
@@ -729,21 +700,12 @@ function enviarProposta(unidade) {
     alert("Faça login e aguarde aprovação para enviar propostas.");
     return;
   }
-  const c = window.dadosCorretor ? window.dadosCorretor() : null;
-  if (!c) {
-    alert("Não foi possível carregar seus dados de corretor.");
-    return;
-  }
-
   const p = new URLSearchParams();
-  p.set(CONFIG.formMap.unidade, unidade || "");
-  p.set(CONFIG.formMap.nome, c.nome || "");
-  p.set(CONFIG.formMap.creci, c.creci || "");
-  p.set(CONFIG.formMap.telefone, c.telefone || "");
-  p.set(CONFIG.formMap.email, c.email || "");
-  p.set(CONFIG.formMap.imobiliaria, c.imobiliaria || "");
+  p.set("unidade", unidade || "");
 
-  const url = `${CONFIG.formsBase}?embedded=true&${p.toString()}`;
+  // O fragmento permanece no navegador mesmo quando o servidor aplica URL limpa
+  // (ex.: formulario.html -> /formulario).
+  const url = `${CONFIG.formsBase}#${p.toString()}`;
 
   if (CONFIG.formsTarget === "newtab") {
     window.open(url, "_blank", "noopener,noreferrer");
@@ -795,6 +757,18 @@ function brl(v) {
   const n = Number(s.replace(/[^\d.-]/g, ""));
   if (isNaN(n)) return s;
   return n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+}
+
+function fromCents(value) {
+  return typeof value === "number" ? value / 100 : null;
+}
+
+function statusLabel(value) {
+  const status = normaliza(value);
+  if (status.includes("dispon")) return "Disponível";
+  if (status.includes("reserv") || status.includes("aprov")) return "Reservado";
+  if (status.includes("vend")) return "Vendido";
+  return value || "Não informado";
 }
 
 // ADICIONE perto dos “UTIL”

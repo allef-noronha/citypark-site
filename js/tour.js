@@ -10,14 +10,5 @@ const tourSteps = [
         selector: "#statusFilter",
         title: "Filtro de status",
         text: "Use este filtro para visualizar unidades disponíveis, reservadas ou vendidas."
-
     }
-    {
-        
-    }
-
-
-
-
-
-]
+];

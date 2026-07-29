@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#091253" />
+  <title>Enviar proposta | City Park</title>
+  <link rel="stylesheet" href="css/theme.css" />
+  <link rel="stylesheet" href="css/formulario.css" />
+  <link rel="icon" href="data:," />
+</head>
+<body>
+  <header class="proposal-header">
+    <a href="vendas.html" class="brand" aria-label="Voltar para a tabela de vendas">
+      <img src="img/CityPark-Branco.png" alt="City Park" />
+    </a>
+    <a href="vendas.html" class="btn btn-outline">Tabela de Vendas</a>
+  </header>
+
+  <main class="proposal-page">
+    <section class="intro" aria-labelledby="page-title">
+      <h1 id="page-title">Proposta Comercial - City Park</h1>
+    </section>
+
+    <section class="form-card">
+      <div class="progress" role="group" aria-label="Progresso do formulário">
+        <div class="progress-line"><span id="progressFill"></span></div>
+        <ol>
+          <li class="active" data-progress-step="1"><span>1</span><strong>Corretor</strong></li>
+          <li data-progress-step="2"><span>2</span><strong>Cliente</strong></li>
+          <li data-progress-step="3"><span>3</span><strong>Proposta</strong></li>
+        </ol>
+      </div>
+
+      <form id="proposalForm" novalidate>
+        <section class="form-step active" data-step="1">
+          <div class="step-heading">
+            
+            <h2>Dados do Corretor</h2>
+            <p>Confira se suas informações estão corretas antes de avançar.</p>
+          </div>
+
+          <div id="adminBrokerPicker" class="form-group span-2 hidden admin-broker-picker">
+            <label for="adminBrokerSelect">Corretor responsável <span>*</span></label>
+            <select id="adminBrokerSelect">
+              <option value="">Selecione um corretor aprovado</option>
+            </select>
+            <small>Modo administrativo: a proposta será registrada em nome do corretor selecionado.</small>
+          </div>
+
+          <div class="fields-grid">
+            <div class="form-group span-2">
+              <label for="brokerName">Nome completo <span>*</span></label>
+              <input type="text" id="brokerName" name="brokerName" autocomplete="name" required />
+            </div>
+            <div class="form-group">
+              <label for="brokerCreci">CRECI <span>*</span></label>
+              <input type="text" id="brokerCreci" name="brokerCreci" required />
+            </div>
+            <div class="form-group">
+              <label for="brokerPhone">Telefone <span>*</span></label>
+              <input type="tel" id="brokerPhone" name="brokerPhone" autocomplete="tel" required />
+            </div>
+            <div class="form-group span-2">
+              <label for="brokerEmail">E-mail <span>*</span></label>
+              <input type="email" id="brokerEmail" name="brokerEmail" autocomplete="email" required />
+            </div>
+            <div class="form-group span-2">
+              <label for="brokerRealEstate">Imobiliária associada</label>
+              <input type="text" id="brokerRealEstate" name="brokerRealEstate" />
+            </div>
+          </div>
+
+          <div class="form-actions end">
+            <button type="button" class="button button-primary" data-next>Continuar <span aria-hidden="true">→</span></button>
+          </div>
+        </section>
+
+        <section class="form-step" data-step="2">
+          <div class="step-heading">
+            
+            <h2>Dados do Cliente</h2>
+            <p>Selecione o tipo de pessoa e preencha os dados do proponente.</p>
+          </div>
+
+          <fieldset class="choice-group">
+            <legend>Tipo de cliente</legend>
+            <div class="choice-grid">
+              <label class="choice-card">
+                <input type="radio" name="clientType" value="fisica" checked />
+                <span><strong>Pessoa física - PF</strong><small>Proposta em nome de CPF</small></span>
+              </label>
+              <label class="choice-card">
+                <input type="radio" name="clientType" value="juridica" />
+                <span><strong>Pessoa jurídica - PJ</strong><small>Proposta em nome de CNPJ</small></span>
+              </label>
+            </div>
+          </fieldset>
+
+          <div id="physicalPersonFields" class="fields-grid">
+            <div class="form-group span-2">
+              <label for="clientName">Nome completo <span>*</span></label>
+              <input type="text" id="clientName" name="clientName" autocomplete="name" />
+            </div>
+            <div class="form-group">
+              <label for="clientCpf">CPF <span>*</span></label>
+              <input type="text" id="clientCpf" name="clientCpf" inputmode="numeric" />
+            </div>
+            <div class="form-group">
+              <label for="clientPhone">Telefone <span>*</span></label>
+              <input type="tel" id="clientPhone" name="clientPhone" autocomplete="tel" />
+            </div>
+            <div class="form-group span-2">
+              <label for="clientEmail">E-mail <span>*</span></label>
+              <input type="email" id="clientEmail" name="clientEmail" autocomplete="email" />
+            </div>
+          </div>
+
+          <div id="legalPersonFields" class="fields-grid hidden">
+            <div class="form-group span-2">
+              <label for="companyName">Razão social <span>*</span></label>
+              <input type="text" id="companyName" name="companyName" />
+            </div>
+            <div class="form-group">
+              <label for="companyCnpj">CNPJ <span>*</span></label>
+              <input type="text" id="companyCnpj" name="companyCnpj" inputmode="numeric" />
+            </div>
+            <div class="form-group">
+              <label for="companyPhone">Telefone (Comercial) <span>*</span></label>
+              <input type="tel" id="companyPhone" name="companyPhone" />
+            </div>
+            <div class="form-group span-2">
+              <label for="companyEmail">E-mail (Comercial) <span>*</span></label>
+              <input type="email" id="companyEmail" name="companyEmail" />
+            </div>
+          </div>
+
+          <div class="form-actions">
+            <button type="button" class="button button-secondary" data-previous><span aria-hidden="true">←</span> Voltar</button>
+            <button type="button" class="button button-primary" data-next>Continuar <span aria-hidden="true">→</span></button>
+          </div>
+        </section>
+
+        <section class="form-step" data-step="3">
+          <div class="step-heading heading-with-unit">
+            <div>
+              
+              <h2>Condições da Proposta</h2>
+              <p>Revise a unidade e selecione a forma de pagamento desejada.</p>
+            </div>
+            <div class="unit-badge">Unidade <strong id="unitPreview">—</strong></div>
+          </div>
+
+          <div class="form-group unit-field">
+            <label for="unit">Unidade desejada <span>*</span></label>
+            <input type="text" id="unit" name="unit" required readonly />
+          </div>
+
+          <fieldset class="choice-group proposal-choices">
+            <legend>Proposta</legend>
+            <p class="legend-help">SI: Sinal · PM: Parcelas Mensais · PS: Parcelas Semestrais · CH: Chaves</p>
+            <label class="choice-card wide">
+              <input type="radio" name="proposalType" value="padrao" checked />
+              <span><strong>Padrão</strong><small>SI 20% · 80 PM 45% · 12 PS 20% · 1 CH 15%</small></span>
+            </label>
+            <label class="choice-card wide">
+              <input type="radio" name="proposalType" value="outro" />
+              <span><strong>Outro</strong><small>Descreva uma composição diferente para análise.</small></span>
+            </label>
+            <div class="form-group custom-condition hidden" id="customProposalWrap">
+              <label for="customProposal">Descreva a condição desejada <span>*</span></label>
+              <textarea id="customProposal" name="customProposal" rows="4" placeholder="Ex.: sinal de 15%, 60 parcelas mensais..."></textarea>
+            </div>
+          </fieldset>
+
+          <label class="declaration-check" for="declaration">
+            <input type="checkbox" id="declaration" required />
+            <span>Declaro que as informações deste formulário são verdadeiras e correspondem aos dados informados pelo cliente proponente.</span>
+          </label>
+          <div id="formMessage" class="form-message" role="alert" aria-live="polite"></div>
+
+          <div class="form-actions">
+            <button type="button" class="button button-secondary" data-previous><span aria-hidden="true">←</span> Voltar</button>
+            <button type="submit" class="button button-primary">Enviar proposta</button>
+          </div>
+        </section>
+      </form>
+    </section>
+  </main>
+
+<!-- ====================== FOOTER ====================== -->
+<footer class="footer-dark">
+  <div class="footer-top">
+    <p class="slogan">É <strong>Plano A</strong>, pode confiar.</p>
+    <img src="img/Logotipo Plano A Construtora 30 anos - horizontal - branco.png" alt="Plano A Construtora" class="footer-logo">
+  </div>
+
+  <div class="footer-bottom">
+    <p>© 2026 | Plano A Construtora | Todos os direitos reservados.</p>
+  </div>
+</footer>
+  <script type="module" src="js/formulario.js"></script>
+</body>
+</html>

@@ -10,15 +10,9 @@
     font-src  'self' https://cdnjs.cloudflare.com data:;
     script-src 'self' https://www.gstatic.com;
     connect-src 'self'
-      https://*.googleapis.com
-      https://script.google.com
-      https://script.googleapis.com
-      https://script.googleusercontent.com
-      https://*.googleusercontent.com
-      https://www.googleapis.com
-      https://docs.google.com
-      https://docs.googleusercontent.com
-      https://spreadsheets.google.com;
+      https://firestore.googleapis.com
+      https://identitytoolkit.googleapis.com
+      https://securetoken.googleapis.com;
   ">
   <title>Tabela de Vendas • Resumo</title>
   <link rel="stylesheet" href="css/theme.css">
@@ -95,7 +89,7 @@
     .brandbar .center{
       flex:1 1 auto;text-align:center
     }
-    .brandbar h1{
+    .brandbar .brand-title{
       margin:0 0 6px;font-size:28px;letter-spacing:.6px
     }
     .brandbar .subtitle{
@@ -183,7 +177,7 @@
       .thead-brand th{ padding:10px 8px 6px; }
       .brandbar .left img,
       .brandbar .right img{ height:28px }
-      .brandbar h1{ font-size:18px;margin:0 0 2px }
+      .brandbar .brand-title{ font-size:18px;margin:0 0 2px }
       .brandbar .subtitle{ font-size:11px }
     }
   </style>
@@ -240,14 +234,14 @@
         <thead>
           <!-- Banner (1 TH cobrindo 9 colunas) -->
           <tr class="thead-brand">
-            <th colspan="9">
+            <th colspan="9" scope="colgroup">
               <div class="brandbar">
                 <div class="left">
                   <!-- Atualize o caminho da logo da construtora -->
                   <img src="img/Logo-PlanoA-30-anos-08.png" alt="Plano A Construtora">
                 </div>
                 <div class="center">
-                  <h1>TABELA DE VENDAS</h1>
+                  <div class="brand-title">TABELA DE VENDAS</div>
                   <div class="subtitle">
                     Prazo de entrega: Dezembro/2029<br>
                     Localização: Complexo Parque Shopping Maceió
@@ -263,15 +257,15 @@
 
           <!-- Cabeçalho das colunas -->
           <tr class="thead-cols">
-            <th>Unidade</th>
-            <th>Tipologia</th>
-            <th>Área (m²)</th>
-            <th>Preço à vista</th>
-            <th>Sinal (20%)</th>
-            <th>80 parc. mensais</th>
-            <th>12 intercal. semestrais</th>
-            <th>Chaves</th>
-            <th>Status</th>
+            <th scope="col">Unidade</th>
+            <th scope="col">Tipologia</th>
+            <th scope="col">Área (m²)</th>
+            <th scope="col">Preço à vista</th>
+            <th scope="col">Sinal (20%)</th>
+            <th scope="col">80 parc. mensais</th>
+            <th scope="col">12 intercal. semestrais</th>
+            <th scope="col">Chaves</th>
+            <th scope="col">Status</th>
           </tr>
         </thead>
 
@@ -281,6 +275,6 @@
   </main>
 
   <script type="module" src="js/guard-aprovado.js"></script>
-  <script src="js/tabela.js" defer></script>
+  <script type="module" src="js/tabela.js"></script>
 </body>
 </html>

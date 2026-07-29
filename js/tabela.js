@@ -1,154 +1,101 @@
-// js/tabela.js
-(function () {
-  'use strict';
+import { db } from "./firebase.js";
+import {
+  collection,
+  getDocs
+} from "https://www.gstatic.com/firebasejs/10.12.1/firebase-firestore.js";
 
-  // URL do seu Web App (Apps Script publicado como Anyone)
-  const WEBAPP_URL =
-    'https://script.google.com/macros/s/AKfycbwD1zCtYAD_UMaFv9rF63QWJ-RYqZbTv5RbRSVCoUqpZB8WFnOqJAhdqCmd_kxhneewoA/exec';
+const tbody = document.getElementById("tvBody");
+const stamp = document.getElementById("stamp");
+const statusFilter = document.getElementById("statusFilter");
+let allRows = [];
 
-  const $ = (s) => document.querySelector(s);
-  const tbody = $('#tvBody');
-  const stamp = $('#stamp');
-  const statusFilter = $('#statusFilter');
+function escapeHTML(value) {
+  return String(value ?? "").replace(/[&<>"']/g, character => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#39;"
+  })[character]);
+}
 
-  let allRows = [];
+function normalize(value) {
+  return String(value ?? "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim();
+}
 
-  const esc = (x) =>
-    String(x ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+function statusClass(value) {
+  const status = normalize(value);
+  if (status.includes("vend")) return "vendido";
+  if (status.includes("reserv") || status.includes("aprov")) return "reservado";
+  return "disponivel";
+}
 
-  const brMoney = (v) => {
-    if (v == null || v === '') return '';
-    if (String(v).trim() === '-') return '-';
-    const n = Number(String(v).replace(/[^\d.-]/g, ''));
-    return Number.isFinite(n) ? n.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) : String(v);
-  };
+function statusLabel(value) {
+  const status = statusClass(value);
+  if (status === "vendido") return "Vendido";
+  if (status === "reservado") return "Reservado";
+  return "Disponível";
+}
 
-  const normalizeStatus = (s) =>
-    String(s || '')
-      .toLowerCase()
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '')
-      .trim();
+function moneyFromCents(value) {
+  if (typeof value !== "number") return "-";
+  return (value / 100).toLocaleString("pt-BR", {
+    style: "currency",
+    currency: "BRL"
+  });
+}
 
-  const clsStatus = (s) => {
-    const k = normalizeStatus(s);
-    if (k.includes('vend')) return 'vendido';
-    if (k.includes('reserv')) return 'reservado';
-    return 'disponivel';
-  };
+function render(rows) {
+  tbody.innerHTML = "";
+  const fragment = document.createDocumentFragment();
 
-  function normalizeResponse(data) {
-    if (Array.isArray(data)) {
-      if (data.length && typeof data[0] === 'object' && !Array.isArray(data[0])) return data;
-      if (data.length && Array.isArray(data[0])) {
-        const headers = data[0].map(String);
-        return data.slice(1).map((row) => {
-          const obj = {};
-          headers.forEach((h, i) => (obj[h] = row[i]));
-          return obj;
-        });
-      }
-      return [];
-    }
-    const candidates = ['rows', 'data', 'values', 'resultado', 'result'];
-    for (const key of candidates) {
-      if (data && Array.isArray(data[key])) {
-        const arr = data[key];
-        if (arr.length && Array.isArray(arr[0])) {
-          const headers = arr[0].map(String);
-          return arr.slice(1).map((row) => {
-            const obj = {};
-            headers.forEach((h, i) => (obj[h] = row[i]));
-            return obj;
-          });
-        }
-        return arr;
-      }
-    }
-    return [];
+  for (const row of rows) {
+    const values = row.valores || {};
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>${escapeHTML(row.unidade)}</td>
+      <td>${escapeHTML(row.tipologia)}</td>
+      <td>${escapeHTML(row.areaM2)}</td>
+      <td>${escapeHTML(moneyFromCents(values.precoAVistaCentavos))}</td>
+      <td>${escapeHTML(moneyFromCents(values.sinalCentavos))}</td>
+      <td>${escapeHTML(moneyFromCents(values.parcelasMensaisCentavos))}</td>
+      <td>${escapeHTML(moneyFromCents(values.intercaladasSemestraisCentavos))}</td>
+      <td>${escapeHTML(moneyFromCents(values.chavesCentavos))}</td>
+      <td class="status ${statusClass(row.status)}">${statusLabel(row.status)}</td>
+    `;
+    fragment.appendChild(tr);
   }
 
-  const pick = (obj, keys) => {
-    for (const k of keys) if (obj[k] != null && obj[k] !== '') return obj[k];
-    return '';
-  };
+  tbody.appendChild(fragment);
+  stamp.textContent = `Atualizado agora: ${new Date().toLocaleString("pt-BR")}`;
+}
 
-  function statusLabel() {
-    return statusFilter?.selectedOptions?.[0]?.textContent || 'Todos os status';
+function applyFilter() {
+  const selected = normalize(statusFilter?.value);
+  const rows = selected
+    ? allRows.filter(row => statusClass(row.status) === selected)
+    : allRows;
+  render(rows);
+}
+
+async function load() {
+  try {
+    stamp.textContent = "Carregando dados…";
+    const snapshot = await getDocs(collection(db, "unidades"));
+    allRows = snapshot.docs
+      .map(docSnapshot => ({ id: docSnapshot.id, ...docSnapshot.data() }))
+      .sort((a, b) => String(a.unidade).localeCompare(String(b.unidade), "pt-BR", { numeric: true }));
+    applyFilter();
+  } catch (error) {
+    console.error("[tabela] erro:", error);
+    stamp.textContent = "Falha ao carregar a tabela. Tente recarregar a página.";
   }
+}
 
-  function getStatus(row) {
-    return pick(row, ['STATUS', 'Status', 'status']);
-  }
-
-  function applyFilter() {
-    const selected = normalizeStatus(statusFilter?.value || '');
-    const rows = selected
-      ? allRows.filter((row) => clsStatus(getStatus(row)) === selected)
-      : allRows;
-
-    render(rows);
-  }
-
-  function render(rows) {
-    tbody.innerHTML = '';
-    const frag = document.createDocumentFragment();
-
-    rows.forEach((r) => {
-      const unidade   = pick(r, ['UNIDADE', 'Unidade', 'unidade']);
-      const tipologia = pick(r, ['TIPOLOGIA', 'Tipologia', 'tipologia']);
-      const area      = pick(r, ['ÁREA', 'AREA', 'Área', 'area']);
-      const preco     = pick(r, ['PREÇO À VISTA', 'PRECO À VISTA', 'Preço', 'Preco', 'preco']);
-      const sinal     = pick(r, ['SINAL', 'Sinal', 'sinal']);
-      const parc80    = pick(r, ['80 PARC. MENSAIS', '80 PARC MENSAIS', '80 PARC', '80 parcelas', '80 PARCELAS']);
-      const inter12   = pick(r, ['12 INTERCAL. SEMESTRAIS', '12 INTERCAL SEMESTRAIS', '12 INTERCALADAS']);
-      const chaves    = pick(r, ['CHAVES', 'Chaves', 'chaves']);
-      const status    = pick(r, ['STATUS', 'Status', 'status']);
-
-      const tr = document.createElement('tr');
-      tr.innerHTML = `
-        <td>${esc(unidade)}</td>
-        <td>${esc(tipologia)}</td>
-        <td>${esc(area)}</td>
-        <td>${esc(brMoney(preco))}</td>
-        <td>${esc(brMoney(sinal))}</td>
-        <td>${esc(brMoney(parc80))}</td>
-        <td>${esc(brMoney(inter12))}</td>
-        <td>${esc(brMoney(chaves))}</td>
-        <td class="status ${clsStatus(status)}">${esc(status)}</td>
-      `;
-      frag.appendChild(tr);
-    });
-
-    tbody.appendChild(frag);
-    stamp.textContent = `Atualizado agora: ${new Date().toLocaleString('pt-BR')}`;
-  }
-
-  async function load() {
-    try {
-      stamp.textContent = 'Carregando dados…';
-      const res = await fetch(WEBAPP_URL, { cache: 'no-store', credentials: 'omit' });
-      if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
-
-      let data;
-      const ct = res.headers.get('content-type') || '';
-      if (ct.includes('application/json')) {
-        data = await res.json();
-      } else {
-        const txt = await res.text();
-        try { data = JSON.parse(txt); } catch { data = []; }
-      }
-
-      allRows = normalizeResponse(data);
-      applyFilter();
-    } catch (e) {
-      console.error('[tabela] erro:', e);
-      stamp.textContent = 'Falha ao carregar a tabela. Tente recarregar a página.';
-    }
-  }
-
-  statusFilter?.addEventListener('change', applyFilter);
-  $('#btnPrint')?.addEventListener('click', () => window.print());
-
-  load();
-})();
+statusFilter?.addEventListener("change", applyFilter);
+document.getElementById("btnPrint")?.addEventListener("click", () => window.print());
+load();

@@ -1,0 +1,121 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return signedIn()
+        && exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+        && get(/databases/$(database)/documents/admins/$(request.auth.uid)).data.ativo == true
+        && get(/databases/$(database)/documents/admins/$(request.auth.uid)).data.tipo == 'admin';
+    }
+
+    function isApprovedBroker() {
+      return signedIn()
+        && exists(/databases/$(database)/documents/corretores/$(request.auth.uid))
+        && get(/databases/$(database)/documents/corretores/$(request.auth.uid)).data.aprovado == true;
+    }
+
+    match /corretores/{uid} {
+      allow get: if signedIn() && (request.auth.uid == uid || isAdmin());
+      allow list: if isAdmin();
+
+      allow create: if signedIn()
+        && request.auth.uid == uid
+        && request.resource.data.aprovado == false
+        && request.resource.data.email == request.auth.token.email;
+
+      allow update: if isAdmin() || (
+        signedIn()
+        && request.auth.uid == uid
+        && request.resource.data.aprovado == resource.data.aprovado
+        && request.resource.data.email == resource.data.email
+        && request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['nome', 'cpf', 'creci', 'telefone', 'imobiliaria'])
+      );
+
+      allow delete: if false;
+    }
+
+    match /admins/{uid} {
+      allow get: if signedIn() && (request.auth.uid == uid || isAdmin());
+      allow list, create, update: if isAdmin();
+      allow delete: if false;
+    }
+
+    match /unidades/{unidadeId} {
+      allow read: if true;
+      allow create, delete: if isAdmin();
+
+      allow update: if isAdmin() || (
+        isApprovedBroker()
+        && resource.data.status == 'disponivel'
+        && request.resource.data.status == 'reservada'
+        && request.resource.data.propostaAtualId is string
+        && request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['status', 'propostaAtualId', 'atualizadoEm', 'expiraEm', 'vendidoEm'])
+        && getAfter(/databases/$(database)/documents/propostas/$(request.resource.data.propostaAtualId)).data.corretorId == request.auth.uid
+        && getAfter(/databases/$(database)/documents/propostas/$(request.resource.data.propostaAtualId)).data.unidadeId == unidadeId
+      );
+    }
+
+    match /propostas/{propostaId} {
+      allow read: if isAdmin() || (
+        signedIn() && resource.data.corretorId == request.auth.uid
+      );
+
+      allow create: if (
+          (
+            isApprovedBroker()
+            && request.resource.data.corretorId == request.auth.uid
+          )
+          ||
+          (
+            isAdmin()
+            && request.resource.data.corretorId is string
+            && exists(/databases/$(database)/documents/corretores/$(request.resource.data.corretorId))
+            && get(/databases/$(database)/documents/corretores/$(request.resource.data.corretorId)).data.aprovado == true
+            && request.resource.data.adminId == request.auth.uid
+          )
+        )
+        && request.resource.data.statusProposta == 'reservada'
+        && request.resource.data.declaracaoAceita == true
+        && request.resource.data.unidadeId is string
+        && getAfter(/databases/$(database)/documents/unidades/$(request.resource.data.unidadeId)).data.status == 'reservada'
+        && getAfter(/databases/$(database)/documents/unidades/$(request.resource.data.unidadeId)).data.propostaAtualId == propostaId;
+
+      allow update, delete: if isAdmin();
+    }
+
+    match /historico_propostas/{historicoId} {
+      allow read: if isAdmin() || (
+        signedIn() && resource.data.corretorId == request.auth.uid
+      );
+      allow create: if isAdmin() || (
+        isApprovedBroker()
+        && request.resource.data.corretorId == request.auth.uid
+        && request.resource.data.acao == 'proposta criada'
+      );
+      allow update, delete: if false;
+    }
+
+    match /historico_unidades/{historicoId} {
+      allow read: if isAdmin() || (
+        signedIn() && resource.data.corretorId == request.auth.uid
+      );
+      allow create: if isAdmin() || (
+        isApprovedBroker()
+        && request.resource.data.corretorId == request.auth.uid
+        && request.resource.data.acao == 'unidade reservada'
+      );
+      allow update, delete: if false;
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

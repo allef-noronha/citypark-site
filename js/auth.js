@@ -3,7 +3,7 @@
 // - Modal padrão: Login ⇄ Cadastro + "Esqueceu a senha?"
 // - Dropdown quando logado: Ver conta (placeholder) e Sair
 // - Ícones: fa-solid (evita sumiço na edição Free) + destaque azul logado
-// - Gating: elementos com [data-require-approved] só aparecem se aprovado=true
+// - Gating: recursos de corretor aprovado e acesso ao painel administrativo
 // - Expõe window.corretorPodePropor(), window.dadosCorretor(), window.fazerLogout()
 // ------------------------------------------------------------------
 
@@ -25,6 +25,7 @@ import {
 // ------------------------------------------------------------------
 let usuarioAtual = null;
 let dadosCorretorCache = null;
+let dadosAdminCache = null;
 
 function permissaoAtiva(valor) {
   if (valor === true || valor === 1) return true;
@@ -197,7 +198,7 @@ registerForm?.addEventListener("submit", async (e) => {
     creci:       document.getElementById("registerCreci")?.value.trim(),
     telefone:    (document.getElementById("registerTelefone")?.value || "").replace(/\D/g, ""),
     imobiliaria: document.getElementById("registerImobiliaria")?.value.trim(),
-    email:       document.getElementById("registerEmail")?.value.trim(),
+    email:       document.getElementById("registerEmail")?.value.trim().toLowerCase(),
     senha:       document.getElementById("registerPassword")?.value || "",
   };
 
@@ -246,6 +247,7 @@ onAuthStateChanged(auth, async (user) => {
   // estado em memória
   usuarioAtual = user || null;
   dadosCorretorCache = null;
+  dadosAdminCache = null;
 
   // refs
   const alertAprovInline = document.getElementById("alert-aprov");
@@ -278,19 +280,48 @@ onAuthStateChanged(auth, async (user) => {
     });
   };
 
+  const aplicarGatingAdmin = (administradorAtivo) => {
+    document.querySelectorAll("[data-require-admin]").forEach((el) => {
+      if (!el.dataset.authorizedHref && el.getAttribute("href")) {
+        el.dataset.authorizedHref = el.getAttribute("href");
+      }
+
+      el.hidden = !administradorAtivo;
+      el.classList.toggle("hidden", !administradorAtivo);
+      el.setAttribute("aria-hidden", String(!administradorAtivo));
+      el.setAttribute("aria-disabled", String(!administradorAtivo));
+
+      if (el.tagName === "A") {
+        if (administradorAtivo) {
+          if (el.dataset.authorizedHref) el.setAttribute("href", el.dataset.authorizedHref);
+          el.removeAttribute("tabindex");
+        } else {
+          el.removeAttribute("href");
+          el.setAttribute("tabindex", "-1");
+        }
+      }
+    });
+  };
+
   if (user) {
-    // --- buscar dados do corretor ---
+    // --- buscar somente os documentos do próprio usuário ---
     try {
-      const snap = await getDoc(doc(db, "corretores", user.uid));
-      dadosCorretorCache = snap.exists() ? snap.data() : null;
+      const [corretorSnapshot, adminSnapshot] = await Promise.all([
+        getDoc(doc(db, "corretores", user.uid)),
+        getDoc(doc(db, "admins", user.uid))
+      ]);
+      dadosCorretorCache = corretorSnapshot.exists() ? corretorSnapshot.data() : null;
+      dadosAdminCache = adminSnapshot.exists() ? adminSnapshot.data() : null;
     } catch (e) {
-      console.error("[auth] erro ao obter corretor:", e);
+      console.error("[auth] erro ao obter perfil:", e);
     }
     const aprovado = permissaoAtiva(dadosCorretorCache?.aprovado);
+    const administradorAtivo = dadosAdminCache?.ativo === true && dadosAdminCache?.tipo === "admin";
 
     // ► marque estado no <body>
     document.body.dataset.logged = "true";
     document.body.dataset.approved = aprovado ? "true" : "false";
+    document.body.dataset.admin = administradorAtivo ? "true" : "false";
 
     // --- UI: mostrar PILL e ocultar ícone ---
     if (userGreet) {
@@ -329,6 +360,7 @@ onAuthStateChanged(auth, async (user) => {
     // alert + gating
     if (alertAprovInline) alertAprovInline.style.display = aprovado ? "none" : "block";
     aplicarGating(aprovado);
+    aplicarGatingAdmin(administradorAtivo);
 
     // helpers globais usados em vendas.js
     window.corretorPodePropor = () => aprovado;
@@ -337,13 +369,14 @@ onAuthStateChanged(auth, async (user) => {
     // ► avisa a vendas.html que o auth mudou
     window.dispatchEvent(
       new CustomEvent("auth-changed", {
-        detail: { logged: true, approved: aprovado },
+        detail: { logged: true, approved: aprovado, admin: administradorAtivo },
       })
     );
   } else {
     // ► marque estado no <body>
     document.body.dataset.logged = "false";
     document.body.dataset.approved = "false";
+    document.body.dataset.admin = "false";
 
     // --- deslogado: esconder pill e mostrar ícone ---
     if (userGreet) {
@@ -363,6 +396,7 @@ onAuthStateChanged(auth, async (user) => {
     // alert + gating reset
     if (alertAprovInline) alertAprovInline.style.display = "none";
     aplicarGating(false);
+    aplicarGatingAdmin(false);
 
     // fecha menu, se aberto
     toggleMenu(false);
@@ -374,7 +408,7 @@ onAuthStateChanged(auth, async (user) => {
     // ► avisa a vendas.html que o auth mudou
     window.dispatchEvent(
       new CustomEvent("auth-changed", {
-        detail: { logged: false, approved: false },
+        detail: { logged: false, approved: false, admin: false },
       })
     );
   }
@@ -402,4 +436,3 @@ btnSair?.addEventListener("click", async () => {
 window.corretorPodePropor = () => !!(usuarioAtual && permissaoAtiva(dadosCorretorCache?.aprovado));
 window.dadosCorretor      = () => dadosCorretorCache;
 window.fazerLogout        = async () => { await signOut(auth); };
-
