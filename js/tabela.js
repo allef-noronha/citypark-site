@@ -105,16 +105,23 @@
       const chaves    = pick(r, ['CHAVES', 'Chaves', 'chaves']);
       const status    = pick(r, ['STATUS', 'Status', 'status']);
 
+      // Constantes que servirão para decidir se os valores devem ser ocultados ou não (mesmo código de vendas.js)
+      const statusNormalizado = normalizeStatus(status);
+      const ocultarValores = statusNormalizado.includes("reservad") || statusNormalizado.includes("vendid");
+      const mostrarValor = (valor) => {
+        return ocultarValores ? "-" : brMoney(valor);
+      };
+
       const tr = document.createElement('tr');
       tr.innerHTML = `
         <td>${esc(unidade)}</td>
         <td>${esc(tipologia)}</td>
         <td>${esc(area)}</td>
-        <td>${esc(brMoney(preco))}</td>
-        <td>${esc(brMoney(sinal))}</td>
-        <td>${esc(brMoney(parc80))}</td>
-        <td>${esc(brMoney(inter12))}</td>
-        <td>${esc(brMoney(chaves))}</td>
+        <td>${esc(mostrarValor(preco))}</td>
+        <td>${esc(mostrarValor(sinal))}</td>
+        <td>${esc(mostrarValor(parc80))}</td>
+        <td>${esc(mostrarValor(inter12))}</td>
+        <td>${esc(mostrarValor(chaves))}</td>
         <td class="status ${clsStatus(status)}">${esc(status)}</td>
       `;
       frag.appendChild(tr);
