@@ -55,16 +55,21 @@ function render(rows) {
 
   for (const row of rows) {
     const values = row.valores || {};
+    const statusNormalizado = normalize(row.status);
+
+    const ocultarValores = statusNormalizado.includes("vendid") || statusNormalizado.includes("reservad");
+
+    const mostrarValores = value => ocultarValores ? "-" : moneyFromCents(value);
     const tr = document.createElement("tr");
     tr.innerHTML = `
       <td>${escapeHTML(row.unidade)}</td>
       <td>${escapeHTML(row.tipologia)}</td>
       <td>${escapeHTML(row.areaM2)}</td>
-      <td>${escapeHTML(moneyFromCents(values.precoAVistaCentavos))}</td>
-      <td>${escapeHTML(moneyFromCents(values.sinalCentavos))}</td>
-      <td>${escapeHTML(moneyFromCents(values.parcelasMensaisCentavos))}</td>
-      <td>${escapeHTML(moneyFromCents(values.intercaladasSemestraisCentavos))}</td>
-      <td>${escapeHTML(moneyFromCents(values.chavesCentavos))}</td>
+      <td>${escapeHTML(mostrarValores(values.precoAVistaCentavos))}</td>
+      <td>${escapeHTML(mostrarValores(values.sinalCentavos))}</td>
+      <td>${escapeHTML(mostrarValores(values.parcelasMensaisCentavos))}</td>
+      <td>${escapeHTML(mostrarValores(values.intercaladasSemestraisCentavos))}</td>
+      <td>${escapeHTML(mostrarValores(values.chavesCentavos))}</td>
       <td class="status ${statusClass(row.status)}">${statusLabel(row.status)}</td>
     `;
     fragment.appendChild(tr);

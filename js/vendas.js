@@ -378,14 +378,21 @@ function mostrarDetalhes(index) {
 
   const aprovado = isAprovado();
   const podeProposta = aprovado && isDisponivel(item.status);
+  // statusNormalizado = status do item sem acentos, minúsculas e espaços extras
+  const statusNormalizado = normaliza(item.status);
+  // Const que esconde os valores se o status incluir "reservad" ou "vendid", cobrindo variações como "reservadO" e "vendidA" + variações.
+  const ocultarValores = statusNormalizado.includes("reservad") || statusNormalizado.includes("vendid");
+  const mostrarValor = (valor) => {
+    return ocultarValores ? "-" : brl(valor);
+  }
 
   popupContent.innerHTML = `
     <h2>Condições - Unidade ${item.unidade}</h2>
-    <p><strong>Preço à vista:</strong> ${brl(item.preco)}</p>
-    <p><strong>Sinal:</strong> ${brl(item.sinal)}</p>
-    <p><strong>Parcelas mensais:</strong> ${brl(item.parcela)}</p>
-    <p><strong>Intercaladas semestrais:</strong> ${brl(item.intercalada)}</p>
-    <p><strong>Chaves:</strong> ${brl(item.chaves)}</p>
+    <p><strong>Preço à vista:</strong> ${mostrarValor(item.preco)}</p>
+    <p><strong>Sinal:</strong> ${mostrarValor(item.sinal)}</p>
+    <p><strong>Parcelas mensais:</strong> ${mostrarValor(item.parcela)}</p>
+    <p><strong>Intercaladas semestrais:</strong> ${mostrarValor(item.intercalada)}</p>
+    <p><strong>Chaves:</strong> ${mostrarValor(item.chaves)}</p>
 
     <div class="popup-botoes">
       ${podeProposta ? `<button class="ver-btn" data-action="propor" data-unidade="${encodeURIComponent(item.unidade)}">Enviar Proposta</button>` : ""}
