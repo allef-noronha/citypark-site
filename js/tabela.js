@@ -10,6 +10,7 @@
   const tbody = $('#tvBody');
   const stamp = $('#stamp');
   const statusFilter = $('#statusFilter');
+  const paymentPlan = window.CityParkPaymentPlan;
 
   let allRows = [];
 
@@ -100,16 +101,24 @@
       const area      = pick(r, ['ÁREA', 'AREA', 'Área', 'area']);
       const preco     = pick(r, ['PREÇO À VISTA', 'PRECO À VISTA', 'Preço', 'Preco', 'preco']);
       const sinal     = pick(r, ['SINAL', 'Sinal', 'sinal']);
-      const parc80    = pick(r, ['80 PARC. MENSAIS', '80 PARC MENSAIS', '80 PARC', '80 parcelas', '80 PARCELAS']);
-      const inter12   = pick(r, ['12 INTERCAL. SEMESTRAIS', '12 INTERCAL SEMESTRAIS', '12 INTERCALADAS']);
+      const parc40    = pick(r, ['40 PARC. MENSAIS', '40 PARC MENSAIS', '40 PARC', '40 parcelas', '40 PARCELAS']);
+      const inter6    = pick(r, ['6 INTERCAL. SEMESTRAIS', '6 INTERCAL SEMESTRAIS', '6 INTERCALADAS']);
       const chaves    = pick(r, ['CHAVES', 'Chaves', 'chaves']);
       const status    = pick(r, ['STATUS', 'Status', 'status']);
+
+      const condition = paymentPlan.format({
+        price: preco,
+        downPayment: sinal,
+        monthlyInstallment: parc40,
+        semiannualInstallment: inter6,
+        keys: chaves
+      });
 
       // Constantes que servirão para decidir se os valores devem ser ocultados ou não (mesmo código de vendas.js)
       const statusNormalizado = normalizeStatus(status);
       const ocultarValores = statusNormalizado.includes("reservad") || statusNormalizado.includes("vendid");
       const mostrarValor = (valor) => {
-        return ocultarValores ? "-" : brMoney(valor);
+        return ocultarValores ? "-" : valor;
       };
 
       const tr = document.createElement('tr');
@@ -117,11 +126,11 @@
         <td>${esc(unidade)}</td>
         <td>${esc(tipologia)}</td>
         <td>${esc(area)}</td>
-        <td>${esc(mostrarValor(preco))}</td>
-        <td>${esc(mostrarValor(sinal))}</td>
-        <td>${esc(mostrarValor(parc80))}</td>
-        <td>${esc(mostrarValor(inter12))}</td>
-        <td>${esc(mostrarValor(chaves))}</td>
+        <td>${esc(mostrarValor(condition.price))}</td>
+        <td>${esc(mostrarValor(condition.downPayment))}</td>
+        <td>${esc(mostrarValor(condition.monthlyInstallment))}</td>
+        <td>${esc(mostrarValor(condition.semiannualInstallment))}</td>
+        <td>${esc(mostrarValor(condition.keys))}</td>
         <td class="status ${clsStatus(status)}">${esc(status)}</td>
       `;
       frag.appendChild(tr);

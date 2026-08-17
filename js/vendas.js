@@ -34,6 +34,8 @@ const CONFIG = {
   formsTarget: "newtab",
 };
 
+const paymentPlan = window.CityParkPaymentPlan;
+
 // Overrides via localStorage (sem redeploy)
 try {
   const v1 = localStorage.getItem("ctaHideMode");
@@ -140,8 +142,8 @@ async function fetchWebApp() {
         preco: r["PREÇO À VISTA"],
         area: r["ÁREA"],
         sinal: r["SINAL"],
-        parcela: r["80 PARC. MENSAIS"],
-        intercalada: r["12 INTERCAL. SEMESTRAIS"],
+        parcela: r["40 PARC. MENSAIS"],
+        intercalada: r["6 INTERCAL. SEMESTRAIS"],
         chaves: r["CHAVES"],
         status: r["STATUS"],
         tipologia: r["TIPOLOGIA"],
@@ -155,7 +157,7 @@ async function fetchWebApp() {
           pick(raw, ["PREÇO À VISTA", "PRECO A VISTA", "PRECO À VISTA", "PREÃ‡O Ã€ VISTA", "Preço", "Preco", "preco"])
         );
 
-        return {
+        const item = {
           unidade: valueOr(it.unidade, pick(raw, ["UNIDADE", "Unidade", "unidade"])),
           preco:
             typeof preco === "number"
@@ -166,12 +168,29 @@ async function fetchWebApp() {
               : preco,
           area: valueOr(it.area, pick(raw, ["ÁREA", "AREA", "ÃREA", "Área", "area"])),
           sinal: valueOr(it.sinal, pick(raw, ["SINAL", "Sinal", "sinal"])),
-          parcela: valueOr(it.parcela, pick(raw, ["80 PARC. MENSAIS", "80 PARC MENSAIS", "80 PARC", "80 parcelas", "80 PARCELAS"])),
-          intercalada: valueOr(it.intercalada, pick(raw, ["12 INTERCAL. SEMESTRAIS", "12 INTERCAL SEMESTRAIS", "12 INTERCALADAS"])),
+          parcela: valueOr(it.parcela, pick(raw, ["40 PARC. MENSAIS", "40 PARC MENSAIS", "40 PARC", "40 parcelas", "40 PARCELAS"])),
+          intercalada: valueOr(it.intercalada, pick(raw, ["6 INTERCAL. SEMESTRAIS", "6 INTERCAL SEMESTRAIS", "6 INTERCALADAS"])),
           chaves: valueOr(it.chaves, pick(raw, ["CHAVES", "Chaves", "chaves"])),
           status: valueOr(it.status, pick(raw, ["STATUS", "Status", "status"])),
           tipologia: valueOr(it.tipologia, pick(raw, ["TIPOLOGIA", "Tipologia", "tipologia"])),
           imagem: valueOr(it.imagem, pick(raw, ["IMAGEM", "Imagem", "imagem"])),
+        };
+
+        const condition = paymentPlan.format({
+          price: item.preco,
+          downPayment: item.sinal,
+          monthlyInstallment: item.parcela,
+          semiannualInstallment: item.intercalada,
+          keys: item.chaves
+        });
+
+        return {
+          ...item,
+          preco: condition.price,
+          sinal: condition.downPayment,
+          parcela: condition.monthlyInstallment,
+          intercalada: condition.semiannualInstallment,
+          chaves: condition.keys
         };
       })
       .filter((it) => it.unidade || it.tipologia || it.status);
