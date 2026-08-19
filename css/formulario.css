@@ -293,6 +293,49 @@ button, input, textarea { font: inherit; }
   background: #fff;
 }
 
+.payment-builder {
+  padding: 14px;
+  display: grid;
+  grid-template-columns: minmax(220px, 1fr) auto;
+  align-items: end;
+  gap: 10px 14px;
+  border-bottom: 1px solid #d7dee8;
+  background: #f2f7ff;
+}
+
+.payment-builder label { display: grid; gap: 5px; }
+.payment-builder label > span {
+  color: var(--muted);
+  font-size: .68rem;
+  font-weight: 750;
+}
+
+.payment-builder select {
+  width: 100%;
+  height: 42px;
+  padding: 7px 10px;
+  border: 1px solid #bfcce0;
+  border-radius: 8px;
+  color: var(--ink);
+  background: #fff;
+  outline: none;
+}
+
+.payment-builder select:focus { border-color: var(--blue); box-shadow: 0 0 0 3px rgba(0, 74, 173, .1); }
+.payment-builder small { grid-column: 1 / -1; color: var(--muted); font-size: .7rem; }
+.button-add-payment { min-height: 42px; color: #fff; background: var(--navy); }
+.button-add-payment:hover { background: #111d6d; }
+.button-add-payment:disabled { opacity: .55; cursor: not-allowed; transform: none; }
+.dynamic-payments:empty::before {
+  content: "Nenhuma parcela adicionada.";
+  display: block;
+  padding: 15px;
+  color: var(--muted);
+  border-bottom: 1px solid #e4e9f0;
+  font-size: .75rem;
+}
+.dynamic-payments .payment-row:last-child { border-bottom: 1px solid #e4e9f0; }
+
 .payment-row {
   min-width: 0;
   padding: 13px;
@@ -313,6 +356,8 @@ button, input, textarea { font: inherit; }
 .payment-toggle strong { color: var(--navy); font-size: .82rem; }
 .payment-name small,
 .payment-toggle small { color: var(--muted); font-size: .67rem; }
+.payment-name .special-description { margin-top: 6px; display: grid; gap: 5px; }
+.payment-name .special-description > span { color: var(--muted); font-size: .64rem; font-weight: 750; }
 
 .payment-toggle { display: flex; align-items: center; gap: 9px; cursor: pointer; }
 .payment-toggle > input { width: 17px; height: 17px; accent-color: var(--green); }
@@ -339,6 +384,21 @@ button, input, textarea { font: inherit; }
 .payment-row input.invalid { border-color: #cf3c3c; box-shadow: 0 0 0 3px rgba(207, 60, 60, .08); }
 .payment-total { align-self: center; color: var(--navy); font-size: .76rem; text-align: right; white-space: nowrap; }
 .special-payment { grid-template-columns: minmax(150px, .9fr) minmax(190px, 1.35fr) minmax(118px, .8fr) minmax(138px, .9fr) minmax(100px, .7fr); }
+.dynamic-payment-row { grid-template-columns: minmax(150px, 1fr) 74px minmax(118px, .9fr) minmax(138px, 1fr) minmax(100px, .7fr) 38px; }
+.dynamic-payment-row.is-special { grid-template-columns: minmax(190px, 1.35fr) 74px minmax(118px, .9fr) minmax(138px, 1fr) minmax(100px, .7fr) 38px; }
+.payment-remove {
+  width: 34px;
+  height: 34px;
+  align-self: center;
+  border: 0;
+  border-radius: 8px;
+  color: #a4282e;
+  background: #fff0f0;
+  cursor: pointer;
+  font-size: 1.15rem;
+  font-weight: 800;
+}
+.payment-remove:hover { background: #fbdede; }
 
 .calculator-message { margin: 13px 2px 0; color: var(--muted); font-size: .73rem; line-height: 1.45; }
 .calculator-message.error { color: #aa2c31; }
@@ -682,6 +742,13 @@ body.modal-open { overflow: hidden; }
   .payment-toggle,
   .special-description { grid-column: 1 / -1; }
   .payment-total { grid-column: 1 / -1; text-align: left; }
+  .payment-builder { grid-template-columns: 1fr; }
+  .payment-builder small { grid-column: auto; }
+  .payment-builder .button { width: 100%; }
+  .dynamic-payment-row,
+  .dynamic-payment-row.is-special { grid-template-columns: 1fr 1fr; }
+  .dynamic-payment-row .payment-name { grid-column: 1 / -1; }
+  .dynamic-payment-row .payment-remove { grid-column: 2; grid-row: 1; justify-self: end; }
   .form-group.span-2 { grid-column: auto; }
   .heading-with-unit { display: block; }
   .unit-badge { display: inline-block; margin-top: 18px; }

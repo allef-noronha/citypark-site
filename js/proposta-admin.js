@@ -279,7 +279,7 @@ function renderFinance() {
       </tr>`).join("")
     : `<tr><td colspan="5" class="empty-table">Esta proposta foi criada antes da calculadora financeira. A descrição original foi preservada.</td></tr>`;
 
-  const special = components.find(item => item.key === "negociacaoEspecial" && item.descricao);
+  const special = components.find(item => (item.key === "negociacaoEspecial" || item.periodicidade === "outra") && item.descricao);
   elements.financeSpecialNote.hidden = !special;
   elements.financeSpecialNote.innerHTML = special ? `<strong>Negociação especial:</strong> ${escapeHtml(special.descricao)}` : "";
 }
@@ -287,6 +287,27 @@ function renderFinance() {
 function structuredComponents(condition) {
   const source = condition.componentes;
   if (!source || typeof source !== "object") return [];
+  if (condition.schemaVersao >= 3 && source.parcelas && typeof source.parcelas === "object") {
+    const labelsByPeriodicity = {
+      mensal: "Parcelas mensais",
+      semestral: "Parcelas semestrais",
+      anual: "Parcelas anuais",
+      outra: "Negociação especial",
+      unica: "Parcela única"
+    };
+    const installments = Object.entries(source.parcelas)
+      .sort(([first], [second]) => first.localeCompare(second))
+      .map(([key, component]) => ({
+        key,
+        label: component?.descricao || labelsByPeriodicity[component?.periodicidade] || "Parcela",
+        ...(component || {})
+      }));
+    return [
+      { key: "sinal", label: "Sinal", ...(source.sinal || {}) },
+      ...installments,
+      { key: "chaves", label: "Chaves / financiamento", ...(source.chaves || {}) }
+    ].filter(item => item.ativo);
+  }
   const labels = {
     sinal: "Sinal",
     mensais: "Parcelas mensais",
