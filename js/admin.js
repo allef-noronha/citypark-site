@@ -793,7 +793,9 @@ function renderProposalCard({ unit, proposal }, status) {
         <p>Status: <strong class="status-word">${escapeHtml(statusLabel(status))}</strong></p>
         <div class="tags-row"><span>Tags:</span>${tags.map(tag => `<span class="tag">${escapeHtml(tag)}</span>`).join("")}</div>
         <div class="card-utilities">
-          <button class="mini-button" type="button" data-action="proposal-details" data-proposal-id="${escapeHtml(proposalId)}" data-unit-id="${escapeHtml(unit.id)}">Ver detalhes</button>
+          ${proposalId
+            ? `<a class="mini-button process-link" href="proposta-admin.html?id=${encodeURIComponent(proposalId)}">Abrir processo</a>`
+            : `<button class="mini-button" type="button" data-action="unit-details" data-unit-id="${escapeHtml(unit.id)}">Ver detalhes</button>`}
           ${proposalId ? `<button class="comment-button ${proposal?.comentarioAdmin ? "has-comment" : ""}" type="button" data-action="comment" data-proposal-id="${escapeHtml(proposalId)}" aria-label="Comentário administrativo" title="${escapeHtml(proposal?.comentarioAdmin ?? "Adicionar comentário")}"></button>` : ""}
         </div>
       </div>
@@ -825,7 +827,9 @@ function renderSoldCard({ unit, proposal, proposalId, brokerName, clientName, ta
           <p>Status: <strong class="status-word">${escapeHtml(statusLabel("vendida"))}</strong></p>
           <div class="tags-row"><span>Tags:</span>${tags.map(tag => `<span class="tag">${escapeHtml(tag)}</span>`).join("")}</div>
           <div class="card-utilities">
-            <button class="mini-button" type="button" data-action="proposal-details" data-proposal-id="${escapeHtml(proposalId)}" data-unit-id="${escapeHtml(unit.id)}">Ver detalhes</button>
+            ${proposalId
+              ? `<a class="mini-button process-link" href="proposta-admin.html?id=${encodeURIComponent(proposalId)}">Abrir processo</a>`
+              : `<button class="mini-button" type="button" data-action="unit-details" data-unit-id="${escapeHtml(unit.id)}">Ver detalhes</button>`}
             ${proposalId ? `<button class="comment-button ${proposal?.comentarioAdmin ? "has-comment" : ""}" type="button" data-action="comment" data-proposal-id="${escapeHtml(proposalId)}" aria-label="Comentário administrativo" title="${escapeHtml(proposal?.comentarioAdmin ?? "Adicionar comentário")}"></button>` : ""}
           </div>
         </div>
@@ -1483,7 +1487,8 @@ function renderManagerProposalCard(proposal) {
       <p>Status: ${display(statusLabel(status))}</p>
       <p>Observação: “${display(observation)}”</p>
       ${finalDate ? `<p>Finalizada em: ${formatDate(finalDate)}</p>` : ""}
-      <button class="mini-button" type="button" data-manager-proposal="${escapeHtml(proposal.id)}">Ver detalhes</button>
+      <a class="mini-button process-link" href="proposta-admin.html?id=${encodeURIComponent(proposal.id)}">Abrir processo</a>
+      <button class="mini-button" type="button" data-manager-proposal="${escapeHtml(proposal.id)}">Ver histórico</button>
       <div style="clear:both"></div>
     </article>`;
 }

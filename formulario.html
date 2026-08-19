@@ -165,11 +165,75 @@
             </label>
             <label class="choice-card wide">
               <input type="radio" name="proposalType" value="outro" />
-              <span><strong>Outro</strong><small>Descreva uma composição diferente para análise.</small></span>
+              <span><strong>Outro</strong><small>Monte uma condição personalizada e confira o total automaticamente.</small></span>
             </label>
-            <div class="form-group custom-condition hidden" id="customProposalWrap">
-              <label for="customProposal">Descreva a condição desejada <span>*</span></label>
-              <textarea id="customProposal" name="customProposal" rows="4" placeholder="Ex.: sinal de 15%, 60 parcelas mensais..."></textarea>
+
+            <div id="proposalValueSummary" class="proposal-value-summary" aria-live="polite">
+              <div><span>Valor da tabela</span><strong id="proposalTableValue">Carregando…</strong></div>
+              <div><span>Total preenchido</span><strong id="proposalFilledValue">—</strong></div>
+              <div id="proposalDifferenceBox"><span>Diferença</span><strong id="proposalDifferenceValue">—</strong></div>
+            </div>
+
+            <div class="custom-condition hidden" id="customProposalWrap">
+              <div class="calculator-heading">
+                <div>
+                  <h3>Composição personalizada</h3>
+                  <p>Informe os valores em reais. Para parcelas recorrentes, o total será quantidade × valor da parcela.</p>
+                </div>
+                <span id="proposalBalanceStatus" class="balance-status">Preencha a condição</span>
+              </div>
+
+              <div class="payment-grid" id="paymentGrid">
+                <article class="payment-row required-payment" data-payment-row="sinal" data-periodicity="unica">
+                  <div class="payment-name"><strong>Sinal</strong><small>Obrigatório · valor de entrada</small></div>
+                  <label><span>Qtd.</span><input id="paymentSinalQuantity" type="number" value="1" min="1" max="1" readonly></label>
+                  <label><span>Valor</span><input id="paymentSinalValue" class="currency-input" type="text" inputmode="decimal" placeholder="R$ 0,00"></label>
+                  <label><span>Data</span><input id="paymentSinalDate" type="date"></label>
+                  <strong class="payment-total" data-payment-total="sinal">R$ 0,00</strong>
+                </article>
+
+                <article class="payment-row optional-payment" data-payment-row="mensais" data-periodicity="mensal">
+                  <label class="payment-toggle"><input type="checkbox" data-payment-toggle="mensais"><span><strong>Mensais</strong><small>Parcelas mensais</small></span></label>
+                  <label><span>Qtd.</span><input id="paymentMensaisQuantity" type="number" min="1" max="240" disabled></label>
+                  <label><span>Valor</span><input id="paymentMensaisValue" class="currency-input" type="text" inputmode="decimal" placeholder="R$ 0,00" disabled></label>
+                  <label><span>1º vencimento</span><input id="paymentMensaisDate" type="date" disabled></label>
+                  <strong class="payment-total" data-payment-total="mensais">R$ 0,00</strong>
+                </article>
+
+                <article class="payment-row optional-payment" data-payment-row="semestrais" data-periodicity="semestral">
+                  <label class="payment-toggle"><input type="checkbox" data-payment-toggle="semestrais"><span><strong>Semestrais</strong><small>Parcelas a cada 6 meses</small></span></label>
+                  <label><span>Qtd.</span><input id="paymentSemestraisQuantity" type="number" min="1" max="60" disabled></label>
+                  <label><span>Valor</span><input id="paymentSemestraisValue" class="currency-input" type="text" inputmode="decimal" placeholder="R$ 0,00" disabled></label>
+                  <label><span>1º vencimento</span><input id="paymentSemestraisDate" type="date" disabled></label>
+                  <strong class="payment-total" data-payment-total="semestrais">R$ 0,00</strong>
+                </article>
+
+                <article class="payment-row optional-payment" data-payment-row="anuais" data-periodicity="anual">
+                  <label class="payment-toggle"><input type="checkbox" data-payment-toggle="anuais"><span><strong>Anuais</strong><small>Parcelas a cada 12 meses</small></span></label>
+                  <label><span>Qtd.</span><input id="paymentAnuaisQuantity" type="number" min="1" max="30" disabled></label>
+                  <label><span>Valor</span><input id="paymentAnuaisValue" class="currency-input" type="text" inputmode="decimal" placeholder="R$ 0,00" disabled></label>
+                  <label><span>1º vencimento</span><input id="paymentAnuaisDate" type="date" disabled></label>
+                  <strong class="payment-total" data-payment-total="anuais">R$ 0,00</strong>
+                </article>
+
+                <article class="payment-row optional-payment special-payment" data-payment-row="negociacaoEspecial" data-periodicity="outra">
+                  <label class="payment-toggle"><input type="checkbox" data-payment-toggle="negociacaoEspecial"><span><strong>Outros</strong><small>Negociação especial</small></span></label>
+                  <label class="special-description"><span>Descrição</span><input id="paymentSpecialDescription" type="text" maxlength="300" placeholder="Descreva a negociação" disabled></label>
+                  <label><span>Valor</span><input id="paymentSpecialValue" class="currency-input" type="text" inputmode="decimal" placeholder="R$ 0,00" disabled></label>
+                  <label><span>Data</span><input id="paymentSpecialDate" type="date" disabled></label>
+                  <strong class="payment-total" data-payment-total="negociacaoEspecial">R$ 0,00</strong>
+                </article>
+
+                <article class="payment-row required-payment" data-payment-row="chaves" data-periodicity="unica">
+                  <div class="payment-name"><strong>Chaves / financiamento</strong><small>Obrigatório · parcela final na entrega</small></div>
+                  <label><span>Qtd.</span><input id="paymentChavesQuantity" type="number" value="1" min="1" max="1" readonly></label>
+                  <label><span>Valor</span><input id="paymentChavesValue" class="currency-input" type="text" inputmode="decimal" placeholder="R$ 0,00"></label>
+                  <label><span>Data</span><input id="paymentChavesDate" type="date"></label>
+                  <strong class="payment-total" data-payment-total="chaves">R$ 0,00</strong>
+                </article>
+              </div>
+
+              <p id="calculatorMessage" class="calculator-message" role="status" aria-live="polite">O total precisa ser exatamente igual ao valor da tabela para permitir o envio.</p>
             </div>
           </fieldset>
 
@@ -199,6 +263,6 @@
     <p>© 2026 | Plano A Construtora | Todos os direitos reservados.</p>
   </div>
 </footer>
-  <script type="module" src="js/formulario.js"></script>
+  <script type="module" src="js/formulario.js?v=20260819-1"></script>
 </body>
 </html>
