@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#091253">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Processo da proposta - City Park</title>
+  <link rel="stylesheet" href="css/theme.css">
+  <link rel="stylesheet" href="css/proposta-admin.css">
+  <link rel="icon" href="data:,">
+  <style>html:not(.page-authorized) body { visibility: hidden; }</style>
+</head>
+<body>
+  <header class="process-topbar">
+    <a href="painel-admin.html" class="process-brand" aria-label="Voltar ao painel administrativo">
+      <img src="img/CityPark-Branco.png" alt="City Park">
+    </a>
+    <nav class="topbar-actions" aria-label="Navegação administrativa">
+      <a href="painel-admin.html" class="topbar-link">Kanban</a>
+      <a href="vendas.html" class="topbar-link">Tabela de Vendas</a>
+      <button id="btnSair" class="topbar-logout" type="button">Sair</button>
+    </nav>
+  </header>
+
+  <div id="loadingState" class="loading-state" role="status" aria-live="polite">
+    <span class="loading-spinner" aria-hidden="true"></span>
+    <p>Carregando processo da proposta…</p>
+  </div>
+
+  <main id="processApp" class="process-app" hidden>
+    <header class="proposal-summary">
+      <div class="summary-id">
+        <p class="summary-eyebrow">Processo comercial</p>
+        <h1>Reserva: <span id="summaryProposalId">—</span></h1>
+        <p>Data de abertura: <strong id="summaryCreatedAt">—</strong></p>
+      </div>
+      <dl class="summary-meta">
+        <div><dt>Empreendimento</dt><dd>City Park</dd></div>
+        <div><dt>Unidade</dt><dd id="summaryUnit">—</dd></div>
+        <div><dt>Corretor</dt><dd id="summaryBroker">—</dd></div>
+        <div><dt>CRECI</dt><dd id="summaryCreci">—</dd></div>
+        <div><dt>Cliente</dt><dd id="summaryClient">—</dd></div>
+        <div><dt>CPF/CNPJ</dt><dd id="summaryDocument">—</dd></div>
+      </dl>
+      <a href="painel-admin.html" class="summary-back">Voltar ao Kanban</a>
+    </header>
+
+    <div class="process-layout">
+      <aside class="module-sidebar" aria-label="Módulos da proposta">
+        <p class="sidebar-label">Módulos</p>
+        <nav id="moduleNavigation">
+          <button class="module-link active" type="button" data-module-target="informacoes" aria-current="page">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 8h.01M11 12h1v4h1M4 12a8 8 0 1 0 16 0 8 8 0 1 0-16 0Z"/></svg>
+            <span>Informações</span>
+          </button>
+          <button class="module-link" type="button" data-module-target="financeiro">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2v20M17 6.5c0-1.4-2.2-2.5-5-2.5S7 5.1 7 6.5 9.2 9 12 9s5 1.1 5 2.5S14.8 14 12 14s-5 1.1-5 2.5S9.2 19 12 19s5-1.1 5-2.5"/></svg>
+            <span>Financeiro</span>
+          </button>
+          <button class="module-link" type="button" data-module-target="contratos">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3h8l4 4v14H7V3Z M15 3v5h5 M10 12h6M10 16h6"/></svg>
+            <span>Contratos</span>
+            <span id="contractBadge" class="module-badge" hidden></span>
+          </button>
+          <button class="module-link" type="button" data-module-target="documentos">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h6l2 3h8v13H4V4Z M12 11v6M9 14h6"/></svg>
+            <span>Documentos</span>
+            <span id="documentBadge" class="module-badge" hidden></span>
+          </button>
+          <button class="module-link" type="button" data-module-target="mensagens">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v12H8l-4 4V5Z M8 9h8M8 13h5"/></svg>
+            <span>Mensagens</span>
+            <span id="messageBadge" class="module-badge" hidden></span>
+          </button>
+          <button class="module-link" type="button" data-module-target="historico">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12a8 8 0 1 0 2.3-5.7L4 8.6M4 4v4h4M12 7v5l3 2"/></svg>
+            <span>Histórico</span>
+          </button>
+        </nav>
+      </aside>
+
+      <div class="module-content">
+        <section class="module-panel active" data-module="informacoes" aria-labelledby="informationTitle">
+          <div class="module-heading">
+            <div>
+              <p class="module-kicker">Visão geral</p>
+              <h2 id="informationTitle">Informações</h2>
+              <p>Dados consolidados da proposta, da unidade e das pessoas envolvidas.</p>
+            </div>
+            <div id="informationStatus" class="status-pill">—</div>
+          </div>
+
+          <div class="info-grid">
+            <article class="content-card info-card">
+              <div class="card-heading"><h3>Proposta e unidade</h3></div>
+              <dl id="proposalInformation" class="detail-list"></dl>
+            </article>
+            <article class="content-card info-card">
+              <div class="card-heading"><h3>Corretor responsável</h3></div>
+              <dl id="brokerInformation" class="detail-list"></dl>
+            </article>
+            <article class="content-card info-card">
+              <div class="card-heading"><h3>Cliente proponente</h3></div>
+              <dl id="clientInformation" class="detail-list"></dl>
+            </article>
+            <article class="content-card info-card condition-highlight">
+              <div class="card-heading"><h3>Condição da proposta</h3></div>
+              <p id="conditionSummary" class="condition-description">—</p>
+              <button class="text-action" type="button" data-go-module="financeiro">Ver detalhamento financeiro →</button>
+            </article>
+          </div>
+        </section>
+
+        <section class="module-panel" data-module="financeiro" aria-labelledby="financeTitle" hidden>
+          <div class="module-heading">
+            <div>
+              <p class="module-kicker">Condição comercial</p>
+              <h2 id="financeTitle">Financeiro</h2>
+              <p>Conferência dos valores informados e da composição de pagamento.</p>
+            </div>
+          </div>
+
+          <div class="finance-totals">
+            <article class="total-card"><span>Valor da tabela</span><strong id="financeTableValue">—</strong></article>
+            <article class="total-card"><span>Total da proposta</span><strong id="financeProposalValue">—</strong></article>
+            <article id="financeDifferenceCard" class="total-card"><span>Diferença</span><strong id="financeDifference">—</strong></article>
+          </div>
+
+          <article class="content-card">
+            <div class="card-heading finance-heading">
+              <div><h3>Composição da proposta</h3><p id="financeConditionType">—</p></div>
+              <span id="financeValidation" class="validation-pill">—</span>
+            </div>
+            <div class="table-wrap">
+              <table class="finance-table">
+                <thead><tr><th>Componente</th><th>Qtd.</th><th>Valor unitário</th><th>Total</th><th>Primeiro vencimento</th></tr></thead>
+                <tbody id="financeRows"></tbody>
+              </table>
+            </div>
+            <div id="financeSpecialNote" class="special-note" hidden></div>
+          </article>
+        </section>
+
+        <section class="module-panel" data-module="contratos" aria-labelledby="contractsTitle" hidden>
+          <div class="module-heading">
+            <div>
+              <p class="module-kicker">Formalização</p>
+              <h2 id="contractsTitle">Contratos</h2>
+              <p>Arquivos encaminhados para análise jurídica e assinatura.</p>
+            </div>
+          </div>
+
+          <article class="content-card form-content-card">
+            <div class="card-heading"><h3>Adicionar contrato</h3></div>
+            <form id="contractForm" class="asset-form">
+              <label><span>Título do contrato</span><input id="contractTitle" type="text" maxlength="120" required placeholder="Ex.: Instrumento particular de compra e venda"></label>
+              <label><span>Etapa</span><select id="contractStage"><option value="juridico">Jurídico</option><option value="assinatura">Assinatura</option><option value="concluido">Concluído</option></select></label>
+              <label class="file-field"><span>Arquivo PDF</span><input id="contractFile" type="file" accept="application/pdf" required><small>Somente PDF, até 15 MB.</small></label>
+              <button class="primary-action" type="submit">Enviar contrato</button>
+            </form>
+          </article>
+          <div id="contractList" class="asset-list" aria-live="polite"></div>
+        </section>
+
+        <section class="module-panel" data-module="documentos" aria-labelledby="documentsTitle" hidden>
+          <div class="module-heading with-action">
+            <div>
+              <p class="module-kicker">Cadastro do cliente</p>
+              <h2 id="documentsTitle">Documentos</h2>
+              <p>Solicitação, recebimento e conferência dos documentos necessários.</p>
+            </div>
+            <button id="requestDefaultDocuments" class="secondary-action" type="button">Solicitar documentos padrão</button>
+          </div>
+
+          <article class="content-card form-content-card">
+            <div class="card-heading"><h3>Nova solicitação ou envio</h3></div>
+            <form id="documentForm" class="asset-form">
+              <label><span>Documento</span><input id="documentTitle" type="text" maxlength="100" required placeholder="Ex.: Certidão de casamento"></label>
+              <label><span>Categoria</span><select id="documentCategory"><option value="identificacao">Identificação</option><option value="residencia">Residência</option><option value="renda">Renda</option><option value="civil">Estado civil</option><option value="outro">Outro</option></select></label>
+              <label class="file-field"><span>Arquivo opcional</span><input id="documentFile" type="file" accept="image/jpeg,image/png,application/pdf"><small>PDF, JPG ou PNG, até 10 MB.</small></label>
+              <button class="primary-action" type="submit">Salvar solicitação</button>
+            </form>
+          </article>
+          <div id="documentList" class="asset-list" aria-live="polite"></div>
+        </section>
+
+        <section class="module-panel messages-panel" data-module="mensagens" aria-labelledby="messagesTitle" hidden>
+          <div class="module-heading">
+            <div>
+              <p class="module-kicker">Comunicação do processo</p>
+              <h2 id="messagesTitle">Mensagens</h2>
+              <p>Canal de suporte entre a administração e o corretor responsável.</p>
+            </div>
+          </div>
+          <article class="content-card chat-card">
+            <div id="messageList" class="message-list" aria-live="polite"></div>
+            <form id="messageForm" class="message-form">
+              <label for="messageField" class="sr-only">Escrever mensagem</label>
+              <textarea id="messageField" maxlength="2000" rows="3" required placeholder="Escreva uma mensagem para o corretor…"></textarea>
+              <button class="primary-action" type="submit">Enviar mensagem</button>
+            </form>
+          </article>
+        </section>
+
+        <section class="module-panel" data-module="historico" aria-labelledby="historyTitle" hidden>
+          <div class="module-heading">
+            <div>
+              <p class="module-kicker">Rastreabilidade</p>
+              <h2 id="historyTitle">Histórico</h2>
+              <p>Registro cronológico das movimentações e ações desta proposta.</p>
+            </div>
+          </div>
+          <article class="content-card">
+            <div id="historyTimeline" class="history-timeline" aria-live="polite"></div>
+          </article>
+        </section>
+      </div>
+    </div>
+  </main>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <script type="module" src="js/proposta-admin.js"></script>
+</body>
+</html>

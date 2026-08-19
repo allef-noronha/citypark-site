@@ -1,106 +1,170 @@
-import { db } from "./firebase.js";
-import {
-  collection,
-  getDocs
-} from "https://www.gstatic.com/firebasejs/10.12.1/firebase-firestore.js";
+// js/tabela.js
+(function () {
+  'use strict';
 
-const tbody = document.getElementById("tvBody");
-const stamp = document.getElementById("stamp");
-const statusFilter = document.getElementById("statusFilter");
-let allRows = [];
+  // URL do seu Web App (Apps Script publicado como Anyone)
+  const WEBAPP_URL =
+    'https://script.google.com/macros/s/AKfycbwD1zCtYAD_UMaFv9rF63QWJ-RYqZbTv5RbRSVCoUqpZB8WFnOqJAhdqCmd_kxhneewoA/exec';
 
-function escapeHTML(value) {
-  return String(value ?? "").replace(/[&<>"']/g, character => ({
-    "&": "&amp;",
-    "<": "&lt;",
-    ">": "&gt;",
-    '"': "&quot;",
-    "'": "&#39;"
-  })[character]);
-}
+  const $ = (s) => document.querySelector(s);
+  const tbody = $('#tvBody');
+  const stamp = $('#stamp');
+  const statusFilter = $('#statusFilter');
+  const paymentPlan = window.CityParkPaymentPlan;
 
-function normalize(value) {
-  return String(value ?? "")
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase()
-    .trim();
-}
+  let allRows = [];
 
-function statusClass(value) {
-  const status = normalize(value);
-  if (status.includes("vend")) return "vendido";
-  if (status.includes("reserv") || status.includes("aprov")) return "reservado";
-  return "disponivel";
-}
+  const esc = (x) =>
+    String(x ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
-function statusLabel(value) {
-  const status = statusClass(value);
-  if (status === "vendido") return "Vendido";
-  if (status === "reservado") return "Reservado";
-  return "Disponível";
-}
+  const brMoney = (v) => {
+    if (v == null || v === '') return '';
+    if (String(v).trim() === '-') return '-';
+    const n = Number(String(v).replace(/[^\d.-]/g, ''));
+    return Number.isFinite(n) ? n.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) : String(v);
+  };
 
-function moneyFromCents(value) {
-  if (typeof value !== "number") return "-";
-  return (value / 100).toLocaleString("pt-BR", {
-    style: "currency",
-    currency: "BRL"
-  });
-}
+  const normalizeStatus = (s) =>
+    String(s || '')
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .trim();
 
-function render(rows) {
-  tbody.innerHTML = "";
-  const fragment = document.createDocumentFragment();
+  const clsStatus = (s) => {
+    const k = normalizeStatus(s);
+    if (k.includes('vend')) return 'vendido';
+    if (k.includes('reserv')) return 'reservado';
+    return 'disponivel';
+  };
 
-  for (const row of rows) {
-    const values = row.valores || {};
-    const statusNormalizado = normalize(row.status);
-
-    const ocultarValores = statusNormalizado.includes("vendid") || statusNormalizado.includes("reservad");
-
-    const mostrarValores = value => ocultarValores ? "-" : moneyFromCents(value);
-    const tr = document.createElement("tr");
-    tr.innerHTML = `
-      <td>${escapeHTML(row.unidade)}</td>
-      <td>${escapeHTML(row.tipologia)}</td>
-      <td>${escapeHTML(row.areaM2)}</td>
-      <td>${escapeHTML(mostrarValores(values.precoAVistaCentavos))}</td>
-      <td>${escapeHTML(mostrarValores(values.sinalCentavos))}</td>
-      <td>${escapeHTML(mostrarValores(values.parcelasMensaisCentavos))}</td>
-      <td>${escapeHTML(mostrarValores(values.intercaladasSemestraisCentavos))}</td>
-      <td>${escapeHTML(mostrarValores(values.chavesCentavos))}</td>
-      <td class="status ${statusClass(row.status)}">${statusLabel(row.status)}</td>
-    `;
-    fragment.appendChild(tr);
+  function normalizeResponse(data) {
+    if (Array.isArray(data)) {
+      if (data.length && typeof data[0] === 'object' && !Array.isArray(data[0])) return data;
+      if (data.length && Array.isArray(data[0])) {
+        const headers = data[0].map(String);
+        return data.slice(1).map((row) => {
+          const obj = {};
+          headers.forEach((h, i) => (obj[h] = row[i]));
+          return obj;
+        });
+      }
+      return [];
+    }
+    const candidates = ['rows', 'data', 'values', 'resultado', 'result'];
+    for (const key of candidates) {
+      if (data && Array.isArray(data[key])) {
+        const arr = data[key];
+        if (arr.length && Array.isArray(arr[0])) {
+          const headers = arr[0].map(String);
+          return arr.slice(1).map((row) => {
+            const obj = {};
+            headers.forEach((h, i) => (obj[h] = row[i]));
+            return obj;
+          });
+        }
+        return arr;
+      }
+    }
+    return [];
   }
 
-  tbody.appendChild(fragment);
-  stamp.textContent = `Atualizado agora: ${new Date().toLocaleString("pt-BR")}`;
-}
+  const pick = (obj, keys) => {
+    for (const k of keys) if (obj[k] != null && obj[k] !== '') return obj[k];
+    return '';
+  };
 
-function applyFilter() {
-  const selected = normalize(statusFilter?.value);
-  const rows = selected
-    ? allRows.filter(row => statusClass(row.status) === selected)
-    : allRows;
-  render(rows);
-}
-
-async function load() {
-  try {
-    stamp.textContent = "Carregando dados…";
-    const snapshot = await getDocs(collection(db, "unidades"));
-    allRows = snapshot.docs
-      .map(docSnapshot => ({ id: docSnapshot.id, ...docSnapshot.data() }))
-      .sort((a, b) => String(a.unidade).localeCompare(String(b.unidade), "pt-BR", { numeric: true }));
-    applyFilter();
-  } catch (error) {
-    console.error("[tabela] erro:", error);
-    stamp.textContent = "Falha ao carregar a tabela. Tente recarregar a página.";
+  function statusLabel() {
+    return statusFilter?.selectedOptions?.[0]?.textContent || 'Todos os status';
   }
-}
 
-statusFilter?.addEventListener("change", applyFilter);
-document.getElementById("btnPrint")?.addEventListener("click", () => window.print());
-load();
+  function getStatus(row) {
+    return pick(row, ['STATUS', 'Status', 'status']);
+  }
+
+  function applyFilter() {
+    const selected = normalizeStatus(statusFilter?.value || '');
+    const rows = selected
+      ? allRows.filter((row) => clsStatus(getStatus(row)) === selected)
+      : allRows;
+
+    render(rows);
+  }
+
+  function render(rows) {
+    tbody.innerHTML = '';
+    const frag = document.createDocumentFragment();
+
+    rows.forEach((r) => {
+      const unidade   = pick(r, ['UNIDADE', 'Unidade', 'unidade']);
+      const tipologia = pick(r, ['TIPOLOGIA', 'Tipologia', 'tipologia']);
+      const area      = pick(r, ['ÁREA', 'AREA', 'Área', 'area']);
+      const preco     = pick(r, ['PREÇO À VISTA', 'PRECO À VISTA', 'Preço', 'Preco', 'preco']);
+      const sinal     = pick(r, ['SINAL', 'Sinal', 'sinal']);
+      const parc40    = pick(r, ['40 PARC. MENSAIS', '40 PARC MENSAIS', '40 PARC', '40 parcelas', '40 PARCELAS']);
+      const inter6    = pick(r, ['6 INTERCAL. SEMESTRAIS', '6 INTERCAL SEMESTRAIS', '6 INTERCALADAS']);
+      const chaves    = pick(r, ['CHAVES', 'Chaves', 'chaves']);
+      const status    = pick(r, ['STATUS', 'Status', 'status']);
+
+      const condition = paymentPlan.format({
+        price: preco,
+        downPayment: sinal,
+        monthlyInstallment: parc40,
+        semiannualInstallment: inter6,
+        keys: chaves
+      });
+
+      // Constantes que servirão para decidir se os valores devem ser ocultados ou não (mesmo código de vendas.js)
+      const statusNormalizado = normalizeStatus(status);
+      const ocultarValores = statusNormalizado.includes("reservad") || statusNormalizado.includes("vendid");
+      const mostrarValor = (valor) => {
+        return ocultarValores ? "-" : valor;
+      };
+
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>${esc(unidade)}</td>
+        <td>${esc(tipologia)}</td>
+        <td>${esc(area)}</td>
+        <td>${esc(mostrarValor(condition.price))}</td>
+        <td>${esc(mostrarValor(condition.downPayment))}</td>
+        <td>${esc(mostrarValor(condition.monthlyInstallment))}</td>
+        <td>${esc(mostrarValor(condition.semiannualInstallment))}</td>
+        <td>${esc(mostrarValor(condition.keys))}</td>
+        <td class="status ${clsStatus(status)}">${esc(status)}</td>
+      `;
+      frag.appendChild(tr);
+    });
+
+    tbody.appendChild(frag);
+    stamp.textContent = `Atualizado agora: ${new Date().toLocaleString('pt-BR')}`;
+  }
+
+  async function load() {
+    try {
+      stamp.textContent = 'Carregando dados…';
+      const res = await fetch(WEBAPP_URL, { cache: 'no-store', credentials: 'omit' });
+      if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
+
+      let data;
+      const ct = res.headers.get('content-type') || '';
+      if (ct.includes('application/json')) {
+        data = await res.json();
+      } else {
+        const txt = await res.text();
+        try { data = JSON.parse(txt); } catch { data = []; }
+      }
+
+      allRows = normalizeResponse(data);
+      applyFilter();
+    } catch (e) {
+      console.error('[tabela] erro:', e);
+      stamp.textContent = 'Falha ao carregar a tabela. Tente recarregar a página.';
+    }
+  }
+
+  statusFilter?.addEventListener('change', applyFilter);
+  $('#btnPrint')?.addEventListener('click', () => window.print());
+
+  load();
+})();

@@ -395,7 +395,7 @@ function mostrarDetalhes(index) {
     <p><strong>Chaves:</strong> ${mostrarValor(item.chaves)}</p>
 
     <div class="popup-botoes">
-      ${podeProposta ? `<button class="ver-btn" data-action="propor" data-unidade="${encodeURIComponent(item.unidade)}">Enviar Proposta</button>` : ""}
+      ${podeProposta ? `<button class="ver-btn" data-action="propor" data-unidade="${encodeURIComponent(item.unidade)}">Enviar Proposta <i class="fa-solid fa-arrow-up-right-from-square" style="font-size: 0.8em; margin-left: 2px;" aria-hidden="true"></i></button>` : ""}
       ${item.imagem && item.imagem !== "-" ? `<button class="ver-btn" data-action="planta" data-imagem="${encodeURIComponent(item.imagem)}">Planta</button>` : ""}
       <button class="ver-btn" data-action="fechar">Fechar</button>
     </div>

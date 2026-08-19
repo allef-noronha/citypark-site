@@ -10,9 +10,15 @@
     font-src  'self' https://cdnjs.cloudflare.com data:;
     script-src 'self' https://www.gstatic.com;
     connect-src 'self'
-      https://firestore.googleapis.com
-      https://identitytoolkit.googleapis.com
-      https://securetoken.googleapis.com;
+      https://*.googleapis.com
+      https://script.google.com
+      https://script.googleapis.com
+      https://script.googleusercontent.com
+      https://*.googleusercontent.com
+      https://www.googleapis.com
+      https://docs.google.com
+      https://docs.googleusercontent.com
+      https://spreadsheets.google.com;
   ">
   <title>Tabela de Vendas • Resumo</title>
   <link rel="stylesheet" href="css/theme.css">
@@ -58,13 +64,13 @@
 
     /* Larguras consistentes por coluna */
     col.c1{width:9%}  /* Unidade  */
-    col.c2{width:13%}  /* Tipologia*/
+    col.c2{width:10%}  /* Tipologia*/
     col.c3{width:9%}  /* Área     */
-    col.c4{width:15%}  /* Preço    */
+    col.c4{width:13%}  /* Preço    */
     col.c5{width:11%}  /* Sinal    */
-    col.c6{width:11%}  /* 80 parc. */
-    col.c7{width:11%}  /* 12 inter */
-    col.c8{width:11%}   /* Chaves   */
+    col.c6{width:11%}  /* 40 parc. */
+    col.c7{width:11%}  /* 6 inter */
+    col.c8{width:16%}   /* Chaves   */
     col.c9{width:10%}   /* Status   */
 
     thead th{background:var(--head-bg);padding:12px;font-weight:700;white-space:normal;line-height:1.25}
@@ -89,11 +95,16 @@
     .brandbar .center{
       flex:1 1 auto;text-align:center
     }
-    .brandbar .brand-title{
+    .brandbar h1{
       margin:0 0 6px;font-size:28px;letter-spacing:.6px
     }
     .brandbar .subtitle{
       font-size:14px;color:#555;line-height:1.35
+    }
+    .brandbar .subtitle-dois{
+      font-size: 10px;
+      color: #555;
+      line-height: 1.35;
     }
 
     /* Status colorido */
@@ -105,7 +116,7 @@
     position:relative;
     display:inline-flex;
     align-items:center;
-    width:180px;
+    width:200px;
     height:38px;
   }
 
@@ -177,8 +188,8 @@
       .thead-brand th{ padding:10px 8px 6px; }
       .brandbar .left img,
       .brandbar .right img{ height:28px }
-      .brandbar .brand-title{ font-size:18px;margin:0 0 2px }
-      .brandbar .subtitle{ font-size:11px }
+      .brandbar h1{ font-size:18px;margin:0 0 2px }
+      .brandbar .subtitle{ font-size:11px;  }
     }
   </style>
 </head>
@@ -234,17 +245,21 @@
         <thead>
           <!-- Banner (1 TH cobrindo 9 colunas) -->
           <tr class="thead-brand">
-            <th colspan="9" scope="colgroup">
+            <th colspan="9">
               <div class="brandbar">
                 <div class="left">
                   <!-- Atualize o caminho da logo da construtora -->
                   <img src="img/Logo-PlanoA-30-anos-08.png" alt="Plano A Construtora">
                 </div>
                 <div class="center">
-                  <div class="brand-title">TABELA DE VENDAS</div>
+                  <h1>TABELA DE VENDAS</h1>
                   <div class="subtitle">
                     Prazo de entrega: Dezembro/2029<br>
                     Localização: Complexo Parque Shopping Maceió
+                  </div>
+                  <!-- Ver a posição com Camilla! -->
+                  <div class="subtitle-dois">
+                    O valor do financiamento poderá ser realizado com instituição bancária ou diretamente com a construtora (a consultar).
                   </div>
                 </div>
                 <div class="right">
@@ -257,15 +272,15 @@
 
           <!-- Cabeçalho das colunas -->
           <tr class="thead-cols">
-            <th scope="col">Unidade</th>
-            <th scope="col">Tipologia</th>
-            <th scope="col">Área (m²)</th>
-            <th scope="col">Preço à vista</th>
-            <th scope="col">Sinal (20%)</th>
-            <th scope="col">80 parc. mensais</th>
-            <th scope="col">12 intercal. semestrais</th>
-            <th scope="col">Chaves</th>
-            <th scope="col">Status</th>
+            <th>Unidade</th>
+            <th>Tipologia</th>
+            <th>Área (m²)</th>
+            <th>Preço à vista</th>
+            <th>Sinal</th>
+            <th>40 parc. mensais</th>
+            <th>6 intercal. semestrais</th>
+            <th>Chaves/Financiamento</th>
+            <th>Status</th>
           </tr>
         </thead>
 
@@ -275,6 +290,7 @@
   </main>
 
   <script type="module" src="js/guard-aprovado.js"></script>
-  <script type="module" src="js/tabela.js"></script>
+  <script src="js/condicao-venda.js?v=20260817-2"></script>
+  <script src="js/tabela.js?v=20260817-2" defer></script>
 </body>
 </html>
