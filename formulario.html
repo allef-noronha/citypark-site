@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#091253" />
   <title>Enviar proposta | City Park</title>
   <link rel="stylesheet" href="css/theme.css" />
-  <link rel="stylesheet" href="css/formulario.css" />
+  <link rel="stylesheet" href="css/formulario.css?v=20260820-1" />
   <link rel="icon" href="data:," />
 </head>
 <body>
@@ -192,21 +192,13 @@
                   <strong class="payment-total" data-payment-total="sinal">R$ 0,00</strong>
                 </article>
 
-                <div class="payment-builder" id="paymentBuilder">
-                  <label for="paymentTypeSelect">
-                    <span>Tipo de parcela</span>
-                    <select id="paymentTypeSelect">
-                      <option value="mensal">Mensal</option>
-                      <option value="semestral">Semestral</option>
-                      <option value="anual">Anual</option>
-                      <option value="outra">Outro / negociação especial</option>
-                    </select>
-                  </label>
-                  <button type="button" class="button button-add-payment" id="addPaymentButton">+ Adicionar parcela</button>
-                  <small>Você pode adicionar o mesmo tipo mais de uma vez, com quantidades e valores diferentes.</small>
-                </div>
-
                 <div id="dynamicPayments" class="dynamic-payments" aria-live="polite"></div>
+
+                <div class="payment-add-zone" id="paymentAddZone">
+                  <button type="button" class="payment-add-trigger" id="openPaymentModal" aria-label="Adicionar parcela" title="Adicionar parcela">
+                    <span aria-hidden="true">+</span>
+                  </button>
+                </div>
 
                 <article class="payment-row required-payment" data-payment-row="chaves" data-periodicity="unica">
                   <div class="payment-name"><strong>Chaves / financiamento</strong><small>Obrigatório · parcela final na entrega</small></div>
@@ -236,6 +228,32 @@
     </section>
   </main>
 
+  <div class="payment-type-modal hidden" id="paymentTypeModal" role="dialog" aria-modal="true" aria-labelledby="paymentTypeModalTitle">
+    <div class="payment-type-modal-card">
+      <div class="payment-type-modal-header">
+        <div>
+          <h2 id="paymentTypeModalTitle">Adicionar parcela</h2>
+          <p>Escolha o tipo de parcela que deseja incluir na condição.</p>
+        </div>
+        <button type="button" class="payment-type-modal-close" id="closePaymentModal" aria-label="Fechar">×</button>
+      </div>
+
+      <div class="payment-builder" id="paymentBuilder">
+        <label for="paymentTypeSelect">
+          <span>Tipo de parcela</span>
+          <select id="paymentTypeSelect">
+            <option value="mensal">Mensal</option>
+            <option value="semestral">Semestral</option>
+            <option value="anual">Anual</option>
+            <option value="outra">Outro / negociação especial</option>
+          </select>
+        </label>
+        <button type="button" class="button button-add-payment" id="addPaymentButton">+ Adicionar parcela</button>
+        <small>Você pode adicionar o mesmo tipo mais de uma vez, com quantidades e valores diferentes.</small>
+      </div>
+    </div>
+  </div>
+
 <!-- ====================== FOOTER ====================== -->
 <footer class="footer-dark">
   <div class="footer-top">
@@ -248,6 +266,6 @@
   </div>
 </footer>
   <script src="js/condicao-venda.js?v=20260819-2"></script>
-  <script type="module" src="js/formulario.js?v=20260819-2"></script>
+  <script type="module" src="js/formulario.js?v=20260820-1"></script>
 </body>
 </html>

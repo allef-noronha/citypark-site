@@ -179,8 +179,24 @@ function setupInputCleanup() {
 
 function setupCalculator() {
   if (!PaymentPlan) return showMessage("A calculadora financeira não pôde ser carregada. Atualize a página.", "error");
+  const modal = document.getElementById("paymentTypeModal");
+  const openButton = document.getElementById("openPaymentModal");
+  const closeButton = document.getElementById("closePaymentModal");
+
+  openButton.addEventListener("click", openPaymentTypeModal);
+  closeButton.addEventListener("click", () => closePaymentTypeModal());
+  modal.addEventListener("click", event => {
+    if (event.target === modal) closePaymentTypeModal();
+  });
+  document.addEventListener("keydown", event => {
+    if (event.key === "Escape" && !modal.classList.contains("hidden")) closePaymentTypeModal();
+  });
+
   document.getElementById("addPaymentButton").addEventListener("click", () => {
-    addPaymentGroup(document.getElementById("paymentTypeSelect").value);
+    const row = addPaymentGroup(document.getElementById("paymentTypeSelect").value);
+    if (!row) return;
+    closePaymentTypeModal({ restoreFocus: false });
+    row.querySelector("[data-field='quantity']").focus();
   });
   document.getElementById("paymentGrid").addEventListener("input", event => {
     if (event.target.classList.contains("currency-input")) formatCurrencyField(event.target);
@@ -200,9 +216,22 @@ function setupCalculator() {
   });
 }
 
+function openPaymentTypeModal() {
+  if (document.getElementById("openPaymentModal").disabled) return;
+  document.getElementById("paymentTypeModal").classList.remove("hidden");
+  document.body.classList.add("modal-open");
+  document.getElementById("paymentTypeSelect").focus();
+}
+
+function closePaymentTypeModal({ restoreFocus = true } = {}) {
+  document.getElementById("paymentTypeModal").classList.add("hidden");
+  document.body.classList.remove("modal-open");
+  if (restoreFocus) document.getElementById("openPaymentModal").focus();
+}
+
 function addPaymentGroup(periodicity) {
   const container = document.getElementById("dynamicPayments");
-  if (container.children.length >= MAX_PAYMENT_GROUPS) return;
+  if (container.children.length >= MAX_PAYMENT_GROUPS) return null;
   const id = `payment-${++paymentGroupSequence}`;
   const isSpecial = periodicity === "outra";
   const row = document.createElement("article");
@@ -219,9 +248,9 @@ function addPaymentGroup(periodicity) {
     <strong class="payment-total" data-payment-total>R$ 0,00</strong>
     <button type="button" class="payment-remove" data-remove-payment="${id}" aria-label="Remover parcela">×</button>`;
   container.appendChild(row);
-  row.querySelector("[data-field='quantity']").focus();
   updateAddPaymentButton();
   recalculateCustomPlan();
+  return row;
 }
 
 function paymentHelp(periodicity) {
@@ -231,8 +260,12 @@ function paymentHelp(periodicity) {
 function updateAddPaymentButton() {
   const count = document.getElementById("dynamicPayments").children.length;
   const button = document.getElementById("addPaymentButton");
-  button.disabled = count >= MAX_PAYMENT_GROUPS;
-  button.textContent = count >= MAX_PAYMENT_GROUPS ? `Limite de ${MAX_PAYMENT_GROUPS} grupos` : "+ Adicionar parcela";
+  const openButton = document.getElementById("openPaymentModal");
+  const reachedLimit = count >= MAX_PAYMENT_GROUPS;
+  button.disabled = reachedLimit;
+  openButton.disabled = reachedLimit;
+  openButton.title = reachedLimit ? `Limite de ${MAX_PAYMENT_GROUPS} grupos atingido` : "Adicionar parcela";
+  button.textContent = reachedLimit ? `Limite de ${MAX_PAYMENT_GROUPS} grupos` : "+ Adicionar parcela";
 }
 
 function formatCurrencyField(field) {
@@ -545,7 +578,7 @@ function showFinalConfirmation(condition) {
     title: "Enviar esta proposta?", subtitle: "Esta é a confirmação final do cadastro.", confirmText: "Sim, enviar proposta",
     content: `<section class="review-section"><div class="review-details"><div><span>Unidade</span><strong>${escapeHtml(value("unit"))}</strong></div>
       <div><span>Cliente</span><strong>${escapeHtml(client.nomeCompleto || client.razaoSocial)}</strong></div><div><span>Valor</span><strong>${formatMoney(condition.totalCalculadoCentavos)}</strong></div></div>
-      <p class="review-description">Ao confirmar, a unidade será reservada por 7 dias e todas as informações serão enviadas ao Ambiente do Administrador.</p></section>`
+      <p class="review-description">Ao confirmar, a unidade será reservada por 7 dias.</p></section>`
   });
 }
 

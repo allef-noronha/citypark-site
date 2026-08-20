@@ -293,13 +293,100 @@ button, input, textarea { font: inherit; }
   background: #fff;
 }
 
+.payment-add-zone {
+  min-height: 145px;
+  display: grid;
+  place-items: center;
+  border-bottom: 1px solid #e4e9f0;
+  background: #fff;
+  transition: min-height .2s ease, background .2s ease;
+}
+
+.dynamic-payments:not(:empty) + .payment-add-zone {
+  min-height: 76px;
+  background: #f8fafc;
+}
+
+.payment-add-trigger {
+  width: 38px;
+  height: 38px;
+  display: grid;
+  place-items: center;
+  border: 3px solid #26AD7D;
+  border-radius: 8px;
+  color: #26AD7D;
+  background: #fff;
+  cursor: pointer;
+  transition: transform .16s ease, color .16s ease, background .16s ease;
+}
+
+.payment-add-trigger span {
+  margin-top: -2px;
+  font-size: 1.9rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.payment-add-trigger:hover {
+  color: #fff;
+  background: #26AD7D;
+  transform: scale(1.06);
+}
+
+.payment-add-trigger:focus-visible { outline: 3px solid rgba(0, 74, 173, .2); outline-offset: 3px; }
+.payment-add-trigger:disabled { opacity: .4; cursor: not-allowed; transform: none; }
+
+.payment-type-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 997;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(9, 18, 83, .48);
+  backdrop-filter: blur(3px);
+}
+
+.payment-type-modal-card {
+  width: min(100%, 820px);
+  overflow: hidden;
+  border-radius: 16px;
+  background: #fff;
+  box-shadow: 0 24px 70px rgba(9, 18, 83, .28);
+  animation: popup-in .24s ease;
+}
+
+.payment-type-modal-header {
+  padding: 18px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  border-bottom: 1px solid #d7dee8;
+}
+
+.payment-type-modal-header h2 { margin: 0 0 4px; color: var(--navy); font-size: 1.1rem; }
+.payment-type-modal-header p { margin: 0; color: var(--muted); font-size: .76rem; }
+
+.payment-type-modal-close {
+  width: 36px;
+  height: 36px;
+  flex: 0 0 auto;
+  border: 0;
+  border-radius: 50%;
+  color: var(--navy);
+  background: #eef1f5;
+  cursor: pointer;
+  font-size: 1.4rem;
+  line-height: 1;
+}
+
 .payment-builder {
-  padding: 14px;
+  padding: 18px 20px 20px;
   display: grid;
   grid-template-columns: minmax(220px, 1fr) auto;
   align-items: end;
   gap: 10px 14px;
-  border-bottom: 1px solid #d7dee8;
   background: #f2f7ff;
 }
 
@@ -326,14 +413,6 @@ button, input, textarea { font: inherit; }
 .button-add-payment { min-height: 42px; color: #fff; background: var(--navy); }
 .button-add-payment:hover { background: #111d6d; }
 .button-add-payment:disabled { opacity: .55; cursor: not-allowed; transform: none; }
-.dynamic-payments:empty::before {
-  content: "Nenhuma parcela adicionada.";
-  display: block;
-  padding: 15px;
-  color: var(--muted);
-  border-bottom: 1px solid #e4e9f0;
-  font-size: .75rem;
-}
 .dynamic-payments .payment-row:last-child { border-bottom: 1px solid #e4e9f0; }
 
 .payment-row {
@@ -729,6 +808,15 @@ body.modal-open { overflow: hidden; }
   .fields-grid, .choice-grid, .proposal-value-summary { grid-template-columns: 1fr; }
   .calculator-heading { display: grid; }
   .payment-grid { border: 0; overflow: visible; background: transparent; }
+  .payment-add-zone {
+    min-height: 125px;
+    margin-bottom: 12px;
+    border: 1px solid #d7dee8;
+    border-radius: 9px;
+  }
+  .dynamic-payments:not(:empty) + .payment-add-zone { min-height: 70px; }
+  .payment-type-modal { padding: 12px; }
+  .payment-type-modal-header { align-items: flex-start; }
   .payment-row,
   .special-payment {
     margin-bottom: 12px;
