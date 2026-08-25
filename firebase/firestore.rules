@@ -80,9 +80,54 @@ service cloud.firestore {
         );
     }
 
+    function validFlexiblePaymentComponent(component, requireDates) {
+      return component is map && (
+        (
+          component.ativo == false
+          && validPaymentComponent(component, 'outra', requireDates, 1)
+        ) || (
+          component.ativo == true
+          && (
+            validPaymentComponent(component, 'mensal', requireDates, 240)
+            || validPaymentComponent(component, 'semestral', requireDates, 60)
+            || validPaymentComponent(component, 'anual', requireDates, 30)
+            || (
+              validPaymentComponent(component, 'outra', requireDates, 1)
+              && component.descricao.size() > 0
+            )
+          )
+        )
+      );
+    }
+
+    function validPaymentSlots(slots, requireDates) {
+      return slots is map
+        && slots.keys().hasAll([
+          'grupo01', 'grupo02', 'grupo03', 'grupo04', 'grupo05', 'grupo06',
+          'grupo07', 'grupo08', 'grupo09', 'grupo10', 'grupo11', 'grupo12'
+        ])
+        && slots.keys().hasOnly([
+          'grupo01', 'grupo02', 'grupo03', 'grupo04', 'grupo05', 'grupo06',
+          'grupo07', 'grupo08', 'grupo09', 'grupo10', 'grupo11', 'grupo12'
+        ])
+        && validFlexiblePaymentComponent(slots.grupo01, requireDates)
+        && validFlexiblePaymentComponent(slots.grupo02, requireDates)
+        && validFlexiblePaymentComponent(slots.grupo03, requireDates)
+        && validFlexiblePaymentComponent(slots.grupo04, requireDates)
+        && validFlexiblePaymentComponent(slots.grupo05, requireDates)
+        && validFlexiblePaymentComponent(slots.grupo06, requireDates)
+        && validFlexiblePaymentComponent(slots.grupo07, requireDates)
+        && validFlexiblePaymentComponent(slots.grupo08, requireDates)
+        && validFlexiblePaymentComponent(slots.grupo09, requireDates)
+        && validFlexiblePaymentComponent(slots.grupo10, requireDates)
+        && validFlexiblePaymentComponent(slots.grupo11, requireDates)
+        && validFlexiblePaymentComponent(slots.grupo12, requireDates);
+    }
+
     function validPaymentCondition(data, unidadeId) {
       let condition = data.condicaoProposta;
       let parts = condition.componentes;
+      let slots = parts.parcelas;
       let values = getAfter(/databases/$(database)/documents/unidades/$(unidadeId)).data.valores;
       let tableValue = values.get(
         'precoAVistaCentavos',
@@ -98,10 +143,11 @@ service cloud.firestore {
           'schemaVersao', 'tipo', 'descricao', 'valorTabelaCentavos',
           'totalCalculadoCentavos', 'diferencaCentavos', 'componentes'
         ])
-        && condition.schemaVersao == 2
+        && condition.schemaVersao == 3
         && condition.tipo in ['padrao', 'personalizada']
         && condition.descricao is string
         && condition.descricao.size() > 0
+        && condition.descricao.size() <= 1000
         && condition.valorTabelaCentavos is int
         && condition.totalCalculadoCentavos is int
         && condition.diferencaCentavos is int
@@ -110,26 +156,27 @@ service cloud.firestore {
         && condition.totalCalculadoCentavos == tableValue
         && condition.diferencaCentavos == 0
         && parts is map
-        && parts.keys().hasAll(['sinal', 'mensais', 'semestrais', 'anuais', 'negociacaoEspecial', 'chaves'])
-        && parts.keys().hasOnly(['sinal', 'mensais', 'semestrais', 'anuais', 'negociacaoEspecial', 'chaves'])
+        && parts.keys().hasAll(['sinal', 'parcelas', 'chaves'])
+        && parts.keys().hasOnly(['sinal', 'parcelas', 'chaves'])
         && validPaymentComponent(parts.sinal, 'unica', requireDates, 1)
-        && validPaymentComponent(parts.mensais, 'mensal', requireDates, 240)
-        && validPaymentComponent(parts.semestrais, 'semestral', requireDates, 60)
-        && validPaymentComponent(parts.anuais, 'anual', requireDates, 30)
-        && validPaymentComponent(parts.negociacaoEspecial, 'outra', requireDates, 1)
         && validPaymentComponent(parts.chaves, 'unica', requireDates, 1)
+        && validPaymentSlots(slots, requireDates)
         && parts.sinal.ativo == true
         && parts.chaves.ativo == true
-        && (
-          parts.negociacaoEspecial.ativo == false
-          || parts.negociacaoEspecial.descricao.size() > 0
-        )
         && condition.totalCalculadoCentavos ==
           parts.sinal.totalCentavos
-          + parts.mensais.totalCentavos
-          + parts.semestrais.totalCentavos
-          + parts.anuais.totalCentavos
-          + parts.negociacaoEspecial.totalCentavos
+          + slots.grupo01.totalCentavos
+          + slots.grupo02.totalCentavos
+          + slots.grupo03.totalCentavos
+          + slots.grupo04.totalCentavos
+          + slots.grupo05.totalCentavos
+          + slots.grupo06.totalCentavos
+          + slots.grupo07.totalCentavos
+          + slots.grupo08.totalCentavos
+          + slots.grupo09.totalCentavos
+          + slots.grupo10.totalCentavos
+          + slots.grupo11.totalCentavos
+          + slots.grupo12.totalCentavos
           + parts.chaves.totalCentavos;
     }
 

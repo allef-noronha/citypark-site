@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#091253">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Detalhamento da Proposta | City Park</title>
+  <link rel="stylesheet" href="css/detalhes-proposta.css?v=20260824-3">
+  <link rel="icon" href="data:,">
+  <style>html:not(.page-authorized) body { visibility: hidden; }</style>
+</head>
+<body>
+  <header class="figma-topbar">
+    <a class="figma-brand" href="painel-admin.html" aria-label="Início do Ambiente Administrativo"><img src="img/CityPark-Branco.png" alt="City Park"></a>
+    <a class="sales-link" href="vendas.html">Tabela de Vendas</a>
+    <button id="btnSair" class="hidden-control" type="button">Sair</button>
+  </header>
+
+  <div id="loadingState" class="loading-state" role="status" aria-live="polite"><span class="spinner" aria-hidden="true"></span><p>Carregando proposta…</p></div>
+
+  <main id="proposalApp" hidden>
+    <header class="proposal-summary">
+      <div class="summary-primary"><p>Proposta: <strong id="summaryProposalId">—</strong></p><span>Data de Abertura: <strong id="summaryCreatedAt">—</strong></span></div>
+      <dl class="summary-meta">
+        <div><dt>Unidade:</dt><dd id="summaryUnit">—</dd></div>
+        <div><dt>Corretor:</dt><dd id="summaryBroker">—</dd><small id="summaryCreci">—</small></div>
+        <div><dt>Cliente:</dt><dd id="summaryClient">—</dd><small id="summaryDocument">—</small></div>
+      </dl>
+      <a class="summary-back" href="gestao-propostas.html">Voltar</a>
+    </header>
+
+    <div class="detail-shell">
+      <aside class="anchor-sidebar">
+        <p class="sr-only">Navegação</p>
+        <nav aria-label="Seções da proposta">
+          <a class="active" href="#informacoes">Informações</a><a href="#documentos">Documentos</a><a href="#contratos">Contratos</a><a href="#historico">Histórico</a>
+        </nav>
+      </aside>
+
+      <div class="detail-content">
+        <section id="informacoes" class="detail-section section-information">
+          <div class="section-heading action-heading">
+            <div><h2>Informações:</h2></div>
+            <div id="proposalActions" class="proposal-actions" hidden><button id="rejectProposal" class="danger-button" type="button">Recusar proposta</button><button id="approveProposal" class="success-button" type="button">Aprovar proposta</button></div>
+          </div>
+
+          <article class="reservation-card">
+            <div class="reservation-heading"><div><h3>Situação da reserva</h3><p id="expiryText">—</p></div><span id="proposalStatus" class="status-badge">—</span></div>
+            <div id="reservationTags" class="tag-list" aria-label="Etapas da reserva"></div>
+          </article>
+
+          <article class="general-data-card">
+            <div class="data-tabs" role="tablist" aria-label="Dados gerais">
+              <button id="brokerTab" class="active" type="button" role="tab" aria-selected="true" aria-controls="brokerPanel">Dados do corretor</button>
+              <button id="clientTab" type="button" role="tab" aria-selected="false" aria-controls="clientPanel">Dados do cliente</button>
+            </div>
+            <div id="brokerPanel" class="data-panel" role="tabpanel" aria-labelledby="brokerTab"><dl id="brokerInformation"></dl></div>
+            <div id="clientPanel" class="data-panel" role="tabpanel" aria-labelledby="clientTab" hidden><dl id="clientInformation"></dl></div>
+          </article>
+
+          <article class="finance-card">
+            <div class="condition-heading"><h3>Condição de Proposta:</h3><span id="financeConditionType">—</span><span class="condition-or">ou</span><span id="financeAlternative" class="condition-alternative">Padrão</span><span id="financeValidation" class="validation-badge">—</span></div>
+            <div class="finance-totals">
+              <div><span>Valor da tabela</span><strong id="financeTableValue">—</strong></div><div><span>Total preenchido</span><strong id="financeProposalValue">—</strong></div><div id="financeDifferenceCard"><span>Diferença</span><strong id="financeDifference">—</strong></div>
+            </div>
+            <div class="finance-table-wrap"><table class="finance-table"><thead><tr><th>Parcelas</th><th>Qtd.</th><th>Valor</th><th>Data de vencimento</th><th>Opções</th></tr></thead><tbody id="financeRows"></tbody></table></div>
+          </article>
+        </section>
+
+        <section id="documentos" class="detail-section">
+          <div class="section-heading"><p class="eyebrow">Módulo reservado</p><h2>Documentos</h2><p>Espaço preparado para a próxima etapa do projeto.</p></div>
+          <article class="empty-module"><span class="file-icon" aria-hidden="true">▱</span><strong>Anexar Arquivos</strong><small>Módulo reservado</small></article>
+        </section>
+
+        <section id="contratos" class="detail-section">
+          <div class="section-heading"><p class="eyebrow">Módulo reservado</p><h2>Contratos</h2><p>Espaço preparado para a próxima etapa do projeto.</p></div>
+          <article class="empty-module"><span class="file-icon" aria-hidden="true">▱</span><strong>Jurídico</strong><small>Módulo reservado</small></article>
+        </section>
+
+        <section id="historico" class="detail-section">
+          <div class="section-heading"><p class="eyebrow">Rastreabilidade</p><h2>Histórico</h2><p>Registro das alterações realizadas desde a criação da proposta.</p></div>
+          <div id="historyTimeline" class="history-timeline" aria-live="polite"></div>
+        </section>
+      </div>
+    </div>
+  </main>
+
+  <div id="confirmationModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="confirmationTitle" hidden>
+    <div class="modal-card">
+      <button class="modal-close" type="button" data-close-modal aria-label="Fechar">×</button><span id="confirmationIcon" class="modal-icon" aria-hidden="true">?</span>
+      <h2 id="confirmationTitle">Confirmar ação</h2><p id="confirmationText">—</p>
+      <label id="rejectionReasonField" class="reason-field" hidden><span>Motivo da recusa</span><textarea id="rejectionReason" rows="4" maxlength="1000" placeholder="Informe o motivo para o histórico da proposta"></textarea><small id="rejectionReasonError" hidden>Informe o motivo da recusa.</small></label>
+      <div class="modal-actions"><button class="secondary-button" type="button" data-close-modal>Cancelar</button><button id="confirmAction" class="primary-button" type="button">Confirmar</button></div>
+    </div>
+  </div>
+
+  <div id="financeModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="financeModalTitle" hidden>
+    <form id="financeEditForm" class="modal-card finance-modal-card">
+      <button class="modal-close" type="button" data-close-finance aria-label="Fechar">×</button><p class="eyebrow">Condição de pagamento</p><h2 id="financeModalTitle">Editar parcela</h2><p>A alteração ficará registrada no histórico da proposta.</p>
+      <div class="edit-grid">
+        <label class="full-field"><span>Descrição</span><input id="editDescription" type="text" maxlength="100" required></label>
+        <label><span>Quantidade</span><input id="editQuantity" type="number" min="1" max="120" required></label>
+        <label><span>Valor unitário</span><input id="editValue" type="text" inputmode="decimal" required placeholder="R$ 0,00"></label>
+        <label class="full-field"><span>Primeiro vencimento</span><input id="editDueDate" type="date" required></label>
+      </div>
+      <p id="editFinanceError" class="form-error" hidden></p>
+      <div class="modal-actions"><button class="secondary-button" type="button" data-close-finance>Cancelar</button><button id="saveFinance" class="primary-button" type="submit">Salvar alteração</button></div>
+    </form>
+  </div>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <script src="js/condicao-venda.js?v=20260824-3"></script><script type="module" src="js/detalhes-proposta.js?v=20260824-3"></script>
+</body>
+</html>

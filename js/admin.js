@@ -794,7 +794,7 @@ function renderProposalCard({ unit, proposal }, status) {
         <div class="tags-row"><span>Tags:</span>${tags.map(tag => `<span class="tag">${escapeHtml(tag)}</span>`).join("")}</div>
         <div class="card-utilities">
           ${proposalId
-            ? `<a class="mini-button process-link" href="proposta-admin.html?id=${encodeURIComponent(proposalId)}">Abrir processo</a>`
+            ? `<a class="mini-button process-link" href="detalhes-proposta.html?id=${encodeURIComponent(proposalId)}">Abrir processo</a>`
             : `<button class="mini-button" type="button" data-action="unit-details" data-unit-id="${escapeHtml(unit.id)}">Ver detalhes</button>`}
           ${proposalId ? `<button class="comment-button ${proposal?.comentarioAdmin ? "has-comment" : ""}" type="button" data-action="comment" data-proposal-id="${escapeHtml(proposalId)}" aria-label="Comentário administrativo" title="${escapeHtml(proposal?.comentarioAdmin ?? "Adicionar comentário")}"></button>` : ""}
         </div>
@@ -828,7 +828,7 @@ function renderSoldCard({ unit, proposal, proposalId, brokerName, clientName, ta
           <div class="tags-row"><span>Tags:</span>${tags.map(tag => `<span class="tag">${escapeHtml(tag)}</span>`).join("")}</div>
           <div class="card-utilities">
             ${proposalId
-              ? `<a class="mini-button process-link" href="proposta-admin.html?id=${encodeURIComponent(proposalId)}">Abrir processo</a>`
+              ? `<a class="mini-button process-link" href="detalhes-proposta.html?id=${encodeURIComponent(proposalId)}">Abrir processo</a>`
               : `<button class="mini-button" type="button" data-action="unit-details" data-unit-id="${escapeHtml(unit.id)}">Ver detalhes</button>`}
             ${proposalId ? `<button class="comment-button ${proposal?.comentarioAdmin ? "has-comment" : ""}" type="button" data-action="comment" data-proposal-id="${escapeHtml(proposalId)}" aria-label="Comentário administrativo" title="${escapeHtml(proposal?.comentarioAdmin ?? "Adicionar comentário")}"></button>` : ""}
           </div>
@@ -1487,7 +1487,7 @@ function renderManagerProposalCard(proposal) {
       <p>Status: ${display(statusLabel(status))}</p>
       <p>Observação: “${display(observation)}”</p>
       ${finalDate ? `<p>Finalizada em: ${formatDate(finalDate)}</p>` : ""}
-      <a class="mini-button process-link" href="proposta-admin.html?id=${encodeURIComponent(proposal.id)}">Abrir processo</a>
+      <a class="mini-button process-link" href="detalhes-proposta.html?id=${encodeURIComponent(proposal.id)}">Abrir processo</a>
       <button class="mini-button" type="button" data-manager-proposal="${escapeHtml(proposal.id)}">Ver histórico</button>
       <div style="clear:both"></div>
     </article>`;

@@ -5,248 +5,29 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="theme-color" content="#091253">
   <meta name="robots" content="noindex, nofollow">
-  <title>Painel Administrativo - City Park</title>
-  <link rel="stylesheet" href="css/theme.css">
-  <link rel="stylesheet" href="css/admin.css">
+  <title>Ambiente Administrativo | City Park</title>
+  <link rel="stylesheet" href="css/ambiente-admin.css?v=20260824-2">
   <link rel="icon" href="data:,">
   <style>html:not(.page-authorized) body { visibility: hidden; }</style>
 </head>
 <body>
-  <header class="proposal-header">
-    <a href="vendas.html" class="brand" aria-label="Voltar para a tabela de vendas">
-      <img src="img/CityPark-Branco.png" alt="City Park">
-    </a>
-
-    <nav class="admin-brand-actions" aria-label="Ações administrativas">
-      <a href="vendas.html" class="btn btn-outline">Tabela de Vendas</a>
-      <button id="btnSairAdmin" class="admin-logout" type="button">Sair</button>
-    </nav>
+  <header class="figma-topbar">
+    <a class="figma-brand" href="painel-admin.html" aria-label="Início do Ambiente Administrativo"><img src="img/CityPark-Branco.png" alt="City Park"></a>
+    <a class="sales-link" href="vendas.html">Tabela de Vendas</a>
+    <button id="btnSairAdmin" class="hidden-logout" type="button">Sair</button>
   </header>
 
-  <section class="admin-intro">
-    <h1>Painel Administrativo - City Park</h1>
-    <button id="btnCarregar" class="refresh-button" type="button" aria-label="Atualizar painel" title="Atualizar painel">
-      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11a8 8 0 0 0-14.9-4M4 4v5h5M4 13a8 8 0 0 0 14.9 4M20 20v-5h-5"/></svg>
-    </button>
-  </section>
+  <section class="figma-titlebar"><h1>Ambiente Administrativo</h1></section>
 
-  <main>
-    <section class="board-shell" aria-label="Fluxo de unidades e propostas">
-      <div class="grid" id="kanbanGrid">
-        <article class="coluna coluna-unidades">
-          <header class="column-header">
-            <div class="column-title-row unit-title-row">
-              <div class="unit-title-group">
-                <h2>Unidades</h2>
-                <button id="btnToggleUnitFilters" class="icon-button filter-button" type="button" aria-label="Filtrar unidades" aria-expanded="false">
-                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 5h18l-7 8v6l-4 2v-8L3 5Z"/></svg>
-                </button>
-              </div>
-
-              <button class="search-toggle" type="button" data-search-toggle="unitSearchPanel" aria-controls="unitSearchPanel" aria-expanded="false" aria-label="Abrir pesquisa de unidades">
-                <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>
-              </button>
-            </div>
-
-            <div id="unitSearchPanel" class="column-search-panel" hidden>
-              <label for="searchUnits">Pesquisar unidades</label>
-              <input id="searchUnits" type="search" autocomplete="off" placeholder="Digite a unidade, tipologia ou status">
-            </div>
-
-            <div id="unitFilters" class="unit-filters" hidden>
-              <label>
-                <span>Status</span>
-                <select id="unitStatusFilter">
-                  <option value="">Todos</option>
-                  <option value="disponivel" selected>Disponíveis</option>
-                  <option value="reservada">Reservadas</option>
-                  <option value="aprovada">Aprovadas</option>
-                  <option value="vendida">Vendidas</option>
-                </select>
-              </label>
-              <select id="unitTypeFilter" hidden aria-hidden="true"><option value="">Todas</option></select>
-            </div>
-          </header>
-
-          <div id="disponiveis" class="column-list unit-list" aria-live="polite"></div>
-        </article>
-
-        <article class="coluna">
-          <header class="column-header">
-            <div class="column-title-row">
-              <h2>Propostas Abertas</h2>
-              <button class="search-toggle" type="button" data-search-toggle="openSearchPanel" aria-controls="openSearchPanel" aria-expanded="false" aria-label="Abrir pesquisa de propostas abertas">
-                <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>
-              </button>
-            </div>
-            <div id="openSearchPanel" class="column-search-panel" hidden>
-              <label for="searchOpen">Pesquisar propostas abertas</label>
-              <input id="searchOpen" type="search" autocomplete="off" placeholder="Unidade, corretor, cliente ou tag">
-            </div>
-          </header>
-          <div id="propostas" class="column-list dropzone" data-drop-status="reservada" aria-live="polite"></div>
-        </article>
-
-        <article class="coluna">
-          <header class="column-header">
-            <div class="column-title-row">
-              <h2>Propostas Aprovadas</h2>
-              <button class="search-toggle" type="button" data-search-toggle="approvedSearchPanel" aria-controls="approvedSearchPanel" aria-expanded="false" aria-label="Abrir pesquisa de propostas aprovadas">
-                <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>
-              </button>
-            </div>
-            <div id="approvedSearchPanel" class="column-search-panel" hidden>
-              <label for="searchApproved">Pesquisar propostas aprovadas</label>
-              <input id="searchApproved" type="search" autocomplete="off" placeholder="Unidade, corretor, cliente ou tag">
-            </div>
-          </header>
-          <div id="aprovadas" class="column-list dropzone" data-drop-status="aprovada" aria-live="polite"></div>
-        </article>
-
-        <article class="coluna coluna-vendidas">
-          <header class="column-header">
-            <div class="column-title-row">
-              <h2>Unidades Vendidas</h2>
-              <button class="search-toggle" type="button" data-search-toggle="soldSearchPanel" aria-controls="soldSearchPanel" aria-expanded="false" aria-label="Abrir pesquisa de unidades vendidas">
-                <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>
-              </button>
-            </div>
-            <div id="soldSearchPanel" class="column-search-panel" hidden>
-              <label for="searchSold">Pesquisar unidades vendidas</label>
-              <input id="searchSold" type="search" autocomplete="off" placeholder="Unidade, corretor, cliente ou tag">
-            </div>
-            <div class="sold-period-row">
-              <label class="sold-period-label" for="soldPeriod">Vendas nos últimos</label>
-              <select id="soldPeriod" class="sold-period">
-                <option value="30">30 dias</option>
-                <option value="90">90 dias</option>
-                <option value="365">12 meses</option>
-                <option value="all">Todo o histórico</option>
-              </select>
-            </div>
-          </header>
-          <div id="vendidas" class="column-list dropzone" data-drop-status="vendida" aria-live="polite"></div>
-        </article>
-      </div>
-    </section>
-
-    <section class="manager-shell" aria-label="Gerenciadores administrativos">
-      <div class="manager-grid">
-      <div class="manager-card">
-        <header class="manager-header">
-          <div class="manager-title-wrap">
-            <button id="managerBack" class="manager-back" type="button" aria-label="Voltar" hidden>←</button>
-            <h2 id="managerTitle">Gerenciador de Unidade</h2>
-          </div>
-
-          <div class="manager-search">
-            <input id="managerSearch" type="search" list="managerUnitOptions" autocomplete="off" aria-label="Pesquisar unidade">
-            <datalist id="managerUnitOptions"></datalist>
-            <button id="managerSearchButton" type="button" aria-label="Pesquisar">
-              <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>
-            </button>
-          </div>
-        </header>
-
-        <div id="managerListView" class="manager-view">
-          <div id="managerUnitList" class="manager-unit-list" aria-live="polite"></div>
-        </div>
-
-        <div id="managerHistoryView" class="manager-view" hidden>
-          <div class="manager-section-title">
-            <span>Propostas feitas nesta unidade</span>
-            <span id="managerUnitBadge" class="manager-unit-badge"></span>
-          </div>
-
-          <div class="manager-status-row">
-            <p>Status Atual: <strong id="managerCurrentStatus"></strong></p>
-            <select id="managerYear" aria-label="Filtrar propostas por ano"></select>
-          </div>
-
-          <p id="managerResultCount" class="manager-result-count"></p>
-          <div id="managerProposalList" class="manager-proposal-list" aria-live="polite"></div>
-        </div>
-
-        <div id="managerDetailView" class="manager-view" hidden>
-          <div id="managerDetailHeader" class="manager-section-title"></div>
-          <div id="managerDetailSummary" class="manager-detail-summary"></div>
-          <div id="managerProposalTimeline" class="manager-timeline" aria-live="polite"></div>
-        </div>
-      </div>
-
-      <div class="manager-card broker-manager-card">
-        <header class="manager-header broker-manager-header">
-          <div class="manager-title-wrap">
-            <button id="brokerManagerBack" class="manager-back" type="button" aria-label="Voltar para a lista de corretores" hidden>←</button>
-            <h2>Gerenciador de Corretores</h2>
-          </div>
-
-          <div class="manager-search broker-manager-search">
-            <input id="brokerManagerSearch" type="search" autocomplete="off" aria-label="Pesquisar corretor" placeholder="Pesquisar corretor">
-            <button id="brokerManagerSearchButton" type="button" aria-label="Pesquisar corretor">
-              <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>
-            </button>
-          </div>
-        </header>
-
-        <div id="brokerManagerListView" class="manager-view">
-          <div class="broker-manager-toolbar">
-            <label for="brokerManagerFilter">Exibir</label>
-            <select id="brokerManagerFilter">
-              <option value="pendente" selected>Pendentes</option>
-              <option value="ignorado">Ignorados</option>
-              <option value="aprovado">Aprovados</option>
-              <option value="todos">Todos</option>
-            </select>
-            <span id="brokerManagerCount" class="broker-manager-count"></span>
-          </div>
-          <div id="brokerManagerList" class="broker-manager-list" aria-live="polite"></div>
-        </div>
-
-        <div id="brokerManagerDetailView" class="manager-view" hidden>
-          <div id="brokerManagerDetail" class="broker-manager-detail" aria-live="polite"></div>
-        </div>
-      </div>
-      </div>
-    </section>
+  <main class="figma-admin-home">
+    <p class="sr-only">Administrador conectado: <strong id="adminName">administrador</strong>. <span id="pendingProposalCount">—</span> propostas aguardam análise.</p>
+    <nav class="figma-module-options" aria-label="Módulos administrativos">
+      <a href="gestao-propostas.html">Propostas</a>
+      <button type="button" disabled aria-label="Corretores, módulo ainda não disponível">Corretores</button>
+    </nav>
   </main>
 
-  <div id="modalConfirmacao" class="modal-overlay oculto" role="dialog" aria-modal="true" aria-labelledby="modalTitulo">
-    <div class="modal">
-      <h2 id="modalTitulo">Confirmar operação</h2>
-      <div id="modalConteudo" class="modal-conteudo"></div>
-      <div class="modal-acoes">
-        <button id="modalCancelar" class="btn-secundario" type="button">Cancelar</button>
-        <button id="modalConfirmar" class="btn-primario" type="button">Confirmar</button>
-      </div>
-    </div>
-  </div>
-
-  <div id="detailModal" class="modal-overlay oculto" role="dialog" aria-modal="true" aria-labelledby="detailModalTitle">
-    <div class="modal modal-details">
-      <div class="detail-modal-header">
-        <h2 id="detailModalTitle">Detalhes</h2>
-        <button id="detailModalClose" class="icon-button" type="button" aria-label="Fechar">×</button>
-      </div>
-      <div id="detailModalContent" class="modal-conteudo"></div>
-    </div>
-  </div>
-
-  <aside id="commentEditor" class="comment-editor" role="dialog" aria-modal="false" aria-labelledby="commentEditorTitle" hidden>
-    <div class="comment-editor-header">
-      <h2 id="commentEditorTitle">Comentário administrativo</h2>
-      <button id="commentEditorClose" class="comment-editor-close" type="button" aria-label="Fechar comentário">×</button>
-    </div>
-    <label for="commentEditorField">Escreva uma observação privada sobre esta proposta</label>
-    <textarea id="commentEditorField" maxlength="1000" placeholder="Digite o comentário..."></textarea>
-    <div class="comment-editor-actions">
-      <button id="commentEditorCancel" class="comment-cancel" type="button">Cancelar</button>
-      <button id="commentEditorSave" class="comment-save" type="button">Salvar</button>
-    </div>
-  </aside>
-
-  <div id="toast" class="toast" role="status" aria-live="polite"></div>
-
-  <script type="module" src="js/admin.js"></script>
+  <div id="adminToast" class="admin-toast" role="status" aria-live="polite"></div>
+  <script type="module" src="js/ambiente-admin.js?v=20260824-2"></script>
 </body>
 </html>

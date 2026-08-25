@@ -44,15 +44,16 @@ Este é o site oficial do empreendimento **City Park**, desenvolvido em HTML, CS
 - HTML5
 - CSS3 (com animações e responsividade)
 - JavaScript Vanilla
+- Firebase (Banco de dados)
 - Google Sheets (como backend leve)
 - Google Apps Script (em breve para formulários)
-- GitHub Pages (ou outro serviço de hospedagem)
+- GitHub Pages (Serviço de Hospedagem)
 
 ---
 
 ## 🚀 Hospedagem
 
-O site será hospedado no GitHub Pages ou vinculado a um domínio via Registro.br.
+O site está hospedado no GitHub Pages e vinculado a um domínio via Registro.br.
 
 ---
 
@@ -67,7 +68,6 @@ O site será hospedado no GitHub Pages ou vinculado a um domínio via Registro.b
 ## 👨‍💻 Desenvolvedor
 
 **Allef Noronha**  
-Contato: *(adicione aqui seu email ou LinkedIn se desejar)*
 
 ---
 

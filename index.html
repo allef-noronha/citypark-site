@@ -135,29 +135,23 @@
 
   <!-- ======================= HERO ======================= -->
   <section class="hero">
-    <!-- Vídeo de fundo com poster e fallback de imagem -->
-    <video class="hero-video"
-          autoplay
-          muted
-          loop
-          playsinline
-          preload="metadata"
-          poster="img/hero-poster.jpg">
-      <source src="media/hero.webm" type="video/webm">
-      <source src="media/hero-1080p.mp4"  type="video/mp4">
-      <!-- Fallback visual (se <video> não for suportado) -->
-      <img class="hero-fallback" src="img/hero-poster.jpg" alt="City Park">
-    </video>
-
+    <!-- Atualização -->
+    <!-- Para reduzir o consumo da CPU: Substituiu o WebM 19 MB para MP4 1,35 MB (Full HD) e reduziu o desfoque do cabeçalho. -->
+  <video
+    class="hero-video"
+    autoplay
+    muted
+    loop
+    playsinline
+    preload="metadata"
+    poster="img/hero-poster.jpg"
+  >
+    <source src="media/hero-1080p.mp4" type="video/mp4">
+  </video>
     <noscript>
       <!-- Fallback quando JS estiver desabilitado -->
       <img class="hero-fallback" src="img/hero-poster.jpg" alt="City Park">
     </noscript>
-
-    <div class="hero-overlay">
-      <div class="hero-content">
-        <!-- <h2>Não é apenas lazer. É um estilo de vida!</h2> -->
-      </div>
     </div>
   </section>
 
@@ -451,19 +445,6 @@
     </div>
   </footer>
 
-  <!-- Tour Guiado | DESENVOLVIMENTO -->
-  <!-- <div id="tourOverlay" class="tour-overlay hidden"></div>
-    <div id="tourBox" class="tour-box hidden">
-      <h3 id="tourTitle"></h3>
-      <p id="tourText"></p>
-
-      <div class="tour-actions">
-        <button id="tourSkip">Pular</button>
-        <button id="tourNext">Próximo</button>
-      </div>
-    </div> -->
-
   <script src="js/index.js" defer></script>
-
 </body>
 </html>

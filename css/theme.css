@@ -52,8 +52,7 @@ body{
 /* 4) Header fixo + navegação (compartilhados) */
 .top-nav.fixed{
   position:fixed; inset:0 auto auto 0; right:0; z-index:1000;
-  background: rgba(0,0,0,.55);
-  backdrop-filter: blur(6px);
+  background: rgba(0,0,0,.72);
   transition: transform .24s ease, background .2s ease, box-shadow .2s ease;
 }
 .top-nav.fixed.hide{ transform: translateY(-100%); }

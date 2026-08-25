@@ -11,6 +11,7 @@
 
   const MONTHLY_INSTALLMENTS = 40;
   const SEMIANNUAL_INSTALLMENTS = 6;
+  const MAX_PAYMENT_GROUPS = 12;
 
   function currencyToCents(value) {
     if (typeof value === "number") {
@@ -97,11 +98,60 @@
     };
   }
 
+  function paymentIntervalMonths(periodicity) {
+    return {
+      mensal: 1,
+      semestral: 6,
+      anual: 12,
+      outra: 0,
+      unica: 0
+    }[periodicity] ?? null;
+  }
+
+  function parseDateOnly(value) {
+    const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(value ?? ""));
+    if (!match) return null;
+    const year = Number(match[1]);
+    const month = Number(match[2]) - 1;
+    const day = Number(match[3]);
+    const date = new Date(year, month, day, 12, 0, 0, 0);
+    return date.getFullYear() === year && date.getMonth() === month && date.getDate() === day ? date : null;
+  }
+
+  function addMonthsClamped(date, months) {
+    const target = new Date(date.getTime());
+    const day = target.getDate();
+    target.setDate(1);
+    target.setMonth(target.getMonth() + months);
+    const lastDay = new Date(target.getFullYear(), target.getMonth() + 1, 0).getDate();
+    target.setDate(Math.min(day, lastDay));
+    return target;
+  }
+
+  function buildSchedule(firstDate, quantity, periodicity) {
+    const start = parseDateOnly(firstDate);
+    const count = Number(quantity);
+    const interval = paymentIntervalMonths(periodicity);
+    if (!start || !Number.isInteger(count) || count < 1 || interval === null) return [];
+    return Array.from({ length: count }, (_, index) => addMonthsClamped(start, interval * index));
+  }
+
+  function sumPaymentGroups(groups) {
+    return groups.reduce((sum, group) => {
+      const quantity = Number(group.quantidade);
+      const unitValue = Number(group.valorUnitarioCentavos);
+      return sum + (Number.isInteger(quantity) && Number.isInteger(unitValue) ? quantity * unitValue : 0);
+    }, 0);
+  }
+
   return {
     MONTHLY_INSTALLMENTS,
     SEMIANNUAL_INSTALLMENTS,
+    MAX_PAYMENT_GROUPS,
     currencyToCents,
     calculate,
-    format
+    format,
+    buildSchedule,
+    sumPaymentGroups
   };
 });
