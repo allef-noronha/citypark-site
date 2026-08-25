@@ -377,7 +377,7 @@ function buildStandardCondition(unit = currentUnit) {
   const signal = moneyValue(values, ["sinalCentavos", "sinal"]);
   const monthly = moneyValue(values, ["parcelasMensaisCentavos", "parcelaMensaisCentavos", "parcelasMensais", "parcelaMensais"]);
   const semiannual = moneyValue(values, ["intercaladasSemestraisCentavos", "intercaladasSemestrais"]);
-  if (![tableValue, signal, monthly, semiannual].every(Number.isInteger)) throw new Error("A condição padrão desta unidade está incompleta. Revise os valores no Painel Administrativo.");
+  if (![tableValue, signal, monthly, semiannual].every(Number.isInteger)) throw new Error("A condição padrão desta unidade está incompleta. Revise os valores no Ambiente Administrativo.");
   const keys = tableValue - signal - PaymentPlan.MONTHLY_INSTALLMENTS * monthly - PaymentPlan.SEMIANNUAL_INSTALLMENTS * semiannual;
   if (signal <= 0 || monthly <= 0 || semiannual <= 0 || keys <= 0) throw new Error("A condição padrão desta unidade possui valores inválidos.");
   const slots = emptyPaymentSlots();
@@ -578,7 +578,7 @@ function showFinalConfirmation(condition) {
     title: "Enviar esta proposta?", subtitle: "Esta é a confirmação final do cadastro.", confirmText: "Sim, enviar proposta",
     content: `<section class="review-section"><div class="review-details"><div><span>Unidade</span><strong>${escapeHtml(value("unit"))}</strong></div>
       <div><span>Cliente</span><strong>${escapeHtml(client.nomeCompleto || client.razaoSocial)}</strong></div><div><span>Valor</span><strong>${formatMoney(condition.totalCalculadoCentavos)}</strong></div></div>
-      <p class="review-description">Ao confirmar, a unidade será reservada por 7 dias.</p></section>`
+      <p class="review-description">Ao confirmar, a unidade será reservada por 7 dias e todas as informações serão enviadas ao Ambiente do Administrador.</p></section>`
   });
 }
 
@@ -642,7 +642,7 @@ function showSuccessPopup() {
   popup.className = "success-popup";
   popup.setAttribute("role", "status");
   popup.setAttribute("aria-live", "polite");
-  popup.innerHTML = `<div class="success-popup-card"><span class="success-popup-icon" aria-hidden="true">✓</span><h3>Proposta enviada com sucesso!</h3><p>A unidade foi reservada e a proposta completa foi encaminhada para análise.</p><div class="success-popup-actions"><a class="button button-primary" href="${adminMode ? "painel-admin.html" : "vendas.html"}">${adminMode ? "Voltar ao Painel Administrativo" : "Voltar para a Tabela de Vendas"}</a></div></div>`;
+  popup.innerHTML = `<div class="success-popup-card"><span class="success-popup-icon" aria-hidden="true">✓</span><h3>Proposta enviada com sucesso!</h3><p>A unidade foi reservada e a proposta completa foi encaminhada para análise.</p><div class="success-popup-actions"><a class="button button-primary" href="${adminMode ? "painel-admin.html" : "vendas.html"}">${adminMode ? "Voltar ao Ambiente Administrativo" : "Voltar para a Tabela de Vendas"}</a></div></div>`;
   document.body.appendChild(popup);
 }
 

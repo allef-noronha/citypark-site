@@ -82,7 +82,7 @@
   </div>
   
   <div class="topo-botoes">
-    <!-- Ícone do usuário AGORA vem primeiro -->
+    <!-- Ícone do usuário  -->
     <button class="icon-btn" id="btn-login" type="button" title="Entrar" aria-label="Entrar">
       <i id="login-icon" class="fa-solid fa-user"></i>
     </button>
@@ -98,12 +98,13 @@
 
     <!-- NOVOS BOTÕES (só quando aprovado) -->
 
+    <!-- Tabela Resumo -->
     <a id="btn-folder" class="icon-btn" data-require-approved
       href="tabela.html"
       title="Tabela Resumo" aria-label="Tabela Resumo">
       <i class="fa-solid fa-table-list"></i>
     </a>
-
+    <!-- Material Digital -->
     <a id="btn-material" class="icon-btn" data-require-approved
       href="https://drive.google.com/drive/folders/1LnuR5-yl-6MRkxO8EKRoLaCic02-yuQl?usp=sharing"
       target="_blank" rel="noopener noreferrer"
@@ -111,20 +112,19 @@
       <i class="fa-solid fa-file-lines"></i>
     </a>
 
-    <!-- Só aparece para admin -->
+    <!-- Campo Admin Só aparece para admin -->
     <a id="btn-admin" class="icon-btn hidden" data-require-admin
       href="painel-admin.html"
-      title="Painel Administrativo" aria-label="Painel Administrativo">
+      title="Ambiente Administrativo" aria-label="Ambiente Administrativo">
       <i class="fa-solid fa-user-shield"></i>
     </a>
 
-    <!-- /NOVOS BOTÕES -->
+    <!-- NOVOS BOTÕES -->
 
     <a href="index.html" class="icon-btn" title="Página inicial" aria-label="Página inicial">
       <i class="fa-solid fa-house"></i>
     </a>
   </div>
-
 
   <!-- Dropdown do usuário (continua igual, fora do topo-botoes) -->
   <div class="user-menu dropdown hidden" id="userMenu" role="menu" aria-hidden="true">
@@ -132,7 +132,6 @@
     <button type="button" id="btnSair" class="dropdown-item">Sair</button>
   </div>
 </header>
-
 
 <!-- Modal Login/Cadastro -->
 <div id="loginModal" class="modal-login" aria-hidden="true" role="dialog" aria-modal="true" style="display:none;">

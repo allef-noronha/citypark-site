@@ -312,9 +312,9 @@ button, input, textarea { font: inherit; }
   height: 38px;
   display: grid;
   place-items: center;
-  border: 3px solid #26AD7D;
+  border: 3px solid #285f2b;
   border-radius: 8px;
-  color: #26AD7D;
+  color: #285f2b;
   background: #fff;
   cursor: pointer;
   transition: transform .16s ease, color .16s ease, background .16s ease;
@@ -329,7 +329,7 @@ button, input, textarea { font: inherit; }
 
 .payment-add-trigger:hover {
   color: #fff;
-  background: #26AD7D;
+  background: #285f2b;
   transform: scale(1.06);
 }
 
