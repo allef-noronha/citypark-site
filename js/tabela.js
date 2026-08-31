@@ -10,6 +10,8 @@
   const tbody = $('#tvBody');
   const stamp = $('#stamp');
   const statusFilter = $('#statusFilter');
+  const headerParcelasMensais = $('#headerParcelasMensais');
+  const headerIntercaladas = $('#headerIntercaladas');
   const paymentPlan = window.CityParkPaymentPlan;
 
   let allRows = [];
@@ -152,6 +154,39 @@
     stamp.textContent = `Atualizado agora: ${new Date().toLocaleString('pt-BR')}`;
   }
 
+  async function loadConditions() {
+    try {
+      const url = `${WEBAPP_URL}?resource=conditions`;
+
+      const res = await fetch(url, {
+        cache: 'no-store',
+        credentials: 'omit'
+      });
+
+      if (!res.ok) {
+        throw new Error(`${res.status} ${res.statusText}`);
+      }
+
+      const data = await res.json();
+
+      const parcelasMensais = Number(data.parcelasMensais);
+      const intercaladas = Number(data.intercaladas);
+
+      if (Number.isFinite(parcelasMensais) && headerParcelasMensais) {
+        headerParcelasMensais.textContent =
+          `${parcelasMensais} parc. mensais`;
+      }
+
+      if (Number.isFinite(intercaladas) && headerIntercaladas) {
+        headerIntercaladas.textContent =
+          `${intercaladas} intercal. semestrais`;
+      }
+
+    } catch (e) {
+      // A tabela continua funcionando com o texto fallback do HTML.
+      console.warn('[tabela] não foi possível carregar as condições:', e);
+    }
+  }
   async function load() {
     try {
       stamp.textContent = 'Carregando dados…';
@@ -178,5 +213,6 @@
   statusFilter?.addEventListener('change', applyFilter);
   $('#btnPrint')?.addEventListener('click', () => window.print());
 
+  loadConditions();
   load();
 })();
