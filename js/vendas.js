@@ -142,8 +142,8 @@ async function fetchWebApp() {
         preco: r["PREÇO À VISTA"],
         area: r["ÁREA"],
         sinal: r["SINAL"],
-        parcela: r["40 PARC. MENSAIS"],
-        intercalada: r["6 INTERCAL. SEMESTRAIS"],
+        parcela: valueOr(r["PARCELA MENSAL"], r["40 PARC. MENSAIS"]),
+        intercalada: valueOr(r["INTERCALADA"], r["6 INTERCAL. SEMESTRAIS"]),
         chaves: r["CHAVES"],
         status: r["STATUS"],
         tipologia: r["TIPOLOGIA"],
@@ -168,8 +168,26 @@ async function fetchWebApp() {
               : preco,
           area: valueOr(it.area, pick(raw, ["ÁREA", "AREA", "ÃREA", "Área", "area"])),
           sinal: valueOr(it.sinal, pick(raw, ["SINAL", "Sinal", "sinal"])),
-          parcela: valueOr(it.parcela, pick(raw, ["40 PARC. MENSAIS", "40 PARC MENSAIS", "40 PARC", "40 parcelas", "40 PARCELAS"])),
-          intercalada: valueOr(it.intercalada, pick(raw, ["6 INTERCAL. SEMESTRAIS", "6 INTERCAL SEMESTRAIS", "6 INTERCALADAS"])),
+          parcela: valueOr(
+            it.parcela,
+            pick(raw, [
+              "PARCELA MENSAL",
+              "40 PARC. MENSAIS",
+              "40 PARC MENSAIS",
+              "40 PARC",
+              "40 parcelas",
+              "40 PARCELAS",
+            ])
+          ),
+          intercalada: valueOr(
+            it.intercalada,
+            pick(raw, [
+              "INTERCALADA",
+              "6 INTERCAL. SEMESTRAIS",
+              "6 INTERCAL SEMESTRAIS",
+              "6 INTERCALADAS",
+            ])
+          ),
           chaves: valueOr(it.chaves, pick(raw, ["CHAVES", "Chaves", "chaves"])),
           status: valueOr(it.status, pick(raw, ["STATUS", "Status", "status"])),
           tipologia: valueOr(it.tipologia, pick(raw, ["TIPOLOGIA", "Tipologia", "tipologia"])),
