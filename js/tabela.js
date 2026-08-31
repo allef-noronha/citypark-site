@@ -101,16 +101,28 @@
       const area      = pick(r, ['ÁREA', 'AREA', 'Área', 'area']);
       const preco     = pick(r, ['PREÇO À VISTA', 'PRECO À VISTA', 'Preço', 'Preco', 'preco']);
       const sinal     = pick(r, ['SINAL', 'Sinal', 'sinal']);
-      const parc40    = pick(r, ['40 PARC. MENSAIS', '40 PARC MENSAIS', '40 PARC', '40 parcelas', '40 PARCELAS']);
-      const inter6    = pick(r, ['6 INTERCAL. SEMESTRAIS', '6 INTERCAL SEMESTRAIS', '6 INTERCALADAS']);
+      const parcelaMensal = pick(r, [
+        'PARCELA MENSAL',
+        '40 PARC. MENSAIS',
+        '40 PARC MENSAIS',
+        '40 PARC',
+        '40 parcelas',
+        '40 PARCELAS'
+      ]);
+      const intercalada = pick(r, [
+        'INTERCALADA',
+        '6 INTERCAL. SEMESTRAIS',
+        '6 INTERCAL SEMESTRAIS',
+        '6 INTERCALADAS'
+      ]);
       const chaves    = pick(r, ['CHAVES', 'Chaves', 'chaves']);
       const status    = pick(r, ['STATUS', 'Status', 'status']);
 
       const condition = paymentPlan.format({
         price: preco,
         downPayment: sinal,
-        monthlyInstallment: parc40,
-        semiannualInstallment: inter6,
+        monthlyInstallment: parcelaMensal,
+        semiannualInstallment: intercalada,
         keys: chaves
       });
 
