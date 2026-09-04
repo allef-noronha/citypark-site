@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#091253">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Configurações Comerciais | City Park</title>
+  <link rel="stylesheet" href="css/configuracoes-comerciais.css?v=20260902-13">
+  <link rel="icon" href="data:,">
+  <style>html:not(.page-authorized) body { visibility: hidden; }</style>
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="painel-admin.html"><img src="img/CityPark-Branco.png" alt="City Park"></a>
+    <nav>
+      <a href="painel-admin.html">Ambiente Administrativo</a>
+      <a href="gestao-propostas.html">Propostas</a>
+      <a href="vendas.html">Tabela de Vendas</a>
+    </nav>
+  </header>
+
+  <main class="settings-shell">
+    <header class="settings-heading">
+      <div>
+        <p class="eyebrow">Ambiente Comercial</p>
+        <h1>Configurações comerciais</h1>
+        <p>Defina limites e comportamento de reserva sem alterar o código.</p>
+      </div>
+      <span id="settingsStatus" class="status-badge">Carregando…</span>
+    </header>
+
+    <form id="commercialSettingsForm" class="settings-card">
+      <section>
+        <h2>Regras de proposta</h2>
+        <div class="settings-grid">
+          <label>
+            <span>Diferença máxima da tabela (%)</span>
+            <input id="maxDiscount" type="number" min="0" max="100" step="0.01" value="15" required>
+            <small>Acima desse percentual a proposta é bloqueada.</small>
+          </label>
+
+          <label>
+            <span>Máximo em financiamento (%)</span>
+            <input id="maxKeys" type="number" min="0" max="100" step="0.01" value="60" required>
+            <small>Acima desse percentual a proposta é bloqueada.</small>
+          </label>
+        </div>
+      </section>
+
+      <section>
+        <h2>Reserva</h2>
+        <div class="settings-grid">
+          <label>
+            <span>Prazo da reserva (dias)</span>
+            <input id="reservationDays" type="number" min="1" max="90" step="1" value="7" required>
+            <small>Usado para calcular a data de expiração da reserva.</small>
+          </label>
+
+          <label class="toggle-setting">
+            <span>Modo de envio</span>
+            <span class="toggle-line">
+              <input id="testMode" type="checkbox" checked>
+              <strong>Usar modo de teste</strong>
+            </span>
+            <small>Ligado: gera o payload e não reserva. Desligado: grava a proposta e reserva a unidade.</small>
+          </label>
+        </div>
+      </section>
+
+      <div id="settingsMessage" class="settings-message" role="status" aria-live="polite"></div>
+
+      <footer class="settings-actions">
+        <a class="secondary-button" href="painel-admin.html">Voltar</a>
+        <button id="saveSettings" class="primary-button" type="submit">Salvar configurações</button>
+      </footer>
+    </form>
+  </main>
+
+  <script type="module" src="js/configuracoes-comerciais.js?v=20260902-13"></script>
+</body>
+</html>

@@ -63,6 +63,10 @@ let listaCompleta = [];
 let listaFiltrada = [];
 let carregandoDados = false;
 
+// BETA 15B Â· PROTECAO DE COTA DO FIRESTORE
+const SALES_CACHE_KEY = "citypark:vendas-cache:v1";
+const SALES_CACHE_TTL_MS = 2 * 60 * 1000;
+
 // ===== UI REFS =====
 const btnToggleFiltros = document.getElementById("btn-toggle-filtros");
 const filtrosEl =
@@ -120,7 +124,53 @@ function mostrarCarregandoDados() {
   `;
 }
 
+function readSalesCache({ allowStale = false } = {}) {
+  try {
+    const raw = localStorage.getItem(SALES_CACHE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed?.data)) return null;
+
+    const age = Date.now() - Number(parsed.savedAt || 0);
+    if (!allowStale && (age < 0 || age > SALES_CACHE_TTL_MS)) return null;
+    return parsed.data;
+  } catch {
+    return null;
+  }
+}
+
+function writeSalesCache(data) {
+  try {
+    localStorage.setItem(SALES_CACHE_KEY, JSON.stringify({
+      savedAt: Date.now(),
+      data
+    }));
+  } catch {
+    // Modos de privacidade podem bloquear localStorage.
+  }
+}
+
 async function fetchWebApp() {
+  const cached = readSalesCache();
+  if (cached) {
+    console.info("[vendas] tabela carregada do cache local; leitura do Firestore evitada.");
+    return cached;
+  }
+
+  const data = await fetchWebAppFromFirestore();
+  if (Array.isArray(data)) {
+    writeSalesCache(data);
+    return data;
+  }
+
+  const stale = readSalesCache({ allowStale: true });
+  if (stale) {
+    console.warn("[vendas] usando o ultimo cache local conhecido.");
+    return stale;
+  }
+  return data;
+}
+async function fetchWebAppFromFirestore() {
   try {
     const snapshot = await getDocs(collection(db, "unidades"));
     return snapshot.docs

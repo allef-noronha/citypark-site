@@ -2,6 +2,19 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
+    // BETA 9 · LEITURA COMERCIAL TESTE
+    // Coleções temporárias usadas somente durante a integração.
+    // Escrita pelo cliente continua proibida.
+    match /site_units_test/{unitId} {
+      allow read: if request.auth != null;
+      allow write: if false;
+    }
+
+    match /site_conditions_test/{documentId} {
+      allow read: if request.auth != null;
+      allow write: if false;
+    }
+
     function signedIn() {
       return request.auth != null;
     }
@@ -80,6 +93,41 @@ service cloud.firestore {
         );
     }
 
+    function validOptionalFixedPaymentComponent(component, periodicity, requireDates, maxQuantity) {
+      return component is map && (
+        (
+          component.ativo == false
+          && validPaymentComponent(component, 'outra', requireDates, 1)
+        )
+        ||
+        (
+          component.ativo == true
+          && validPaymentComponent(component, periodicity, requireDates, maxQuantity)
+        )
+      );
+    }
+
+    function validSignalPaymentComponent(component, requireDates) {
+      return component is map && (
+        (
+          component.ativo == false
+          && validPaymentComponent(component, 'outra', requireDates, 1)
+        )
+        ||
+        (
+          component.ativo == true
+          && (
+            validPaymentComponent(component, 'mensal', requireDates, 3)
+            ||
+            (
+              component.quantidade == 1
+              && validPaymentComponent(component, 'unica', requireDates, 1)
+            )
+          )
+        )
+      );
+    }
+
     function validFlexiblePaymentComponent(component, requireDates) {
       return component is map && (
         (
@@ -124,45 +172,97 @@ service cloud.firestore {
         && validFlexiblePaymentComponent(slots.grupo12, requireDates);
     }
 
-    function validPaymentCondition(data, unidadeId) {
+    function validConditionShape(condition) {
+      return condition is map && (
+        (
+          condition.tipo == 'personalizada'
+          && condition.schemaVersao == 3
+          && condition.keys().hasAll([
+            'schemaVersao', 'tipo', 'descricao', 'valorTabelaCentavos',
+            'totalCalculadoCentavos', 'diferencaCentavos', 'componentes'
+          ])
+          && condition.keys().hasOnly([
+            'schemaVersao', 'tipo', 'descricao', 'valorTabelaCentavos',
+            'totalCalculadoCentavos', 'diferencaCentavos', 'componentes'
+          ])
+        )
+        ||
+        (
+          condition.tipo == 'padrao'
+          && condition.schemaVersao == 4
+          && condition.keys().hasAll([
+            'schemaVersao', 'tipo', 'descricao', 'tipologia',
+            'valorTabelaCentavos', 'totalCalculadoCentavos', 'diferencaCentavos',
+            'condicaoComercialSnapshot', 'resumoPublicado', 'componentes',
+            'diaVencimentoPadrao', 'dataBasePadrao', 'calendarioPadrao'
+          ])
+          && condition.keys().hasOnly([
+            'schemaVersao', 'tipo', 'descricao', 'tipologia',
+            'valorTabelaCentavos', 'totalCalculadoCentavos', 'diferencaCentavos',
+            'condicaoComercialSnapshot', 'resumoPublicado', 'componentes',
+            'diaVencimentoPadrao', 'dataBasePadrao', 'calendarioPadrao'
+          ])
+          && condition.tipologia is string
+          && condition.condicaoComercialSnapshot is map
+          && condition.resumoPublicado is map
+          && condition.diaVencimentoPadrao in [15, 30]
+          && condition.dataBasePadrao is string
+          && condition.calendarioPadrao is map
+        )
+      );
+    }
+
+    function validPaymentCondition(data, unidadeId, commercialUnitId) {
       let condition = data.condicaoProposta;
       let parts = condition.componentes;
       let slots = parts.parcelas;
-      let values = getAfter(/databases/$(database)/documents/unidades/$(unidadeId)).data.valores;
-      let tableValue = values.get(
-        'precoAVistaCentavos',
-        values.get('precoAVista', values.get('precoVistaCentavos', values.get('precoVista', null)))
-      );
+      let operationalUnit = getAfter(
+        /databases/$(database)/documents/unidades/$(unidadeId)
+      ).data;
+      let commercialUnit = getAfter(
+        /databases/$(database)/documents/site_units_test/$(commercialUnitId)
+      ).data;
+      let livePrice = commercialUnit.precoVista;
+      let livePriceCents = livePrice * 100;
+      let tableValue = condition.valorTabelaCentavos;
       let requireDates = condition.tipo == 'personalizada';
+
       return condition is map
-        && condition.keys().hasAll([
-          'schemaVersao', 'tipo', 'descricao', 'valorTabelaCentavos',
-          'totalCalculadoCentavos', 'diferencaCentavos', 'componentes'
-        ])
-        && condition.keys().hasOnly([
-          'schemaVersao', 'tipo', 'descricao', 'valorTabelaCentavos',
-          'totalCalculadoCentavos', 'diferencaCentavos', 'componentes'
-        ])
-        && condition.schemaVersao == 3
-        && condition.tipo in ['padrao', 'personalizada']
+        && validConditionShape(condition)
         && condition.descricao is string
         && condition.descricao.size() > 0
         && condition.descricao.size() <= 1000
         && condition.valorTabelaCentavos is int
         && condition.totalCalculadoCentavos is int
         && condition.diferencaCentavos is int
-        && tableValue is int
-        && condition.valorTabelaCentavos == tableValue
-        && condition.totalCalculadoCentavos == tableValue
-        && condition.diferencaCentavos == 0
+        && commercialUnit.precoVista is number
+        && commercialUnit.precoVista > 0
+        && operationalUnit.unidade is string
+        && commercialUnit.unidade is string
+        && commercialUnit.unidade == operationalUnit.unidade
+        && condition.valorTabelaCentavos >= livePriceCents - 0.5
+        && condition.valorTabelaCentavos <= livePriceCents + 0.5
+        && condition.totalCalculadoCentavos > 0
+        && (
+          (
+            condition.tipo == 'padrao'
+            && condition.totalCalculadoCentavos == tableValue
+            && condition.diferencaCentavos == 0
+          )
+          ||
+          (
+            condition.tipo == 'personalizada'
+            && condition.totalCalculadoCentavos * 100 >= tableValue * 85
+            && condition.diferencaCentavos == tableValue - condition.totalCalculadoCentavos
+          )
+        )
         && parts is map
         && parts.keys().hasAll(['sinal', 'parcelas', 'chaves'])
         && parts.keys().hasOnly(['sinal', 'parcelas', 'chaves'])
-        && validPaymentComponent(parts.sinal, 'unica', requireDates, 1)
-        && validPaymentComponent(parts.chaves, 'unica', requireDates, 1)
+        && validSignalPaymentComponent(parts.sinal, requireDates)
+        && validOptionalFixedPaymentComponent(parts.chaves, 'unica', false, 1)
         && validPaymentSlots(slots, requireDates)
-        && parts.sinal.ativo == true
-        && parts.chaves.ativo == true
+        && parts.chaves.totalCentavos * 100 <= condition.totalCalculadoCentavos * 60
         && condition.totalCalculadoCentavos ==
           parts.sinal.totalCentavos
           + slots.grupo01.totalCentavos
@@ -178,6 +278,15 @@ service cloud.firestore {
           + slots.grupo11.totalCentavos
           + slots.grupo12.totalCentavos
           + parts.chaves.totalCentavos;
+    }
+
+    match /condicoes_comerciais/{documentId} {
+      allow read: if true;
+      allow write: if false;
+    }
+    match /configuracoes_comerciais/{documentId} {
+      allow read: if true;
+      allow write: if false;
     }
 
     match /corretores/{uid} {
@@ -245,7 +354,9 @@ service cloud.firestore {
         && request.resource.data.statusProposta == 'reservada'
         && request.resource.data.declaracaoAceita == true
         && request.resource.data.unidadeId is string
-        && validPaymentCondition(request.resource.data, request.resource.data.unidadeId)
+        
+        && request.resource.data.commercialUnitId is string
+        && validPaymentCondition(request.resource.data, request.resource.data.unidadeId, request.resource.data.commercialUnitId)
         && getAfter(/databases/$(database)/documents/unidades/$(request.resource.data.unidadeId)).data.status == 'reservada'
         && getAfter(/databases/$(database)/documents/unidades/$(request.resource.data.unidadeId)).data.propostaAtualId == propostaId;
 
@@ -317,5 +428,12 @@ service cloud.firestore {
     match /{document=**} {
       allow read, write: if false;
     }
+
+    match /configuracoes/{documento} {
+      allow read: if signedIn();
+      allow create, update, delete: if isAdmin();
+    }
+
   }
 }
+

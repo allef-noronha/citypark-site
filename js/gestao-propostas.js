@@ -9,7 +9,9 @@ import {
   collection,
   doc,
   getDoc,
-  getDocs
+  getDocs,
+  query,
+  where
 } from "https://www.gstatic.com/firebasejs/10.12.1/firebase-firestore.js";
 
 const $ = id => document.getElementById(id);
@@ -73,7 +75,7 @@ function bindEvents() {
   if (state.initialized) return;
   state.initialized = true;
   elements.search.addEventListener("input", renderRows);
-  elements.filter.addEventListener("change", renderRows);
+  elements.filter.addEventListener("change", loadProposals);
   elements.refresh.addEventListener("click", loadProposals);
   elements.rows.addEventListener("click", event => {
     const link = event.target.closest("[data-proposal-id]");
@@ -87,6 +89,20 @@ function bindEvents() {
   });
 }
 
+function proposalQueryForFilter(filter) {
+  const proposals = collection(db, "propostas");
+  if (filter === "pending") return query(proposals, where("statusProposta", "==", "reservada"));
+  if (filter === "approved") return query(proposals, where("statusProposta", "==", "aprovada"));
+  if (filter === "closed") return query(proposals, where("statusProposta", "==", "vendida"));
+  if (filter === "inactive") {
+    return query(
+      proposals,
+      where("statusProposta", "in", ["recusada", "cancelada", "expirada", "distratada"])
+    );
+  }
+  return proposals;
+}
+
 async function loadProposals() {
   elements.refresh.disabled = true;
   elements.loading.hidden = false;
@@ -94,17 +110,41 @@ async function loadProposals() {
   elements.empty.hidden = true;
 
   try {
-    const [proposalSnapshot, brokerSnapshot, unitSnapshot] = await Promise.all([
-      getDocs(collection(db, "propostas")),
-      getDocs(collection(db, "corretores")),
-      getDocs(collection(db, "unidades"))
-    ]);
-
+    const proposalSnapshot = await getDocs(proposalQueryForFilter(elements.filter.value));
     state.proposals = proposalSnapshot.docs
       .map(item => ({ id: item.id, ...item.data() }))
       .sort((a, b) => dateValue(b.criadoEm) - dateValue(a.criadoEm));
-    state.brokers = new Map(brokerSnapshot.docs.map(item => [item.id, { id: item.id, ...item.data() }]));
-    state.units = new Map(unitSnapshot.docs.map(item => [item.id, { id: item.id, ...item.data() }]));
+
+    // BETA 15A · REDUÇÃO DE LEITURAS
+    // Propostas novas ja carregam corretorSnapshot e unidadeSnapshot.
+    // Para propostas legadas, buscamos SOMENTE os IDs ausentes, em vez de baixar
+    // as colecoes inteiras de corretores e unidades (~300 documentos cada).
+    const missingBrokerIds = [...new Set(
+      state.proposals
+        .filter(proposal => proposal.corretorId && !proposal.corretorSnapshot)
+        .map(proposal => proposal.corretorId)
+    )];
+    const missingUnitIds = [...new Set(
+      state.proposals
+        .filter(proposal => proposal.unidadeId && !proposal.unidadeSnapshot)
+        .map(proposal => proposal.unidadeId)
+    )];
+
+    const [brokerDocs, unitDocs] = await Promise.all([
+      Promise.all(missingBrokerIds.map(id => getDoc(doc(db, "corretores", id)))),
+      Promise.all(missingUnitIds.map(id => getDoc(doc(db, "unidades", id))))
+    ]);
+
+    state.brokers = new Map(
+      brokerDocs
+        .filter(snapshot => snapshot.exists())
+        .map(snapshot => [snapshot.id, { id: snapshot.id, ...snapshot.data() }])
+    );
+    state.units = new Map(
+      unitDocs
+        .filter(snapshot => snapshot.exists())
+        .map(snapshot => [snapshot.id, { id: snapshot.id, ...snapshot.data() }])
+    );
     renderSummary();
     renderRows();
   } catch (error) {

@@ -1,4 +1,6 @@
-import { auth, db } from "./firebase.js";
+import {
+  auth,
+  db } from "./firebase.js";
 
 import {
   onAuthStateChanged,
@@ -9,7 +11,9 @@ import {
   collection,
   doc,
   getDoc,
-  getDocs
+  getCountFromServer,
+  query,
+  where
 } from "https://www.gstatic.com/firebasejs/10.12.1/firebase-firestore.js";
 
 const adminName = document.getElementById("adminName");
@@ -57,13 +61,15 @@ logoutButton.addEventListener("click", async () => {
   }
 });
 
+// BETA 15B · COUNT AGREGADO: evita baixar todas as propostas somente para contar.
 async function loadPendingCount() {
   try {
-    const snapshot = await getDocs(collection(db, "propostas"));
-    const total = snapshot.docs.reduce((count, proposal) => {
-      return normalizeStatus(proposal.data().statusProposta) === "reservada" ? count + 1 : count;
-    }, 0);
-    pendingProposalCount.textContent = String(total);
+    const pendingQuery = query(
+      collection(db, "propostas"),
+      where("statusProposta", "==", "reservada")
+    );
+    const snapshot = await getCountFromServer(pendingQuery);
+    pendingProposalCount.textContent = String(snapshot.data().count || 0);
   } catch (error) {
     console.error("[ambiente-admin] contagem de propostas:", error);
     pendingProposalCount.textContent = "—";

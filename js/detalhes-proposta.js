@@ -197,7 +197,7 @@ function renderFinanceTableRows(rows, currentSchema) {
 }
 
 function financeGroupLabel(groupKey, fallback) {
-  return { sinal:"Sinal", mensal:"Mensais", semestral:"Semestrais", anual:"Anuais", outra:"Outro", unica:"Parcela única", chaves:"Chaves / financiamento" }[groupKey] || fallback || "Parcela";
+  return { sinal:"Sinal", mensal:"Mensais", semestral:"Semestrais", anual:"Anuais", outra:"Outro", unica:"Parcela única", chaves:"Financiamento" }[groupKey] || fallback || "Parcela";
 }
 
 function structuredComponents(condition) {
@@ -205,16 +205,16 @@ function structuredComponents(condition) {
   if (!source || typeof source !== "object") return [];
   if (condition.schemaVersao >= 3 && source.parcelas && typeof source.parcelas === "object") {
     const installmentRows = Object.entries(source.parcelas).sort(([a], [b]) => a.localeCompare(b)).map(([key, component]) => ({ key, label: component?.descricao || periodicityLabel(component?.periodicidade), ...(component || {}) }));
-    return [{ key: "sinal", label: "Sinal", ...(source.sinal || {}) }, ...installmentRows, { key: "chaves", label: "Chaves / financiamento", ...(source.chaves || {}) }].filter(item => item.ativo);
+    return [{ key: "sinal", label: "Sinal", ...(source.sinal || {}) }, ...installmentRows, { key: "chaves", label: "Financiamento", ...(source.chaves || {}) }].filter(item => item.ativo);
   }
-  const labels = { sinal:"Sinal", mensais:"Parcelas mensais", semestrais:"Parcelas semestrais", anuais:"Parcelas anuais", negociacaoEspecial:"Negociação especial", chaves:"Chaves / financiamento" };
+  const labels = { sinal:"Sinal", mensais:"Parcelas mensais", semestrais:"Parcelas semestrais", anuais:"Parcelas anuais", negociacaoEspecial:"Negociação especial", chaves:"Financiamento" };
   return Object.entries(labels).map(([key, label]) => ({ key, label, ...(source[key] || {}) })).filter(item => item.ativo);
 }
 
 function legacyFinanceRows(condition) {
   if (normalizeStatus(condition.tipo) !== "padrao") return [];
   const values = unitData().valores || {};
-  const data = [["Sinal",1,moneyValue(values,["sinalCentavos","sinal"])],["Parcelas mensais",80,moneyValue(values,["parcelasMensaisCentavos","parcelasMensais"])],["Parcelas semestrais",12,moneyValue(values,["intercaladasSemestraisCentavos","intercaladasSemestrais"])],["Chaves / financiamento",1,moneyValue(values,["chavesCentavos","chaves"])]];
+  const data = [["Sinal",1,moneyValue(values,["sinalCentavos","sinal"])],["Parcelas mensais",80,moneyValue(values,["parcelasMensaisCentavos","parcelasMensais"])],["Parcelas semestrais",12,moneyValue(values,["intercaladasSemestraisCentavos","intercaladasSemestrais"])],["Financiamento",1,moneyValue(values,["chavesCentavos","chaves"])]];
   return data.filter(([, , value]) => Number.isInteger(value)).map(([label, quantidade, valor]) => ({ label, quantidade, valorUnitarioCentavos:valor, totalCentavos:quantidade*valor, primeiroVencimento:null }));
 }
 
@@ -223,9 +223,9 @@ function openConfirmation(action) {
   const approving = action === "approve";
   elements.confirmationIcon.textContent = approving ? "✓" : "!";
   elements.confirmationIcon.className = `modal-icon ${approving ? "success" : "danger"}`;
-  elements.confirmationTitle.textContent = approving ? "Aprovar esta proposta?" : "Recusar esta proposta?";
+  elements.confirmationTitle.textContent = approving ? "Aprovar esta proposta?" : "Recusar e liberar esta unidade?";
   elements.confirmationText.textContent = approving ? "A proposta será aprovada e o temporizador de expiração será removido." : "A proposta ficará inativa e a unidade voltará a ficar disponível.";
-  elements.confirmAction.textContent = approving ? "Sim, aprovar proposta" : "Confirmar recusa";
+  elements.confirmAction.textContent = approving ? "Sim, aprovar proposta" : "Recusar e liberar";
   elements.confirmAction.className = approving ? "primary-button" : "danger-button";
   elements.reasonField.hidden = approving;
   elements.reason.value = "";
@@ -308,18 +308,8 @@ async function rejectProposal(reason) {
 
 function openFinanceModal(key) {
   const component = state.financeComponents.find(item => item.key === key);
-  if (!component || state.proposal.condicaoProposta?.schemaVersao < 3) return;
-  state.editingKey = key;
-  elements.editDescription.value = component.descricao || component.label || "";
-  elements.editQuantity.value = component.quantidade || 1;
-  elements.editQuantity.disabled = ["sinal", "chaves"].includes(key);
-  elements.editQuantity.max = String({ mensal:240, semestral:60, anual:30, outra:1, unica:1 }[component.periodicidade] || 120);
-  elements.editValue.value = formatMoney(component.valorUnitarioCentavos);
-  elements.editDueDate.value = dateInputValue(component.primeiroVencimento);
-  elements.editError.hidden = true;
-  elements.financeModal.hidden = false;
-  document.body.classList.add("modal-open");
-  elements.editDescription.focus();
+  if (!component) return;
+  showToast("A proposta recebida é imutável. Para negociar valores, crie uma contraproposta como nova versão da negociação.");
 }
 
 function closeFinanceModal(force = false) {
