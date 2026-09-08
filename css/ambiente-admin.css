@@ -69,7 +69,7 @@
 .module-card:hover .module-arrow { transform: translateX(4px); }
 
 .inventory-visual { min-height: 150px; display: flex; align-items: center; justify-content: center; gap: 27px; }
-.inventory-donut { width: 132px; height: 132px; display: grid; place-items: center; flex: 0 0 auto; border-radius: 50%; background: conic-gradient(var(--admin-green) 0 calc(var(--available) * 1%),var(--admin-amber) 0 calc((var(--available) + var(--reserved)) * 1%),var(--admin-red) 0 100%); position: relative; transition: background 1s ease; }
+.inventory-donut { width: 132px; height: 132px; display: grid; place-items: center; flex: 0 0 auto; border-radius: 50%; background: conic-gradient(var(--admin-green) 0 calc(var(--available) * 1%),var(--admin-amber) 0 calc((var(--available) + var(--reserved)) * 1%),var(--admin-red) 0 calc((var(--available) + var(--reserved) + var(--sold, 0)) * 1%),#94a3b8 0 100%); position: relative; transition: background 1s ease; }
 .inventory-donut::after { content: ""; width: 86px; height: 86px; background: #fff; border-radius: 50%; position: absolute; }
 .inventory-donut > span { display: grid; place-items: center; position: relative; z-index: 1; }
 .inventory-donut strong { font-size: 25px; line-height: 1; }

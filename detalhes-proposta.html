@@ -116,7 +116,18 @@
           <div id="historyTimeline" class="history-timeline" aria-live="polite"></div>
         </section>
 
-        <section id="cancelamento-proposta" class="detail-section cancellation-section" hidden>
+        <section id="previousSaleDetails" hidden class="detail-section"></section>
+        <section id="invalidateTestSection" hidden class="detail-section cancellation-section">
+          <h2>Proposta de teste</h2>
+          <p>Invalide o teste preservando os dados e o histórico. A unidade ficará bloqueada até a conferência das propostas anteriores.</p>
+          <button id="invalidateTestProposal" type="button" class="danger-button">Invalidar teste</button>
+        </section>
+        <section id="distratoSection" hidden class="detail-section cancellation-section">
+        <h2>Distrato da venda</h2>
+        <p>Registre o distrato para liberar a unidade. A proposta, os valores e o histórico da venda serão mantidos.</p>
+        <button id="distractProposal" type="button" class="danger-button">Registrar distrato</button>
+      </section>
+      <section id="cancelamento-proposta" class="detail-section cancellation-section" hidden>
           <div class="section-heading cancellation-heading">
             <div><h2>Cancelamento da proposta</h2><p>Encerre esta proposta aprovada e devolva a unidade ao estoque disponível.</p></div>
             <button id="cancelApprovedProposal" class="danger-button" type="button">Cancelar proposta</button>

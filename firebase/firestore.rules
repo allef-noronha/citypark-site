@@ -186,6 +186,7 @@ service cloud.firestore {
         && commercialUnit.precoVista is number
         && commercialUnit.precoVista > 0
         && operationalUnit.status == 'disponivel'
+        && operationalUnit.get('destinacao', 'venda') == 'venda'
         && operationalUnit.unidade is string
         && commercialUnit.unidade is string
         && commercialUnit.unidade == operationalUnit.unidade
@@ -264,13 +265,46 @@ service cloud.firestore {
       allow delete: if false;
     }
 
+    match /disponibilidade_publica/{documentId} {
+      allow get: if documentId == 'atual';
+      allow list, write: if false;
+    }
+
+    function validInventoryAdjustment(unitId) {
+      let data = request.resource.data;
+      let historyId = data.ajusteHistoricoId;
+      let history = getAfter(/databases/$(database)/documents/historico_unidades/$(historyId)).data;
+      return historyId is string
+        && !exists(/databases/$(database)/documents/historico_unidades/$(historyId))
+        && resource.data.get('propostaAtualId', null) == null
+        && resource.data.get('propostaId', null) == null
+        && data.get('propostaAtualId', null) == null
+        && data.get('propostaId', null) == null
+        && data.destinacao in ['venda', 'administracao', 'permuta']
+        && data.status in ['disponivel', 'reservada', 'vendida', 'bloqueada']
+        && (data.destinacao != 'administracao' || data.status == 'bloqueada')
+        && (data.destinacao != 'permuta' || data.status in ['bloqueada', 'vendida'])
+        && data.diff(resource.data).affectedKeys().hasOnly(['status','destinacao','atualizadoEm','ajusteHistoricoId','expiraEm','vendidoEm'])
+        && data.atualizadoEm == request.time
+        && history.unidadeId == unitId && history.adminId == request.auth.uid
+        && history.acao == 'ajuste administrativo' && history.data == request.time
+        && history.statusAnterior == resource.data.status && history.statusNovo == data.status
+        && history.destinacaoAnterior == resource.data.get('destinacao', 'nao_classificada')
+        && history.destinacaoNova == data.destinacao
+        && history.observacao is string && history.observacao.size() > 0 && history.observacao.size() <= 2000
+        && history.referencia is string && history.referencia.size() > 0 && history.referencia.size() <= 300;
+    }
+
     match /unidades/{unidadeId} {
       allow read: if true;
       allow create, delete: if isAdmin();
 
-      allow update: if isAdmin() || (
+      allow update: if (isAdmin()
+        && (request.resource.data.get('destinacao', 'venda') == 'venda' || request.resource.data.status in ['bloqueada', 'vendida'])
+        && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['destinacao','ajusteHistoricoId']) || validInventoryAdjustment(unidadeId))) || (
         isApprovedBroker()
         && resource.data.status == 'disponivel'
+        && resource.data.get('destinacao', 'venda') == 'venda'
         && request.resource.data.status == 'reservada'
         && request.resource.data.propostaAtualId is string
         && request.resource.data.diff(resource.data).affectedKeys()
@@ -278,6 +312,36 @@ service cloud.firestore {
         && getAfter(/databases/$(database)/documents/propostas/$(request.resource.data.propostaAtualId)).data.corretorId == request.auth.uid
         && getAfter(/databases/$(database)/documents/propostas/$(request.resource.data.propostaAtualId)).data.unidadeId == unidadeId
       );
+    }
+
+    function validPreviousSale(proposalId) {
+      let p = request.resource.data;
+      let u = get(/databases/$(database)/documents/unidades/$(p.unidadeId)).data;
+      let after = getAfter(/databases/$(database)/documents/unidades/$(p.unidadeId)).data;
+      let uh = getAfter(/databases/$(database)/documents/historico_unidades/$(proposalId)).data;
+      let ph = getAfter(/databases/$(database)/documents/historico_propostas/$(proposalId)).data;
+      return isAdmin() && p.origem == 'venda_anterior' && p.statusProposta == 'vendida'
+        && proposalId == 'venda-anterior-' + p.unidadeId
+        && p.adminId == request.auth.uid && p.corretorId == null
+        && p.criadoEm == request.time && p.atualizadoEm == request.time
+        && u.status == 'vendida' && u.get('destinacao','nao_classificada') in ['venda','nao_classificada']
+        && u.get('propostaAtualId',null) == null && u.get('propostaId',null) == null
+        && after.status == 'vendida' && after.propostaAtualId == proposalId
+        && after.atualizadoEm == request.time
+        && after.diff(u).affectedKeys().hasOnly(['propostaAtualId','atualizadoEm'])
+        && p.cliente.nomeCompleto is string && p.cliente.nomeCompleto.size() > 0 && p.cliente.nomeCompleto.size() <= 200
+        && p.corretorSnapshot.nome is string && p.corretorSnapshot.nome.size() > 0 && p.corretorSnapshot.nome.size() <= 200
+        && p.vendaAnterior.valorCentavos is int && p.vendaAnterior.valorCentavos > 0 && p.vendaAnterior.valorCentavos <= 100000000000
+        && p.vendaAnterior.dataVenda is string && p.vendaAnterior.dataVenda.matches('[0-9]{4}-[0-9]{2}-[0-9]{2}')
+        && p.vendaAnterior.condicoes is string && p.vendaAnterior.condicoes.size() > 0 && p.vendaAnterior.condicoes.size() <= 4000
+        && p.vendaAnterior.referencia is string && p.vendaAnterior.referencia.size() > 0 && p.vendaAnterior.referencia.size() <= 300
+        && p.vendaAnterior.conferidoPor == request.auth.uid
+        && !exists(/databases/$(database)/documents/historico_unidades/$(proposalId))
+        && !exists(/databases/$(database)/documents/historico_propostas/$(proposalId))
+        && uh == ph && uh.propostaId == proposalId && uh.unidadeId == p.unidadeId
+        && uh.adminId == request.auth.uid && uh.data == request.time
+        && uh.statusAnterior == 'vendida' && uh.statusNovo == 'vendida'
+        && uh.acao == 'venda anterior cadastrada' && uh.vendaAnterior == p.vendaAnterior;
     }
 
     match /propostas/{propostaId} {
@@ -309,7 +373,10 @@ service cloud.firestore {
         && getAfter(/databases/$(database)/documents/unidades/$(request.resource.data.unidadeId)).data.status == 'reservada'
         && getAfter(/databases/$(database)/documents/unidades/$(request.resource.data.unidadeId)).data.propostaAtualId == propostaId;
 
-      allow update, delete: if isAdmin();
+      allow create: if validPreviousSale(propostaId);
+
+      allow update: if isAdmin();
+      allow delete: if false;
 
       match /documentos/{documentoId} {
         allow read: if canAccessProposal(propostaId);

@@ -99,7 +99,7 @@ function proposalQueryForFilter(filter) {
   if (filter === "inactive") {
     return query(
       proposals,
-      where("statusProposta", "in", ["recusada", "cancelada", "expirada", "distratada"])
+      where("statusProposta", "in", ["recusada", "cancelada", "expirada", "distratada", "teste_invalidado"])
     );
   }
   return proposals;
@@ -261,6 +261,7 @@ function statusLabel(value) {
     cancelada: "Proposta cancelada",
     expirada: "Proposta expirada",
     distratada: "Proposta distratada",
+    teste_invalidado: "Teste invalidado",
     inativa: "Proposta inativa"
   };
   return labels[status] || value || "Situação não informada";

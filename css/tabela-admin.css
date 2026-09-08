@@ -1,4 +1,22 @@
 [hidden] { display: none !important; }
+.inventory-scope { margin-bottom: 24px; padding-bottom: 20px; border-bottom: 1px solid #dde2ea; }
+.inventory-scope select { max-width: 100%; padding: 10px; margin: 8px 0; }
+.inventory-scope button { padding: 10px; cursor: pointer; }
+#classificationResult { white-space: pre-wrap; }
+#saveUnitAdjustment { border-top: 1px solid #ccd3dd; padding-top: 16px; }
+#saveUnitAdjustment label { display: block; margin: 12px 0; }
+#saveUnitAdjustment select, #saveUnitAdjustment textarea, #saveUnitAdjustment input:not([type=checkbox]) { display: block; width: 100%; box-sizing: border-box; padding: 10px; }
+#adjustError { color: #9b2424; }
+.unit-card[data-status=blocked] { background: #e0e4eb; color: #374151; border-color: #718096; }
+.unit-card { font-family: inherit; cursor: pointer; }
+.unit-card:focus-visible { outline: 3px solid #1729a5; outline-offset: 3px; }
+#unitDialog { width: min(680px, calc(100% - 32px)); max-height: 85vh; border: 1px solid #d7dce5; border-radius: 16px; padding: 24px; color: #17213c; }
+#unitDialog::backdrop { background: #07114799; }
+#unitDialog header { display: flex; align-items: start; justify-content: space-between; gap: 16px; }
+#unitDialog h2 { margin-top: 0; }
+#unitDialog li { margin-bottom: 16px; overflow-wrap: anywhere; }
+#unitDialog a { color: #1729a5; font-weight: 600; }
+#unitDialog button, #refreshUnits { padding: 10px 16px; border: 1px solid #c7cfdd; border-radius: 8px; cursor: pointer; background: #fff; color: #17213c; }
 .unit-dashboard {
   min-height: calc(100vh - 136px);
   padding: 34px clamp(18px,4vw,56px) 72px;
@@ -86,3 +104,8 @@
   .tower-section { padding: 16px 12px; }
   .unit-grid { grid-template-columns: repeat(auto-fit,minmax(65px,1fr)); gap: 6px; }
 }
+
+#previousSaleForm {border-top:1px solid #ccd5e5;margin-top:24px;padding-top:20px;}
+#previousSaleForm label {display:block;margin:12px 0;}
+#previousSaleForm input:not([type=checkbox]), #previousSaleForm textarea {display:block;width:100%;box-sizing:border-box;padding:10px;border:1px solid #aab7cb;border-radius:6px;font:inherit;}
+#previousError {color:#a32222;}

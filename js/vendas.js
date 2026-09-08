@@ -1,3 +1,4 @@
+import { watchAvailability, unitKey, publicStatus } from './disponibilidade.js';
 // js/vendas.js — Tabela, filtros, popup e formulário (modal ou nova guia)
 // ------------------------------------------------------------------
 // - Card: "VER" só aparece para corretor aprovado (e pode ser ocultado para visitante via HideMode).
@@ -57,12 +58,13 @@ const normaliza = (s) =>
     .normalize("NFD")
     .replace(/\p{Diacritic}/gu, "")
     .trim();
-const isDisponivel = (status) => normaliza(status).includes("disponivel");
+const isDisponivel = (status) => normaliza(status) === "disponivel";
 
 // ===== ESTADO LOCAL =====
 let listaCompleta = [];
 let listaFiltrada = [];
 let carregandoDados = false;
+let popupUnit = null;
 
 // BETA 15B Â· PROTECAO DE COTA DO FIRESTORE
 const SALES_CACHE_KEY = "citypark:vendas-cache:v1";
@@ -91,7 +93,7 @@ const btnFormTarget = document.getElementById("btn-form-target");
 // ===== AUTH EVENTS =====
 window.addEventListener("auth-changed", () => {
   if (carregandoDados) return;
-  renderTabela((listaFiltrada && listaFiltrada.length) ? listaFiltrada : listaCompleta);
+  if (f.form) f.form.dispatchEvent(new Event('input')); else renderTabela(listaCompleta);
 });
 
 // ===== INIT =====
@@ -107,8 +109,13 @@ document.addEventListener("DOMContentLoaded", async () => {
   carregandoDados = false;
 
   if (!data) return;
-  listaCompleta = data;
-  renderTabela(data);
+  listaCompleta = data.map(item => ({ ...item, status: 'A confirmar' }));
+  renderTabela(listaCompleta);
+  watchAvailability(units => {
+    listaCompleta = listaCompleta.map(item => ({ ...item, status: publicStatus(units[unitKey(item.unidade)]) }));
+    if (f.form) f.form.dispatchEvent(new Event('input')); else renderTabela(listaCompleta);
+    if (popupUnit && publicStatus(units[unitKey(popupUnit.unidade)]) !== popupUnit.status) fecharPopup();
+  });
 });
 
 // ========================================================================
@@ -450,7 +457,7 @@ function renderTabela(data = []) {
 
   listaFiltrada.forEach((item, index) => {
     const s = normaliza(item.status);
-    const statusClass = s.includes("disponivel")
+    const statusClass = s === "disponivel"
       ? "status-disponivel"
       : s.includes("reservado")
       ? "status-reservado"
@@ -517,6 +524,7 @@ function abrirPopup() {
   if (popup) popup.style.display = "flex";
 }
 function fecharPopup() {
+  popupUnit = null;
   if (popup) popup.style.display = "none";
   if (popupContent) popupContent.innerHTML = "";
 }
@@ -524,6 +532,7 @@ function fecharPopup() {
 function mostrarDetalhes(index) {
   const item = listaFiltrada[index] || listaCompleta[index];
   if (!item || !popupContent) return;
+  popupUnit = item;
 
   const aprovado = isAprovado();
   const podeProposta = aprovado && isDisponivel(item.status);
@@ -921,7 +930,7 @@ function fromCents(value) {
 
 function statusLabel(value) {
   const status = normaliza(value);
-  if (status.includes("dispon")) return "Disponível";
+  if (status === "disponivel") return "Disponível";
   if (status.includes("reserv") || status.includes("aprov")) return "Reservado";
   if (status.includes("vend")) return "Vendido";
   return value || "Não informado";

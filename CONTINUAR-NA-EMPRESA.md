@@ -1,5 +1,35 @@
 # Continuação na empresa
 
+## Ponto atual — 08/09/2026
+
+O objetivo é substituir Forms → Sheets → AppSheet pelo site com Firebase e painel administrativo. O acervo antigo será usado para conferência. Permanecer no plano gratuito: não implantar Cloud Functions nem executar bootstrap.
+
+### Já implementado e testado
+
+- Reservas em tempo real no site e mapa administrativo; transações protegem contra duplicação.
+- Sheets como fonte de preços/condições; Firebase como fonte de disponibilidade. Espelho diário no Sheets e resumo público a cada 30 minutos para demais estados.
+- Histórico por unidade e proposta, distrato, invalidação identificada de teste.
+- Destinação Administração/Permuta/Venda comercial, ajustes auditados, filtros e CSV.
+- Cadastro administrativo de venda anterior: unidade permanece vendida; registra cliente, corretor da época, data, valor, condições e referência. Bloqueia duplicação, vínculos pendentes e destinações especiais.
+
+### Ativação confirmada pelo responsável
+
+O Apps Script completo já foi atualizado e executado para 389 unidades. As nove unidades da Administração já foram classificadas e bloqueadas. As regras anteriores foram publicadas pelo responsável. **As regras desta última revisão, que permitem cadastrar venda anterior, ainda precisam ser publicadas.** Os arquivos atualizados do site ainda não foram publicados.
+
+### Próximos passos
+
+1. Conferir a versão local e publicar as regras: `firebase deploy --only "firestore:rules" --project "city-park-25e9c"`.
+2. Planejar a virada: encerrar entrada no Forms e desativar automações operacionais do script antigo de Solicitações; manter os gatilhos novos da Tabela de Vendas. O script antigo também altera STATUS e envia notificações. Não desativar indiscriminadamente todos os gatilhos.
+3. Conciliar o acervo com o Firebase, ou reconstruir vendas anteriores gradualmente com o comercial. Não importar estados antigos por cima do estado operacional atual.
+4. Conferir o teste e o legado da 2208 A antes de liberar a unidade; a invalidação real não foi executada pelo agente.
+5. Publicar os arquivos do site pelo fluxo habitual após conferência. O envio desta branch ao GitHub não constitui publicação do site.
+
+Leia [INTEGRACAO-DISPONIBILIDADE.md](INTEGRACAO-DISPONIBILIDADE.md) e [CONFERENCIA-LEGADO-PROPOSTAS.md](CONFERENCIA-LEGADO-PROPOSTAS.md). O Excel e scripts privados de Solicitações fornecidos pelo responsável não estão incluídos no repositório.
+
+Validação mais recente: 84 testes no emulador (reservas e ações comerciais), além de testes locais e navegador desktop/mobile. Os testes do emulador usam projetos demo e não alteram o banco real.
+
+As seções posteriores a Preparar o computador documentam também o trabalho anterior; este resumo de 08/09 prevalece em caso de divergência.
+
 Repositório: https://github.com/allef-noronha/citypark-site
 
 Branch de trabalho: `codex/comercial-firebase-20260907`.

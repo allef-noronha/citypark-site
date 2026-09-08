@@ -11,13 +11,17 @@ const root=path.resolve(__dirname,'..');
   export const db={},auth={};
   const snapshot=(id,data)=>({id,exists:()=>!!data,data:()=>data});
   export function doc(...args){return {path:args.slice(1).join('/')}};
+  export function onSnapshot(ref,callback,error){getDocs(ref).then(callback,error);return ()=>{};}
   export function collection(db,name){return {name}};
   export function query(ref,...constraints){return {...ref,constraints}};
   export const where=(...args)=>({type:'where',args}),orderBy=(...args)=>({type:'orderBy',args}),limit=n=>({type:'limit',n}),startAfter=cursor=>({type:'cursor',cursor});
-  export async function getDoc(ref){if(ref.path==='configuracoes/comercial')return snapshot('comercial',{descontoMaximoPercentual:15,alertaChavesPercentual:60,prazoReservaDias:7,modoEnvioTeste:false}); if(ref.path.startsWith('admins/'))return snapshot('admin',{ativo:true,tipo:'admin',nome:'Administradora'}); if(ref.path.startsWith('propostas/'))return snapshot('p1',proposal); if(ref.path.startsWith('unidades/'))return snapshot('2208-A',{...proposal.unidadeSnapshot,status:'aprovada',propostaAtualId:'p1'}); throw Error('Unexpected related read: '+ref.path);}
+  export async function getDoc(ref){if(window.previousSaleTest && ref.path.startsWith('unidades/'))return snapshot('2208-A',{unidade:'2208 A',status:'vendida'}); if(window.previousSaleTest && ref.path.startsWith('propostas/'))return snapshot('old',{...proposal,statusProposta:'vendida',origem:'venda_anterior',vendaAnterior:{dataVenda:'2025-10-10',valorCentavos:12345678,condicoes:'Contrato original <teste>',referencia:'Contrato 123'}});if(ref.path==='configuracoes/comercial')return snapshot('comercial',{descontoMaximoPercentual:15,alertaChavesPercentual:60,prazoReservaDias:7,modoEnvioTeste:false}); if(ref.path.startsWith('admins/'))return snapshot('admin',{ativo:true,tipo:'admin',nome:'Administradora'}); if(ref.path.startsWith('propostas/'))return snapshot('p1',proposal); if(ref.path.startsWith('unidades/'))return snapshot('2208-A',{...proposal.unidadeSnapshot,status:'aprovada',propostaAtualId:'p1'}); throw Error('Unexpected related read: '+ref.path);}
   export async function getCountFromServer(){return {data:()=>({count:30})}};
   export async function getDocs(ref){
     if(ref.name==='corretores')throw Error('Full broker collection read');
+    if(ref.name==='historico_unidades')return {docs:[snapshot('h1',{acao:'unidade vendida',observacao:'Registro preservado'})],size:1};
+    if(window.previousSaleTest && ref.name==='propostas' && ref.constraints?.some(c=>c.type==='where' && c.args[0]==='unidadeId'))return {docs:[],size:0};
+    if(ref.name==='propostas' && ref.constraints?.some(c=>c.type==='where' && c.args[0]==='unidadeId'))return {docs:[snapshot('p1',proposal),snapshot('p-old',{...proposal,statusProposta:'distratada'})],size:2};
     if(ref.name==='historico_propostas')return {docs:[],size:0};
     if(ref.name==='unidades')return {docs:[snapshot('2208-A',{...proposal.unidadeSnapshot,status:'aprovada'})],size:1};
     const constraints=ref.constraints||[]; const max=constraints.find(c=>c.type==='limit')?.n;
@@ -51,6 +55,18 @@ const root=path.resolve(__dirname,'..');
         await page.locator('#proposalSearch').fill('p30');assert.equal(await page.locator('#proposalRows tr').count(),1);
         await page.locator('#proposalSearch').fill('');
       }
+      if(file.startsWith('tabela-admin')){
+        await page.locator('[data-unit-id]').first().click();
+        await page.getByRole('link',{name:/Proposta p-old/}).waitFor();
+        assert.match(await page.locator('#unitDialogBody').innerText(), /Distratada/);
+        assert.match(await page.locator('#unitDialogBody').innerText(), /Registro preservado/);
+        await page.screenshot({path:path.join(root,'tests/artifacts/unidade-dialog.png')});
+        await page.setViewportSize({width:390,height:844});
+        assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
+        await page.screenshot({path:path.join(root,'tests/artifacts/unidade-dialog-mobile.png')});
+        await page.setViewportSize({width:1440,height:1000});
+        await page.locator('#closeUnitDialog').click();
+      }
       if(file.startsWith('detalhes')){
         await page.waitForSelector('#proposalApp:not([hidden])');
         assert.match(await page.locator('#financeRows').innerText(),/217.102,08/);
@@ -80,6 +96,18 @@ const root=path.resolve(__dirname,'..');
       await page.screenshot({path:path.join(root,'tests/artifacts',file.split('.')[0]+'-mobile.png'),fullPage:true});
       await page.setViewportSize({width:1440,height:1000});
     }
+    await context.addInitScript(()=>window.previousSaleTest=true);
+    await page.goto(origin+'/tabela-admin.html');
+    await page.locator('[data-unit-id]').first().click();
+    await page.locator('#previousSaleForm:not([hidden])').waitFor();
+    assert.equal(await page.locator('#previousClient').getAttribute('required'),'');
+    await page.setViewportSize({width:390,height:844});
+    assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
+    await page.goto(origin+'/detalhes-proposta.html?id=old');
+    await page.locator('#previousSaleDetails:not([hidden])').waitFor();
+    assert.match(await page.locator('#previousSaleDetails').innerText(),/123.456,78/);
+    assert.match(await page.locator('#previousSaleDetails').innerText(),/Contrato original <teste>/);
+    assert.equal(await page.locator('#condicao-proposta').isVisible(),false);
     assert.deepEqual(errors,[]);console.log('Four commercial pages: desktop/mobile, pagination, search, original condition and counterproposal UI passed. No Firebase network access.');
   }finally{if(browser)await browser.close();await new Promise(resolve=>server.close(resolve));}
 })().catch(error=>{console.error(error);process.exitCode=1});

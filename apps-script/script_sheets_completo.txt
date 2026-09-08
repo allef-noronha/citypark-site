@@ -1,0 +1,718 @@
+const SPREADSHEET_ID = "18dPPkPvjb6HCutlX6UE-SFCXfsfeUPgoufV9xDctN5c";
+
+const FIREBASE_PROJECT_ID = "city-park-25e9c";
+
+const FIRESTORE_BATCH_URL =
+  `https://firestore.googleapis.com/v1/projects/${FIREBASE_PROJECT_ID}` +
+  `/databases/(default)/documents:batchWrite`;
+
+const FIRESTORE_DOCUMENT_BASE =
+  `projects/${FIREBASE_PROJECT_ID}/databases/(default)/documents`;
+
+
+// ============================================================
+// WEB APP
+// ============================================================
+
+function doGet(e) {
+  const resource =
+    e && e.parameter
+      ? e.parameter.resource
+      : "";
+
+  if (resource === "conditions") {
+    return jsonOutput_(getConditions_());
+  }
+
+  if (resource === "unit") {
+    const unit = e && e.parameter ? e.parameter.unit : "";
+    return jsonOutput_(getTabelaVendaUnit_(unit));
+  }
+
+  return jsonOutput_(getTabelaVendas_());
+}
+
+
+// ============================================================
+// TABELA DE VENDAS
+// ============================================================
+
+function getTabelaVendas_() {
+  const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+  const sh = ss.getSheetByName("Tabela de Vendas");
+
+  if (!sh) {
+    throw new Error('Aba "Tabela de Vendas" não encontrada.');
+  }
+
+  const values = sh.getDataRange().getValues();
+  const headers = values.shift();
+
+  return values.map(row => {
+    const obj = {};
+
+    headers.forEach((header, index) => {
+      obj[header] = row[index];
+    });
+
+    return obj;
+  });
+}
+
+
+
+
+// ============================================================
+// UMA ÚNICA UNIDADE — evita baixar a tabela inteira no formulário
+// ============================================================
+
+function getTabelaVendaUnit_(unitValue) {
+  const wanted = normalizeUnitId_(unitValue);
+
+  if (!wanted) {
+    throw new Error("Parâmetro unit não informado.");
+  }
+
+  const rows = getTabelaVendas_();
+  const row = rows.find(item =>
+    normalizeUnitId_(item["UNIDADE"] || item["Unidade"] || item["unidade"]) === wanted
+  );
+
+  if (!row) {
+    throw new Error(`Unidade não encontrada na Tabela de Vendas: ${unitValue}`);
+  }
+
+  return row;
+}
+
+// ============================================================
+// CONTRATO COMPLETO DAS CONDIÇÕES COMERCIAIS
+//
+// FIREBASE_CONDITIONS
+// A1 Tipologia | B1 Sinal | C1 Parc. Mensais | D1 Intercaladas | E1 Chaves
+// A2 Quantidade| B2 1     | C2 39            | D2 5            | E2 1
+// A3...        | percentuais por tipologia
+// ============================================================
+
+function getConditions_() {
+  const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+  const sh = ss.getSheetByName("FIREBASE_CONDITIONS");
+
+  if (!sh) {
+    throw new Error('Aba "FIREBASE_CONDITIONS" não encontrada.');
+  }
+
+  const lastRow = sh.getLastRow();
+  if (lastRow < 3) {
+    throw new Error('Aba "FIREBASE_CONDITIONS" não possui dados suficientes.');
+  }
+
+  const values = sh.getRange(1, 1, lastRow, 5).getValues();
+  const headers = values[0].map(normalizeConditionHeader_);
+
+  const index = {
+    tipologia: findConditionColumn_(headers, ["tipologia"]),
+    sinal: findConditionColumn_(headers, ["sinal"]),
+    mensais: findConditionColumn_(headers, ["parcmensais", "parcelasmensais", "mensais"]),
+    intercaladas: findConditionColumn_(headers, ["intercaladas", "intercaladassemestrais"]),
+    chaves: findConditionColumn_(headers, ["chaves", "chavesfinanciamento"])
+  };
+
+  Object.entries(index).forEach(([name, column]) => {
+    if (column < 0) {
+      throw new Error(`Coluna obrigatória não encontrada em FIREBASE_CONDITIONS: ${name}`);
+    }
+  });
+
+  const quantityRow = values
+    .slice(1)
+    .find(row => normalizeConditionHeader_(row[index.tipologia]) === "quantidade");
+
+  if (!quantityRow) {
+    throw new Error('Linha "Quantidade" não encontrada em FIREBASE_CONDITIONS.');
+  }
+
+  const quantidades = {
+    sinal: integerConditionValue_(quantityRow[index.sinal], "Quantidade do sinal"),
+    mensais: integerConditionValue_(quantityRow[index.mensais], "Quantidade de parcelas mensais"),
+    intercaladas: integerConditionValue_(quantityRow[index.intercaladas], "Quantidade de intercaladas"),
+    chaves: integerConditionValue_(quantityRow[index.chaves], "Quantidade de chaves")
+  };
+
+  const tipologias = {};
+
+  values.slice(1).forEach(row => {
+    const rawName = row[index.tipologia];
+    const normalizedName = normalizeConditionHeader_(rawName);
+
+    if (!rawName || normalizedName === "quantidade") {
+      return;
+    }
+
+    const name = String(rawName).trim();
+
+    const percentages = {
+      sinal: percentageConditionValue_(row[index.sinal], `${name} / Sinal`),
+      mensais: percentageConditionValue_(row[index.mensais], `${name} / Mensais`),
+      intercaladas: percentageConditionValue_(row[index.intercaladas], `${name} / Intercaladas`),
+      chaves: percentageConditionValue_(row[index.chaves], `${name} / Chaves`)
+    };
+
+    const total =
+      percentages.sinal +
+      percentages.mensais +
+      percentages.intercaladas +
+      percentages.chaves;
+
+    if (Math.abs(total - 1) > 0.001) {
+      throw new Error(
+        `Os percentuais da tipologia "${name}" não totalizam 100%. Total encontrado: ${(total * 100).toFixed(2)}%.`
+      );
+    }
+
+    tipologias[name] = percentages;
+  });
+
+  if (!Object.keys(tipologias).length) {
+    throw new Error("Nenhuma tipologia válida encontrada em FIREBASE_CONDITIONS.");
+  }
+
+  // parcelasMensais/intercaladas ficam no topo por compatibilidade com tabela.js,
+  // que já usa esses campos para alterar o cabeçalho 39/5 automaticamente.
+  return {
+    schemaVersao: 2,
+    fonte: "FIREBASE_CONDITIONS",
+    parcelasMensais: quantidades.mensais,
+    intercaladas: quantidades.intercaladas,
+    quantidades,
+    tipologias,
+    consultadoEm: new Date().toISOString()
+  };
+}
+
+
+function normalizeConditionHeader_(value) {
+  return String(value || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "");
+}
+
+
+function findConditionColumn_(headers, candidates) {
+  return headers.findIndex(header => candidates.includes(header));
+}
+
+
+function integerConditionValue_(value, label) {
+  const number = Number(value);
+
+  if (!Number.isInteger(number) || number < 1) {
+    throw new Error(`${label} inválida em FIREBASE_CONDITIONS.`);
+  }
+
+  return number;
+}
+
+
+function percentageConditionValue_(value, label) {
+  let number = Number(value);
+
+  if (!Number.isFinite(number) || number < 0) {
+    throw new Error(`Percentual inválido em ${label}.`);
+  }
+
+  // Aceita tanto célula percentual real (0,12) quanto eventual número 12.
+  if (number > 1 && number <= 100) {
+    number = number / 100;
+  }
+
+  if (number > 1) {
+    throw new Error(`Percentual acima de 100% em ${label}.`);
+  }
+
+  return Math.round((number + Number.EPSILON) * 1000000) / 1000000;
+}
+
+
+// ============================================================
+// PUBLICAÇÃO COMPLETA - AMBIENTE TESTE
+// ============================================================
+
+function publicarTodasUnidadesFirebaseTeste() {
+  const inicio = new Date();
+
+  const versaoTabela =
+    Utilities.formatDate(
+      inicio,
+      Session.getScriptTimeZone(),
+      "yyyyMMdd-HHmmss"
+    );
+
+  const conditions = getConditions_();
+
+  const rows =
+    getTabelaVendas_()
+      .filter(row => row["UNIDADE"]);
+
+  if (!rows.length) {
+    throw new Error("Nenhuma unidade encontrada.");
+  }
+
+  const idsEncontrados = new Set();
+  const writes = [];
+
+
+  // ----------------------------------------------------------
+  // CONDIÇÃO VIGENTE COMPLETA
+  // ----------------------------------------------------------
+
+  writes.push(
+    buildFirestoreWrite_(
+      "site_conditions_test/current",
+      {
+        ...conditions,
+        versaoTabela,
+        atualizadoEm: inicio
+      }
+    )
+  );
+
+
+  // ----------------------------------------------------------
+  // UNIDADES
+  // ----------------------------------------------------------
+
+  rows.forEach((row, index) => {
+
+    const unidade =
+      String(row["UNIDADE"] || "").trim();
+
+    if (!unidade) {
+      throw new Error(
+        `Linha ${index + 2}: unidade vazia.`
+      );
+    }
+
+    const unidadeId = normalizeUnitId_(unidade);
+
+    if (idsEncontrados.has(unidadeId)) {
+      throw new Error(
+        `Unidade duplicada encontrada: ${unidade}`
+      );
+    }
+
+    idsEncontrados.add(unidadeId);
+
+    const dadosUnidade = {
+      unidade,
+      tipologia: row["TIPOLOGIA"] || "",
+      areaM2: numberOrNull_(row["ÁREA"]),
+      precoVista: roundMoney_(row["PREÇO À VISTA"]),
+      sinal: roundMoney_(row["SINAL"]),
+      parcelaMensal: roundMoney_(row["PARCELA MENSAL"]),
+      intercalada: roundMoney_(row["INTERCALADA"]),
+      chaves: roundMoney_(row["CHAVES"]),
+      imagem: row["IMAGEM"] || "",
+      versaoTabela,
+      atualizadoEm: inicio
+    };
+
+    writes.push(
+      buildFirestoreWrite_(
+        `site_units_test/${unidadeId}`,
+        dadosUnidade
+      )
+    );
+  });
+
+  const totalGravacoes = executarBatchWrites_(writes);
+
+  const resumo = {
+    unidadesLidas: rows.length,
+    unidadesPublicadas: rows.length,
+    documentosGravados: totalGravacoes,
+    parcelasMensais: conditions.quantidades.mensais,
+    intercaladas: conditions.quantidades.intercaladas,
+    tipologiasPublicadas: Object.keys(conditions.tipologias).length,
+    versaoTabela,
+    concluidoEm: new Date().toISOString()
+  };
+
+  Logger.log("====================================");
+  Logger.log("PUBLICAÇÃO FIREBASE TESTE CONCLUÍDA");
+  Logger.log("====================================");
+  Logger.log(`Unidades lidas: ${resumo.unidadesLidas}`);
+  Logger.log(`Unidades publicadas: ${resumo.unidadesPublicadas}`);
+  Logger.log(`Parcelas mensais: ${resumo.parcelasMensais}`);
+  Logger.log(`Intercaladas: ${resumo.intercaladas}`);
+  Logger.log(`Tipologias publicadas: ${resumo.tipologiasPublicadas}`);
+  Logger.log(`Versão: ${resumo.versaoTabela}`);
+
+  return resumo;
+}
+
+
+// ============================================================
+// BATCH WRITE
+// ============================================================
+
+function executarBatchWrites_(writes) {
+  if (!writes.length) {
+    return 0;
+  }
+
+  const token = ScriptApp.getOAuthToken();
+  const tamanhoLote = 400;
+  let total = 0;
+
+  for (
+    let i = 0;
+    i < writes.length;
+    i += tamanhoLote
+  ) {
+    const lote = writes.slice(i, i + tamanhoLote);
+
+    const response =
+      UrlFetchApp.fetch(
+        FIRESTORE_BATCH_URL,
+        {
+          method: "post",
+          contentType: "application/json",
+          headers: {
+            Authorization: `Bearer ${token}`
+          },
+          payload: JSON.stringify({
+            writes: lote
+          }),
+          muteHttpExceptions: true
+        }
+      );
+
+    const status = response.getResponseCode();
+    const body = response.getContentText();
+
+    if (
+      status < 200 ||
+      status >= 300
+    ) {
+      throw new Error(
+        `Erro Firestore (${status}): ${body}`
+      );
+    }
+
+    const resultado = JSON.parse(body);
+
+    const erros =
+      (resultado.status || [])
+        .filter(item =>
+          item &&
+          item.code &&
+          Number(item.code) !== 0
+        );
+
+    if (erros.length) {
+      throw new Error(
+        "Firestore retornou erros individuais: " +
+        JSON.stringify(erros)
+      );
+    }
+
+    total += lote.length;
+  }
+
+  return total;
+}
+
+
+// ============================================================
+// MONTA WRITE DO FIRESTORE
+// ============================================================
+
+function buildFirestoreWrite_(documentPath, data) {
+  const documentName =
+    `${FIRESTORE_DOCUMENT_BASE}/${documentPath}`;
+
+  return {
+    update: {
+      name: documentName,
+      fields: objectToFirestoreFields_(data)
+    }
+  };
+}
+
+
+// ============================================================
+// CONVERSÃO JS -> FIRESTORE
+// Agora suporta mapas e arrays, necessários para o contrato completo.
+// ============================================================
+
+function objectToFirestoreFields_(obj) {
+  const fields = {};
+
+  Object.entries(obj).forEach(([key, value]) => {
+    fields[key] = firestoreValue_(value);
+  });
+
+  return fields;
+}
+
+
+function firestoreValue_(value) {
+  if (
+    value === null ||
+    value === undefined ||
+    value === ""
+  ) {
+    return {
+      nullValue: null
+    };
+  }
+
+  if (value instanceof Date) {
+    return {
+      timestampValue: value.toISOString()
+    };
+  }
+
+  if (Array.isArray(value)) {
+    return {
+      arrayValue: {
+        values: value.map(firestoreValue_)
+      }
+    };
+  }
+
+  if (
+    typeof value === "object"
+  ) {
+    return {
+      mapValue: {
+        fields: objectToFirestoreFields_(value)
+      }
+    };
+  }
+
+  if (
+    typeof value === "boolean"
+  ) {
+    return {
+      booleanValue: value
+    };
+  }
+
+  if (
+    typeof value === "number"
+  ) {
+    if (Number.isInteger(value)) {
+      return {
+        integerValue: String(value)
+      };
+    }
+
+    return {
+      doubleValue: value
+    };
+  }
+
+  return {
+    stringValue: String(value)
+  };
+}
+
+
+// ============================================================
+// UTILITÁRIOS
+// ============================================================
+
+function normalizeUnitId_(value) {
+  return String(value)
+    .trim()
+    .replace(/\s+/g, "")
+    .toUpperCase();
+}
+
+
+function numberOrNull_(value) {
+  if (
+    value === "" ||
+    value === null ||
+    value === undefined ||
+    value === "-"
+  ) {
+    return null;
+  }
+
+  const number = Number(value);
+
+  return Number.isFinite(number)
+    ? number
+    : null;
+}
+
+
+function roundMoney_(value) {
+  if (
+    value === "" ||
+    value === null ||
+    value === undefined ||
+    value === "-"
+  ) {
+    return null;
+  }
+
+  const number = Number(value);
+
+  if (!Number.isFinite(number)) {
+    return null;
+  }
+
+  return (
+    Math.round(
+      (number + Number.EPSILON) * 100
+    ) / 100
+  );
+}
+
+
+// ============================================================
+// RESPOSTA JSON DO WEB APP
+// ============================================================
+
+function jsonOutput_(data) {
+  return ContentService
+    .createTextOutput(
+      JSON.stringify(data)
+    )
+    .setMimeType(
+      ContentService.MimeType.JSON
+    );
+}
+
+
+// Acrescentar ao mesmo projeto Apps Script de Code.gs.
+// Esta rotina lê somente unidade/status. Nunca grava em unidades ou propostas.
+function chaveDisponibilidade_(value) {
+  return String(value || '').trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+}
+
+function lerDisponibilidadeFirebase_() {
+  const response = UrlFetchApp.fetch(
+    `https://firestore.googleapis.com/v1/${FIRESTORE_DOCUMENT_BASE}:runQuery`, {
+      method: 'post', contentType: 'application/json',
+      headers: { Authorization: `Bearer ${ScriptApp.getOAuthToken()}` },
+      payload: JSON.stringify({ structuredQuery: {
+        from: [{ collectionId: 'unidades' }],
+        select: { fields: [{ fieldPath: 'unidade' }, { fieldPath: 'status' }, { fieldPath: 'destinacao' }] }
+      } }), muteHttpExceptions: true
+    });
+  if (response.getResponseCode() !== 200) throw new Error(`Consulta de disponibilidade falhou: ${response.getContentText()}`);
+  const entries = JSON.parse(response.getContentText());
+  if (!Array.isArray(entries)) throw new Error('Resposta de disponibilidade inválida.');
+  const result = {};
+  entries.forEach(entry => {
+    if (entry.error) throw new Error(JSON.stringify(entry.error));
+    if (!entry.document) return;
+    const fields = entry.document.fields || {};
+    const id = chaveDisponibilidade_(fields.unidade?.stringValue || entry.document.name.split('/').pop());
+    if (!id || Object.prototype.hasOwnProperty.call(result, id)) throw new Error(`Identificação de unidade ambígua: ${id}`);
+    const destination = fields.destinacao?.stringValue;
+    result[id] = destination && destination !== 'venda' && destination !== 'nao_classificada' ? 'bloqueada' : fields.status?.stringValue || '';
+  });
+  if (!Object.keys(result).length) throw new Error('Nenhuma unidade retornada; planilha preservada.');
+  return result;
+}
+
+function atualizarDisponibilidadeSheets_() {
+  const statuses = lerDisponibilidadeFirebase_();
+  const sheet = SpreadsheetApp.openById(SPREADSHEET_ID).getSheetByName('Tabela de Vendas');
+  if (!sheet) throw new Error('Aba Tabela de Vendas não encontrada.');
+  const values = sheet.getDataRange().getValues();
+  const headers = values[0].map(value => String(value).trim().toUpperCase());
+  const unitColumn = headers.indexOf('UNIDADE');
+  const statusColumn = headers.indexOf('STATUS');
+  if (unitColumn < 0 || statusColumn < 0 || values.length < 2) throw new Error('Tabela sem UNIDADE, STATUS ou linhas.');
+  const target = sheet.getRange(2, statusColumn + 1, values.length - 1, 1);
+  if (target.getFormulas().some(row => row[0])) throw new Error('STATUS contém fórmulas. Defina uma coluna STATUS editável antes de sincronizar.');
+  const labels = { disponivel: 'Disponível', reservada: 'Reservado', aprovada: 'Reservado', vendida: 'Vendido', bloqueada: 'Indisponível' };
+  const missing = [];
+  const seen = new Set();
+  const output = values.slice(1).map(row => {
+    const key = chaveDisponibilidade_(row[unitColumn]);
+    if (!key) return [row[statusColumn]];
+    if (seen.has(key)) throw new Error(`Unidade duplicada na planilha: ${row[unitColumn]}`);
+    seen.add(key);
+    const label = labels[statuses[key]];
+    if (!label) missing.push(String(row[unitColumn]));
+    return [label || 'A confirmar'];
+  });
+  // Única coluna alterada; preços, fórmulas financeiras e condições permanecem intactos.
+  target.setValues(output);
+  SpreadsheetApp.flush();
+  return { unidades: seen.size, semStatusConfirmado: missing, atualizadoEm: new Date().toISOString() };
+}
+
+function atualizarDisponibilidadeSheets() {
+  return executarSincronizacao_({ disponibilidade: atualizarDisponibilidadeSheets_ });
+}
+
+function sincronizarDiariamente() {
+  return executarSincronizacao_({ precos: publicarTodasUnidadesFirebaseTeste, disponibilidade: atualizarDisponibilidadeSheets_ });
+}
+
+function executarSincronizacao_(jobs) {
+  const lock = LockService.getScriptLock();
+  if (!lock.tryLock(5000)) throw new Error('Já existe uma sincronização em execução.');
+  const report = { iniciadoEm: new Date().toISOString() };
+  const errors = [];
+  try {
+    Object.entries(jobs).forEach(([name, job]) => {
+      try { report[name] = { sucesso: true, resultado: job() }; }
+      catch (error) { report[name] = { sucesso: false, erro: String(error.message || error) }; errors.push(name); }
+    });
+    report.concluidoEm = new Date().toISOString();
+    PropertiesService.getScriptProperties().setProperty('ultimaSincronizacao', JSON.stringify(report));
+    console.log(JSON.stringify(report));
+    if (errors.length) throw new Error(`Falha em: ${errors.join(', ')}. Consulte ultimaSincronizacao e o registro de execução.`);
+    return report;
+  } finally { lock.releaseLock(); }
+}
+
+function instalarGatilhoDiario() {
+  const handler = 'sincronizarDiariamente';
+  if (ScriptApp.getProjectTriggers().some(trigger => trigger.getHandlerFunction() === handler)) {
+    console.log('Gatilho diário já existe para esta conta.');
+    return;
+  }
+  ScriptApp.newTrigger(handler).timeBased().atHour(2).everyDays(1).inTimezone('America/Sao_Paulo').create();
+}
+
+// Plano gratuito: resumo público periódico; não requer Cloud Functions ou gcloud.
+function atualizarResumoDisponibilidade() {
+  return executarSincronizacao_({ resumoPublico: publicarResumoDisponibilidade_ });
+}
+
+function publicarResumoDisponibilidade_() {
+  const statuses = lerDisponibilidadeFirebase_();
+  const units = {};
+  Object.entries(statuses).forEach(([id, value]) => {
+    units[id] = ['disponivel', 'reservada', 'aprovada', 'vendida', 'bloqueada'].includes(value) ? value : 'desconhecida';
+  });
+  const now = new Date();
+  executarBatchWrites_([buildFirestoreWrite_('disponibilidade_publica/atual', {
+    schemaVersao: 1, unidades: units, atualizadoEm: now,
+    validoAte: new Date(now.getTime() + 75 * 60 * 1000),
+    fonte: 'apps-script-periodico'
+  })]);
+  return { unidades: Object.keys(units).length, atualizadoEm: now.toISOString() };
+}
+
+function instalarGatilhoDisponibilidade() {
+  const handler = 'atualizarResumoDisponibilidade';
+  if (ScriptApp.getProjectTriggers().some(trigger => trigger.getHandlerFunction() === handler)) {
+    console.log('Gatilho de disponibilidade já existe para esta conta.');
+    return;
+  }
+  ScriptApp.newTrigger(handler).timeBased().everyMinutes(30).create();
+}

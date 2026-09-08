@@ -28,7 +28,7 @@ function presentation({ firebase = {}, confirm = () => true } = {}) {
   const source = fs.readFileSync(path.join(__dirname, "../js/detalhes-proposta.js"), "utf8")
     .replace(/^import[\s\S]*?from\s+["'][^"']+["'];\s*/gm, "");
   vm.runInContext(source, context);
-  const api = vm.runInContext(`({ clientFields, proposalExpiry, expiryLabel, toDate, renderGeneralData, renderSummary, renderReservation, renderCounterproposalTotals, buildCounterproposalCondition, counterproposalDraftRows, renderCounterproposal, saveCounterproposal, openFinanceModal, saveFinanceEdit, openConfirmation, executeConfirmedAction, cancelApprovedProposal, approveProposal, rejectProposal,
+  const api = vm.runInContext(`({ clientFields, proposalExpiry, expiryLabel, toDate, renderGeneralData, renderSummary, renderReservation, renderCounterproposalTotals, buildCounterproposalCondition, counterproposalDraftRows, renderCounterproposal, saveCounterproposal, openFinanceModal, saveFinanceEdit, openConfirmation, executeConfirmedAction, cancelApprovedProposal, distractSoldProposal, invalidateTestProposal, approveProposal, rejectProposal,
     setData(proposal, unit = null) { state.proposal = proposal; state.unit = unit; },
     configureActions(notify, reload, components = []) { state.adminUser = { uid: "admin-test" }; showToast = notify; loadProposal = reload; state.financeComponents = components; },
     configureCounterMode(mode, revision) { state.counterproposalMode = mode; state.editingCounterproposalRevision = dateValue(revision); }
@@ -291,7 +291,7 @@ function cancellationHarness({ proposalStatus = "aprovada", unitStatus = "aprova
   } });
   api.setData(proposal, serverUnit);
   api.configureActions((message, error) => notifications.push({ message, error }), async () => { reloads++; });
-  return { api, proposal, serverUnit, deleted, updates, histories, notifications, calls: () => calls, reloads: () => reloads };
+  return { api, proposal, serverProposal, serverUnit, deleted, updates, histories, notifications, calls: () => calls, reloads: () => reloads };
 }
 
 test("cancelamento aprovado altera proposta e libera a unidade na mesma transação", async () => {
@@ -382,4 +382,48 @@ test("contraproposta usa preço registrado na proposta, mesmo com tabela atual d
   const condition=api.buildCounterproposalCondition();
   assert.equal(condition.valorTabelaCentavos,10000000);
   assert.equal(condition.diferencaCentavos,0);
+});
+
+
+test("distrato preserva condições e venda anterior, libera apenas o vínculo atual", async () => {
+  const h = cancellationHarness({proposalStatus:'vendida', unitStatus:'vendida'});
+  await h.api.distractSoldProposal('Distrato assinado, protocolo 123');
+  const proposal = h.updates.find(item => item.ref === 'propostas/proposal-1').data;
+  assert.equal(proposal.statusProposta, 'distratada');
+  assert.equal(proposal.distratadoEm, 'server-time');
+  assert.equal('vendidoEm' in proposal, false);
+  assert.equal('condicaoProposta' in proposal, false);
+  assert.equal(h.updates.find(item => item.ref === 'unidades/unit-1').data.status, 'disponivel');
+  assert.equal(h.histories.length, 2);
+  assert.equal(h.histories[1].data.observacao, 'Distrato assinado, protocolo 123');
+});
+test("distrato rejeita motivo vazio, venda antiga e estados incompatíveis", async () => {
+  for (const options of [{}, {proposalStatus:'vendida',unitStatus:'vendida',currentProposalId:'nova-proposta'}]) {
+    const h = cancellationHarness(options);
+    await assert.rejects(h.api.distractSoldProposal('Motivo formal'));
+    assert.equal(h.updates.length, 0);
+  }
+  const h = cancellationHarness({proposalStatus:'vendida',unitStatus:'vendida'});
+  await assert.rejects(h.api.distractSoldProposal('   '));
+  assert.equal(h.calls(), 0);
+});
+
+test('invalidar teste mantém finanças, registra histórico e bloqueia em vez de liberar', async()=>{
+ const h=cancellationHarness({proposalStatus:'vendida',unitStatus:'vendida'});
+ h.serverProposal.teste=true;
+ await h.api.invalidateTestProposal('Teste confirmado');
+ const patch=h.updates.find(x=>x.ref==='propostas/proposal-1').data;
+ assert.equal(patch.statusProposta,'teste_invalidado');
+ assert.equal('condicaoProposta' in patch,false);
+ assert.equal('vendidoEm' in patch,false);
+ assert.equal(h.updates.find(x=>x.ref==='unidades/unit-1').data.status,'bloqueada');
+ assert.equal(h.histories.length,2);
+});
+test('invalidação recusa proposta real ou vínculo de outra proposta',async()=>{
+ for(const link of ['proposal-1','outra']){
+  const h=cancellationHarness({proposalStatus:'vendida',unitStatus:'vendida',currentProposalId:link});
+  if(link==='outra')h.serverProposal.teste=true;
+  await assert.rejects(h.api.invalidateTestProposal('Motivo'));
+  assert.equal(h.updates.length,0);
+ }
 });

@@ -67,6 +67,8 @@ function bindEvents() {
   elements.clientTab.addEventListener("click", () => showDataTab("client"));
   elements.approve.addEventListener("click", () => openConfirmation("approve"));
   elements.reject.addEventListener("click", () => openConfirmation("reject"));
+  $("distractProposal").addEventListener("click", () => openConfirmation("distract"));
+  $('invalidateTestProposal').addEventListener('click', () => openConfirmation('invalidateTest'));
   elements.cancelApproved.addEventListener("click", () => openConfirmation("cancel"));
   elements.confirmAction.addEventListener("click", executeConfirmedAction);
   document.querySelectorAll("[data-close-modal]").forEach(button => button.addEventListener("click", closeConfirmation));
@@ -127,6 +129,11 @@ async function loadProposal() {
 }
 
 function renderAll() {
+  const previous = state.proposal.vendaAnterior;
+  $('previousSaleDetails').hidden = !previous;
+  $('condicao-proposta').hidden = !!previous;
+  if (previous) $('previousSaleDetails').innerHTML = `<h2>Venda anterior cadastrada</h2><p>Data original: ${escapeHtml(previous.dataVenda)} · Valor contratado: ${formatMoney(previous.valorCentavos)}</p><p style="white-space:pre-wrap">${escapeHtml(previous.condicoes)}</p><p>Referência: ${escapeHtml(previous.referencia)}</p><p>Cadastro retrospectivo. As condições originais acima não são uma simulação da tabela atual.</p>`;
+
   renderSummary();
   renderReservation();
   renderGeneralData();
@@ -159,6 +166,8 @@ function renderReservation() {
   elements.status.dataset.group = group;
   elements.actions.hidden = status !== "reservada";
   elements.cancelSection.hidden = status !== "aprovada";
+  $("distratoSection").hidden = status !== "vendida";
+  $('invalidateTestSection').hidden = !(state.proposalId === 'Q22ovBXKxVdn8r9BZi3h' || state.proposal.teste === true) || status === 'teste_invalidado';
   renderExpiry();
   elements.tags.innerHTML = "";
 }
@@ -251,6 +260,8 @@ function openConfirmation(action) {
   const options = {
     approve: { icon:"✓", title:"Aprovar esta proposta?", text:"A proposta será aprovada e o temporizador de expiração será removido.", confirm:"Sim, aprovar proposta", approving:true },
     reject: { icon:"!", title:"Recusar esta proposta?", text:"A proposta ficará inativa e a unidade voltará a ficar disponível.", confirm:"Confirmar recusa", label:"Motivo da recusa", error:"Informe o motivo da recusa." },
+    distract: { icon:"!", title:"Registrar distrato desta venda?", text:"A proposta e suas condições serão preservadas como distratadas. A unidade voltará a ficar disponível para uma nova proposta.", confirm:"Confirmar distrato", label:"Motivo e referência do distrato", error:"Informe o motivo do distrato." },
+    invalidateTest: { icon:'!', title:'Invalidar esta proposta de teste?', text:'A proposta será preservada como teste invalidado e a unidade ficará BLOQUEADA para conferência do histórico anterior. Esta ação não registra distrato nem libera a unidade automaticamente.', confirm:'Invalidar teste e bloquear unidade', label:'Motivo e referência da conferência', error:'Informe a justificativa.' },
     cancel: { icon:"!", title:"Cancelar esta proposta aprovada?", text:"A proposta ficará cancelada e a unidade voltará a ficar disponível.", confirm:"Confirmar cancelamento", label:"Motivo do cancelamento", error:"Informe o motivo do cancelamento." }
   }[action];
   if (!options) return;
@@ -279,7 +290,7 @@ function closeConfirmation() {
 
 async function executeConfirmedAction() {
   const reason = elements.reason.value.trim();
-  if (["reject", "cancel"].includes(state.modalAction) && !reason) {
+  if (["reject", "cancel", "distract", 'invalidateTest'].includes(state.modalAction) && !reason) {
     elements.reasonError.hidden = false;
     elements.reason.focus();
     return;
@@ -289,9 +300,11 @@ async function executeConfirmedAction() {
     if (state.modalAction === "approve") await approveProposal();
     else if (state.modalAction === "reject") await rejectProposal(reason);
     else if (state.modalAction === "cancel") await cancelApprovedProposal(reason);
+    else if (state.modalAction === "distract") await distractSoldProposal(reason);
+    else if (state.modalAction === 'invalidateTest') await invalidateTestProposal(reason);
     elements.confirmationModal.hidden = true;
     document.body.classList.remove("modal-open");
-    showToast(state.modalAction === "approve" ? "Proposta aprovada e expiração removida." : state.modalAction === "cancel" ? "Proposta cancelada e unidade liberada." : "Proposta recusada e unidade liberada.");
+    showToast(state.modalAction === 'invalidateTest' ? 'Teste invalidado. Unidade bloqueada para conferência.' : state.modalAction === "distract" ? "Distrato registrado e unidade liberada." : state.modalAction === "approve" ? "Proposta aprovada e expiração removida." : state.modalAction === "cancel" ? "Proposta cancelada e unidade liberada." : "Proposta recusada e unidade liberada.");
     state.modalAction = null;
     await loadProposal();
   } catch (error) {
@@ -363,6 +376,51 @@ async function cancelApprovedProposal(reason) {
     transaction.update(unitRef, { status:"disponivel", propostaAtualId:null, propostaId:deleteField(), atualizadoEm:serverTimestamp(), expiraEm:null, vendidoEm:null });
     transaction.set(unitHistoryRef, { ...common, statusNovo:"disponivel", acao:"unidade disponível", observacao:"Unidade liberada após o cancelamento da proposta." });
     transaction.set(proposalHistoryRef, { ...common, acao:"proposta cancelada", observacao:reason });
+  });
+}
+
+async function distractSoldProposal(reason) {
+  if (!String(reason || "").trim() || reason.length > 2000) throw new Error("Informe um motivo de até 2000 caracteres.");
+  requireLinkedUnit();
+  const proposalRef = doc(db, "propostas", state.proposalId);
+  const unitRef = doc(db, "unidades", state.proposal.unidadeId);
+  const unitHistoryRef = doc(collection(db, "historico_unidades"));
+  const proposalHistoryRef = doc(collection(db, "historico_propostas"));
+  await runTransaction(db, async transaction => {
+    const [proposalSnapshot, unitSnapshot] = await Promise.all([transaction.get(proposalRef), transaction.get(unitRef)]);
+    if (!proposalSnapshot.exists() || !unitSnapshot.exists()) throw new Error("Proposta ou unidade não encontrada.");
+    const proposal = proposalSnapshot.data();
+    const unit = unitSnapshot.data();
+    assertCurrentUnit(proposal, unit);
+    if (normalizeStatus(proposal.statusProposta) !== "vendida" || normalizeStatus(unit.status) !== "vendida") throw new Error("Esta proposta não pode mais ser distratada.");
+    if (unit.propostaAtualId && unit.propostaAtualId !== state.proposalId) throw new Error("A unidade está vinculada a outra proposta. Atualize a página.");
+    const common = historyCommon(proposal, unit, "vendida", "distratada");
+    transaction.update(proposalRef, { statusProposta:"distratada", adminId:state.adminUser.uid, observacaoAdmin:reason, observacaoDistrato:reason, distratadoEm:serverTimestamp(), tagsAdmin:[], atualizadoEm:serverTimestamp(), expiraEm:null });
+    transaction.update(unitRef, { status:"disponivel", propostaAtualId:null, propostaId:deleteField(), atualizadoEm:serverTimestamp(), expiraEm:null, vendidoEm:null });
+    transaction.set(unitHistoryRef, { ...common, statusNovo:"disponivel", acao:"unidade disponível", observacao:"Unidade liberada após o distrato da venda." });
+    transaction.set(proposalHistoryRef, { ...common, acao:"proposta distratada", observacao:reason });
+  });
+}
+
+async function invalidateTestProposal(reason) {
+  if (!String(reason || '').trim() || reason.length > 2000) throw new Error('Informe uma justificativa de até 2000 caracteres.');
+  requireLinkedUnit();
+  const proposalRef = doc(db, 'propostas', state.proposalId);
+  const unitRef = doc(db, 'unidades', state.proposal.unidadeId);
+  const unitHistoryRef = doc(collection(db, 'historico_unidades'));
+  const proposalHistoryRef = doc(collection(db, 'historico_propostas'));
+  await runTransaction(db, async transaction => {
+    const [ps, us] = await Promise.all([transaction.get(proposalRef), transaction.get(unitRef)]);
+    if (!ps.exists() || !us.exists()) throw new Error('Proposta ou unidade não encontrada.');
+    const proposal = ps.data(), unit = us.data();
+    assertCurrentUnit(proposal, unit);
+    if (!(state.proposalId === 'Q22ovBXKxVdn8r9BZi3h' || proposal.teste === true)) throw new Error('Esta proposta não está identificada como teste.');
+    if (!['reservada', 'aprovada', 'vendida'].includes(proposal.statusProposta) || unit.status !== proposal.statusProposta) throw new Error('O estado mudou. Atualize a página.');
+    const common = historyCommon(proposal, unit, proposal.statusProposta, 'teste_invalidado');
+    transaction.update(proposalRef, {statusProposta:'teste_invalidado', teste:true, invalidadoEm:serverTimestamp(), invalidadoPor:state.adminUser.uid, motivoInvalidacao:reason.trim(), atualizadoEm:serverTimestamp(), expiraEm:null});
+    transaction.update(unitRef, {status:'bloqueada', propostaAtualId:null, propostaId:deleteField(), atualizadoEm:serverTimestamp(), expiraEm:null, vendidoEm:null});
+    transaction.set(unitHistoryRef, {...common, statusNovo:'bloqueada', acao:'teste invalidado; unidade bloqueada', observacao:reason.trim(), vendidoEmAnterior:unit.vendidoEm || null});
+    transaction.set(proposalHistoryRef, {...common, acao:'proposta de teste invalidada', observacao:reason.trim()});
   });
 }
 
@@ -635,7 +693,7 @@ function detail(label, value) { return `<div><dt>${escapeHtml(label)}</dt><dd>${
 function conditionTypeLabel(value) { const status=normalizeStatus(value); return status === "padrao" ? "Condição padrão" : ["outro","personalizada","personalizado"].includes(status) ? "Condição personalizada" : "Condição não informada"; }
 function periodicityLabel(value) { return { mensal:"Parcelas mensais", semestral:"Parcelas semestrais", anual:"Parcelas anuais", outra:"Negociação especial", unica:"Parcela única" }[value] || "Parcela"; }
 function statusGroup(value) { const status=normalizeStatus(value); if (status === "reservada") return "pending"; if (status === "aprovada") return "approved"; if (status === "vendida") return "closed"; return "inactive"; }
-function statusLabel(value) { const status=normalizeStatus(value); return { reservada:"Pendente para análise", aprovada:"Proposta aprovada", vendida:"Proposta encerrada", recusada:"Proposta recusada", cancelada:"Proposta cancelada", expirada:"Proposta expirada", distratada:"Proposta distratada", disponivel:"Disponível" }[status] || value || "Não informado"; }
+function statusLabel(value) { const status=normalizeStatus(value); return { reservada:"Pendente para análise", aprovada:"Proposta aprovada", vendida:"Proposta encerrada", recusada:"Proposta recusada", cancelada:"Proposta cancelada", expirada:"Proposta expirada", distratada:"Proposta distratada", teste_invalidado:"Teste invalidado", disponivel:"Disponível" }[status] || value || "Não informado"; }
 function normalizeStatus(value) { return String(value || "").trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/\s+/g,"_"); }
 function proposalExpiry(proposal, unit) {
   if (proposal.expiraEm !== undefined) return proposal.expiraEm;

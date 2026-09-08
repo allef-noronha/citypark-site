@@ -2197,7 +2197,7 @@ async function submitProposal(condition, analysis) {
     const unit = unitSnapshot.data();
     const commercialUnit = commercialSnapshot.data() || {};
 
-    if (unit.status !== "disponivel") {
+    if (unit.status !== "disponivel" || (unit.destinacao && unit.destinacao !== 'venda')) {
       throw new Error("Essa unidade não está mais disponível.");
     }
 
@@ -2243,6 +2243,11 @@ async function submitProposal(condition, analysis) {
         versaoTabela: liveTableVersion
       },
       statusProposta: "reservada",
+      unidadeAntesDaReserva: {
+        status: unit.status, destinacao: unit.destinacao || 'nao_classificada',
+        propostaAtualId: unit.propostaAtualId || null, propostaId: unit.propostaId || null,
+        vendidoEm: unit.vendidoEm || null, expiraEm: unit.expiraEm || null
+      },
       statusAnalise: condition.tipo === "personalizada" ? "pendente" : "dispensada",
       tagsAdmin: ["Comercial em Análise"],
       criadoEm: serverTimestamp(),

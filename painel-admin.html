@@ -54,12 +54,13 @@
       </article>
 
       <article class="dashboard-card inventory-card">
-        <div class="card-heading"><div><h2>Panorama do empreendimento</h2></div><a href="tabela-admin.html">Ver tabela</a></div>
+        <div class="card-heading"><div><h2>Panorama do empreendimento</h2><p>Estoque total, incluindo Administração e permutas. Use a tabela para filtrar e exportar o estoque comercial.</p></div><a href="tabela-admin.html">Ver tabela</a></div>
         <div class="inventory-visual">
           <div id="inventoryDonut" class="inventory-donut" style="--available:0;--reserved:0" aria-label="Distribuição das unidades"><span><strong id="soldUnitCount">—</strong><small>vendidas</small></span></div>
           <ul class="inventory-legend">
             <li><span data-color="available"></span><div><strong>Disponíveis</strong><small id="availableLegend">— unidades</small></div></li>
             <li><span data-color="reserved"></span><div><strong>Reservadas</strong><small id="reservedLegend">— unidades</small></div></li>
+            <li><span style="background:#94a3b8"></span><div><strong>Bloqueadas ou a confirmar</strong><small id="blockedLegend">— unidades</small></div></li>
             <li><span data-color="sold"></span><div><strong>Vendidas</strong><small id="soldLegend">— unidades</small></div></li>
           </ul>
         </div>

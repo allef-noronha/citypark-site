@@ -30,7 +30,7 @@
 
   <main class="unit-dashboard">
     <header class="page-intro">
-      <div><h1>Disponibilidade das unidades</h1><p>Visualize a disponibilidade das unidades de cada torre e filtre rapidamente por tipologia.</p></div>
+      <div><h1>Disponibilidade das unidades</h1><p>Selecione uma unidade para acessar propostas, ações comerciais e histórico.</p></div>
       <p id="unitLastUpdated" class="page-updated-at">Atualizado em: —</p>
     </header>
 
@@ -42,9 +42,28 @@
     </section>
 
     <section class="inventory-panel">
+      <div class="inventory-scope">
+        <label for="inventoryScope">Visão do estoque</label>
+        <select id="inventoryScope">
+          <option value="total">Estoque total</option>
+          <option value="comercial">Resultado comercial — exclui Administração</option>
+          <option value="vendas">Venda comercial classificada — exclui Administração e Permuta</option>
+          <option value="administracao">Somente Administração</option>
+          <option value="permuta">Somente Permuta</option>
+        </select>
+        <button type="button" id="exportInventory">Exportar visão em CSV</button>
+        <p id="scopeDescription"></p>
+        <p>Bloqueadas nesta visão: <strong id="blockedCount">0</strong></p>
+        <details><summary>Classificação inicial da Administração</summary>
+          <p>709 A, 909 A, 910 A, 1005 B, 1006 B, 1105 B, 1106 B, 1108 B e 1306 B.</p>
+          <button type="button" id="classifyAdministration">Revisar e classificar as 9 unidades</button>
+          <pre id="classificationResult" aria-live="polite"></pre>
+        </details>
+      </div>
       <div class="inventory-toolbar">
         <div><h1>Unidades por torre</h1></div>
         <div class="toolbar-actions">
+          <button type="button" id="refreshUnits">Atualizar</button>
           <label class="filter-field" for="typologyFilter">
             <h2 id="summaryTitle">Tipologia</h2>
             <select id="typologyFilter">
@@ -79,6 +98,32 @@
     </section>
   </main>
 
+  <dialog id="unitDialog" aria-labelledby="unitDialogTitle">
+    <header><h2 id="unitDialogTitle">Unidade</h2><button id="closeUnitDialog" type="button">Fechar</button></header>
+    <div id="unitDialogBody" aria-live="polite"></div>
+    <form id="previousSaleForm" hidden>
+      <h3>Cadastrar venda anterior</h3>
+      <p>Reconstrua o registro de uma venda comercial já concluída. A unidade continuará vendida. Não use para Administração ou permuta.</p>
+      <label>Cliente / razão social<input id="previousClient" required maxlength="200"></label>
+      <label>Corretor responsável à época<input id="previousBroker" required maxlength="200"></label>
+      <label>Data original da venda<input id="previousDate" type="date" required></label>
+      <label>Valor da venda (R$)<input id="previousValue" type="number" min="0.01" max="1000000000" step="0.01" required></label>
+      <label>Condições contratadas<textarea id="previousConditions" required maxlength="4000" placeholder="Entrada, parcelas, vencimentos e demais condições do contrato original"></textarea></label>
+      <label>Referência documental<input id="previousReference" required maxlength="300" placeholder="Número do contrato ou referência do registro antigo"></label>
+      <label><input id="previousChecked" type="checkbox" required>Conferi o histórico e os documentos. Confirmo que é uma venda comercial anterior.</label>
+      <p id="previousError" role="alert"></p><button id="previousSubmit" type="submit">Cadastrar venda anterior com histórico</button>
+    </form>
+    <form id="saveUnitAdjustment" hidden>
+      <h3>Ajustar disponibilidade e destinação</h3>
+      <p>Use para unidades sem proposta vinculada. Propostas ativas ou legadas sem encerramento impedem o ajuste.</p>
+      <label>Destinação<select id="adjustDestination"><option value="venda">Venda comercial</option><option value="administracao">Administração</option><option value="permuta">Permuta</option></select></label>
+      <label>Situação<select id="adjustStatus"><option value="disponivel">Disponível</option><option value="reservada">Reserva externa</option><option value="vendida">Venda ou permuta concluída</option><option value="bloqueada">Bloqueada para propostas</option></select></label>
+      <label>Motivo<textarea id="adjustReason" required maxlength="2000"></textarea></label>
+      <label>Referência documental<input id="adjustReference" required maxlength="300" placeholder="Contrato, distrato ou registro administrativo"></label>
+      <label><input type="checkbox" id="adjustChecked" required>Conferi os documentos e confirmo a alteração da unidade.</label>
+      <p id="adjustError" role="alert"></p><button id="adjustSubmit" type="submit">Salvar ajuste com histórico</button>
+    </form>
+  </dialog>
   <div id="adminToast" class="admin-toast" role="status" aria-live="polite"></div>
   <script type="module" src="js/tabela-admin.js?v=20260907-comercial"></script>
 </body>

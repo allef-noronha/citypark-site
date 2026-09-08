@@ -49,6 +49,70 @@ test('ações comerciais executam o código da página com regras reais no emula
   const proposal=async()=> (await getDoc(doc(db,'propostas','p1'))).data();
   const unit=async()=> (await getDoc(doc(db,'unidades','u1'))).data();
   try {
+    await t.test('venda anterior mantém status, preserva dados e impede duplicação',async()=>{
+      const ui=await seed('vendida',null);
+      await env.withSecurityRulesDisabled(async context=>firestore.deleteDoc(doc(context.firestore(),'propostas','p1')));
+      ui.run(readFileSync(new URL('../../js/venda-anterior.js',import.meta.url),'utf8').replace(/^import .*;\r?\n/gm,'').replace(/export /g,''));
+      const input={id:'u1',uid:'admin-test',cliente:'Cliente anterior',corretor:'Corretor anterior',dataVenda:'2025-10-10',valorCentavos:12345678,condicoes:'Entrada e saldo conforme contrato',referencia:'Contrato 123',confirmado:true};
+      const command=`registerPreviousSale(${JSON.stringify(input)})`;
+      await ui.run(command);
+      const saved=(await getDoc(doc(db,'propostas','venda-anterior-u1'))).data();
+      assert.equal(saved.statusProposta,'vendida');assert.equal(saved.vendaAnterior.valorCentavos,12345678);
+      assert.equal(saved.vendaAnterior.dataVenda,'2025-10-10');assert.equal(saved.corretorId,null);
+      assert.equal((await unit()).status,'vendida');assert.equal((await unit()).propostaAtualId,'venda-anterior-u1');
+      assert.equal((await getDocs(collection(db,'historico_propostas'))).size,1);
+      await assert.rejects(ui.run(command),/Já existe/);
+      assert.equal((await getDocs(collection(db,'propostas'))).size,1);
+    });
+    await t.test('venda anterior recusa unidade livre, vínculo, legado e destinação especial',async()=>{
+      for(const scenario of ['disponivel','vinculo','legado','administracao','permuta']) {
+        const ui=await seed(scenario==='disponivel'?'disponivel':'vendida',scenario==='vinculo'?'p1':null);
+        await env.withSecurityRulesDisabled(async context=>{
+          if(scenario!=='legado')await firestore.deleteDoc(doc(context.firestore(),'propostas','p1'));
+          if(['administracao','permuta'].includes(scenario))await updateDoc(doc(context.firestore(),'unidades','u1'),{destinacao:scenario});
+        });
+        ui.run(readFileSync(new URL('../../js/venda-anterior.js',import.meta.url),'utf8').replace(/^import .*;\r?\n/gm,'').replace(/export /g,''));
+        await assert.rejects(ui.run(`registerPreviousSale({id:'u1',uid:'admin-test',cliente:'Cliente',corretor:'Corretor',dataVenda:'2025-10-10',valorCentavos:10000,condicoes:'Contrato',referencia:'123',confirmado:true})`));
+        assert.equal((await getDoc(doc(db,'propostas','venda-anterior-u1'))).exists(),false);
+      }
+    });
+    await t.test('regras negam cadastro de venda anterior sem histórico e por corretor',async()=>{
+      await seed('vendida',null);
+      const data={origem:'venda_anterior',statusProposta:'vendida',unidadeId:'u1',adminId:'admin-test',corretorId:null};
+      await assertFails(firestore.setDoc(doc(db,'propostas','venda-anterior-u1'),data));
+      await assertFails(firestore.setDoc(doc(env.authenticatedContext('broker-test').firestore(),'propostas','venda-anterior-u1'),data));
+    });
+    await t.test('teste invalidado preserva proposta e bloqueia unidade atomicamente',async()=>{
+      const ui=await seed('vendida','p1',{teste:true,vendidoEm:'venda-de-teste'});
+      const before=(await proposal()).condicaoProposta;
+      await ui.run('invalidateTestProposal("Teste confirmado")');
+      assert.equal((await proposal()).statusProposta,'teste_invalidado');
+      assert.deepEqual((await proposal()).condicaoProposta,before);
+      assert.equal((await proposal()).vendidoEm,'venda-de-teste');
+      assert.equal((await unit()).status,'bloqueada');
+      assert.equal((await getDocs(collection(db,'historico_unidades'))).size,1);
+      await assert.rejects(ui.run('invalidateTestProposal("Repetido")'));
+    });
+    await t.test('ajuste administrativo exige histórico e respeita destinação e propostas legadas',async()=>{
+      const ui=await seed('vendida',null);
+      await env.withSecurityRulesDisabled(async context=>{
+        await firestore.deleteDoc(doc(context.firestore(),'propostas','p1'));
+      });
+      for(const file of ['estoque.js','ajuste-unidade.js']) ui.run(readFileSync(new URL('../../js/'+file,import.meta.url),'utf8').replace(/^import .*;\r?\n/gm,'').replace(/export /g,''));
+      await assertFails(updateDoc(doc(db,'unidades','u1'),{destinacao:'administracao',status:'bloqueada'}));
+      await ui.run(`adjustUnit({id:'u1',expectedStatus:'vendida',expectedDestination:'nao_classificada',nextStatus:'bloqueada',nextDestination:'administracao',reason:'Patrimônio da Administração',reference:'Lista confirmada',uid:'admin-test'})`);
+      assert.equal((await unit()).destinacao,'administracao');
+      assert.equal((await unit()).status,'bloqueada');
+      assert.equal((await getDocs(collection(db,'historico_unidades'))).size,1);
+      await assertFails(updateDoc(doc(db,'unidades','u1'),{status:'disponivel'}));
+      await assert.rejects(ui.run(`adjustUnit({id:'u1',expectedStatus:'vendida',expectedDestination:'nao_classificada',nextStatus:'disponivel',nextDestination:'venda',reason:'X',reference:'Y',uid:'admin-test'})`),/outra sessão/);
+      const broker=env.authenticatedContext('broker-test').firestore();
+      await assertFails(updateDoc(doc(broker,'unidades','u1'),{status:'reservada',propostaAtualId:'p2'}));
+      await env.withSecurityRulesDisabled(async context=>{
+        await firestore.setDoc(doc(context.firestore(),'propostas','legada'),{unidadeId:'u1',statusProposta:'pendente_correcao'});
+      });
+      await assert.rejects(ui.run(`adjustUnit({id:'u1',expectedStatus:'bloqueada',expectedDestination:'administracao',nextStatus:'disponivel',nextDestination:'venda',reason:'X',reference:'Y',uid:'admin-test'})`),/legada/);
+    });
     await t.test('aprovação e recusa mantêm proposta, unidade e históricos consistentes',async()=>{
       let ui=await seed(); await ui.run('approveProposal()');
       assert.equal((await proposal()).statusProposta,'aprovada'); assert.equal((await unit()).status,'aprovada');
@@ -94,6 +158,28 @@ test('ações comerciais executam o código da página com regras reais no emula
       assert.equal((await unit()).status,'vendida'); assert.equal((await proposal()).statusProposta,'vendida');
       assert.equal((await getDocs(collection(db,'historico_propostas'))).size,4);
       assert.equal((await getDocs(collection(db,'historico_unidades'))).size,1);
+    });
+    await t.test('distrato mantém proposta, valores e histórico; nova reserva não reabre venda antiga', async()=>{
+      const ui=await seed('vendida','p1',{vendidoEm:firestore.Timestamp.fromMillis(1000)});
+      const before=await proposal();
+      await ui.run('distractSoldProposal("Distrato formal 123")');
+      const old=await proposal();
+      assert.equal(old.statusProposta,'distratada');
+      assert.deepEqual(old.condicaoProposta,before.condicaoProposta);
+      assert.equal(old.vendidoEm.toMillis(),1000);
+      assert.equal((await unit()).status,'disponivel');
+      await assertFails(firestore.deleteDoc(doc(db,'propostas','p1')));
+      const event=(await getDocs(collection(db,'historico_propostas'))).docs[0];
+      await assertFails(firestore.deleteDoc(event.ref));
+      await updateDoc(doc(db,'unidades','u1'),{status:'reservada',propostaAtualId:'p2'});
+      await assert.rejects(ui.run('distractSoldProposal("Repetido")'));
+      assert.equal((await unit()).propostaAtualId,'p2');
+    });
+    await t.test('resumo público pode ser lido mas não alterado por clientes',async()=>{
+      await env.withSecurityRulesDisabled(async context=>{await firestore.setDoc(doc(context.firestore(),'disponibilidade_publica','atual'),{schemaVersao:1,unidades:{u1:'vendida'}});});
+      const publicDb=env.unauthenticatedContext().firestore();
+      assert.equal((await getDoc(doc(publicDb,'disponibilidade_publica','atual'))).exists(),true);
+      await assertFails(firestore.setDoc(doc(db,'disponibilidade_publica','atual'),{unidades:{u1:'disponivel'}}));
     });
     await t.test('não permite pular etapa',async()=>{
       const ui=await seed('aprovada');

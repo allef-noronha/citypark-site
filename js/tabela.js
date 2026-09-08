@@ -1,3 +1,4 @@
+import { watchAvailability, unitKey, publicStatus } from './disponibilidade.js';
 // js/tabela.js
 (function () {
   'use strict';
@@ -35,7 +36,8 @@
     const k = normalizeStatus(s);
     if (k.includes('vend')) return 'vendido';
     if (k.includes('reserv')) return 'reservado';
-    return 'disponivel';
+    if (k === 'disponivel') return 'disponivel';
+    return 'desconhecido';
   };
 
   function normalizeResponse(data) {
@@ -155,8 +157,12 @@
         try { data = JSON.parse(txt); } catch { data = []; }
       }
 
-      allRows = normalizeResponse(data);
+      allRows = normalizeResponse(data).map(row => ({ ...row, STATUS: 'A confirmar' }));
       applyFilter();
+      watchAvailability(units => {
+        allRows = allRows.map(row => ({ ...row, STATUS: publicStatus(units[unitKey(pick(row, ['UNIDADE', 'Unidade', 'unidade']))]) }));
+        applyFilter();
+      });
     } catch (e) {
       console.error('[tabela] erro:', e);
       stamp.textContent = 'Falha ao carregar a tabela. Tente recarregar a página.';

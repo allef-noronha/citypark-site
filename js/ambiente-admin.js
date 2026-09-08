@@ -98,6 +98,8 @@ function renderMetrics(counts, total, pending) {
   elements.availableLegend.textContent = `${counts.available} unidade${counts.available === 1 ? "" : "s"}`;
   elements.reservedLegend.textContent = `${counts.reserved} unidade${counts.reserved === 1 ? "" : "s"}`;
   elements.soldLegend.textContent = `${counts.sold} unidade${counts.sold === 1 ? "" : "s"}`;
+  $('blockedLegend').textContent = `${Math.max(0,total-counts.available-counts.reserved-counts.sold)} unidades`;
+  elements.donut.style.setProperty('--sold', String(total ? counts.sold / total * 100 : 0));
   elements.donut.style.setProperty("--available", String(availablePercentage));
   elements.donut.style.setProperty("--reserved", String(reservedPercentage));
 }

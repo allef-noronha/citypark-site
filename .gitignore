@@ -9,3 +9,5 @@ firebase/rule-coverage.json
 firebase/.emulator-tmp/
 firebase/.deployment-backups/
 tests/artifacts/
+firebase/.npm-cache/
+.tools/
