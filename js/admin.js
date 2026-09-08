@@ -1597,7 +1597,7 @@ function renderContextDetails({ proposal, unit, broker }) {
   if (!proposal || !unit) return `<div class="modal-bloco"><p>Registro legado sem proposta vinculada.</p></div>`;
   const client = proposal.cliente ?? {};
   const brokerData = { ...(broker ?? {}), ...(proposal.corretorSnapshot ?? {}) };
-  const condition = proposal.condicaoProposta ?? {};
+  const condition = proposal.condicaoVigente ?? proposal.condicaoProposta ?? {};
   return `
     <div class="modal-bloco"><h3>Unidade</h3>
       ${detailLine("Unidade", unitName(unit))}${detailLine("Tipologia", unit.tipologia)}${detailLine("Área", formatArea(unit.areaM2))}${detailLine("Status", statusLabel(normalizeStatus(unit.status)))}

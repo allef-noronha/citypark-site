@@ -1,0 +1,18 @@
+{
+  "name": "citypark-reserva-diagnostico",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "preview": "node local-preview.mjs",
+    "test": "node run-tests.mjs",
+    "test:commercial": "node run-tests.mjs --commercial",
+    "test:browser": "node ../tests/commercial-browser.cjs",
+    "test:fixtures": "node --test tests/fixtures.test.mjs",
+    "test:emulator": "firebase emulators:exec --only firestore --project demo-citypark-reserva --config firebase.json \"node --test tests/reserva.test.mjs\""
+  },
+  "devDependencies": {
+    "@firebase/rules-unit-testing": "^4.0.0",
+    "firebase": "^11.0.0",
+    "firebase-tools": "^14.0.0"
+  }
+}

@@ -12,14 +12,13 @@
 //   com zoom (wheel/dblclick), pan (arrastar) e pinch (touch).
 // ------------------------------------------------------------------
 
-// BETA 15G - Tabela de vendas sem leitura integral do Firestore.
-// A listagem comercial vem do Web App/Sheets. O Firestore operacional
-// continua sendo a autoridade no envio da proposta, dentro de formulario.js.
+import { db } from "./firebase.js";
+import {
+  collection,
+  getDocs
+} from "https://www.gstatic.com/firebasejs/10.12.1/firebase-firestore.js";
 
 // ===== CONFIG =====
-const SALES_WEBAPP_URL =
-  "https://script.google.com/macros/s/AKfycbwD1zCtYAD_UMaFv9rF63QWJ-RYqZbTv5RbRSVCoUqpZB8WFnOqJAhdqCmd_kxhneewoA/exec";
-
 const CONFIG = {
   formsBase: "formulario.html",
 
@@ -158,7 +157,7 @@ async function fetchWebApp() {
     return cached;
   }
 
-  const data = await fetchSalesSnapshotFromWebApp();
+  const data = await fetchWebAppFromFirestore();
   if (Array.isArray(data)) {
     writeSalesCache(data);
     return data;
@@ -171,32 +170,30 @@ async function fetchWebApp() {
   }
   return data;
 }
-async function fetchSalesSnapshotFromWebApp() {
+async function fetchWebAppFromFirestore() {
   try {
-    const response = await fetch(SALES_WEBAPP_URL, {
-      cache: "no-store",
-      credentials: "omit"
-    });
-
-    if (!response.ok) {
-      throw new Error(`Tabela comercial indisponível (${response.status}).`);
-    }
-
-    const payload = await response.json();
-    const rows = normalizeSalesResponse(payload);
-
-    console.info(
-      `[vendas] tabela carregada do Web App; 0 leituras da coleção operacional "unidades" nesta carga. Linhas: ${rows.length}`
-    );
-
-    return rows
-      .map(normalizeSalesRow)
-      .filter(Boolean)
-      .sort((a, b) =>
-        String(a.unidade).localeCompare(String(b.unidade), "pt-BR", { numeric: true })
-      );
+    const snapshot = await getDocs(collection(db, "unidades"));
+    return snapshot.docs
+      .map((docSnapshot) => {
+        const unit = docSnapshot.data();
+        const values = unit.valores || {};
+        return {
+          id: docSnapshot.id,
+          unidade: unit.unidade || docSnapshot.id,
+          preco: fromCents(values.precoAVistaCentavos),
+          area: unit.areaM2,
+          sinal: fromCents(values.sinalCentavos),
+          parcela: fromCents(values.parcelasMensaisCentavos),
+          intercalada: fromCents(values.intercaladasSemestraisCentavos),
+          chaves: fromCents(values.chavesCentavos),
+          status: statusLabel(unit.status),
+          tipologia: unit.tipologia,
+          imagem: unit.imagem
+        };
+      })
+      .sort((a, b) => String(a.unidade).localeCompare(String(b.unidade), "pt-BR", { numeric: true }));
   } catch (err) {
-    console.error("[vendas] erro ao carregar tabela comercial:", err);
+    console.error("[vendas] erro ao carregar dados:", err);
     if (tabelaEl) {
       tabelaEl.innerHTML = `
         <div class="alert">
@@ -206,102 +203,6 @@ async function fetchSalesSnapshotFromWebApp() {
     }
     return null;
   }
-}
-
-function normalizeSalesResponse(data) {
-  if (Array.isArray(data)) {
-    if (data.length && Array.isArray(data[0])) {
-      const headers = data[0].map(String);
-      return data.slice(1).map((row) => {
-        const obj = {};
-        headers.forEach((header, index) => {
-          obj[header] = row[index];
-        });
-        return obj;
-      });
-    }
-    return data;
-  }
-
-  for (const key of ["rows", "data", "values", "resultado", "result"]) {
-    const candidate = data?.[key];
-    if (!Array.isArray(candidate)) continue;
-
-    if (candidate.length && Array.isArray(candidate[0])) {
-      const headers = candidate[0].map(String);
-      return candidate.slice(1).map((row) => {
-        const obj = {};
-        headers.forEach((header, index) => {
-          obj[header] = row[index];
-        });
-        return obj;
-      });
-    }
-
-    return candidate;
-  }
-
-  return [];
-}
-
-function pickSalesField(row, names) {
-  for (const name of names) {
-    if (row?.[name] !== undefined && row?.[name] !== null && row?.[name] !== "") {
-      return row[name];
-    }
-  }
-  return null;
-}
-
-function commercialNumber(value) {
-  if (value === null || value === undefined || value === "") return null;
-  if (typeof value === "number") return Number.isFinite(value) ? value : null;
-
-  let raw = String(value).trim();
-  if (!raw) return null;
-
-  raw = raw.replace(/[R$\s]/g, "");
-  if (raw.includes(",") && raw.includes(".")) {
-    raw = raw.replace(/\./g, "").replace(",", ".");
-  } else if (raw.includes(",")) {
-    raw = raw.replace(",", ".");
-  }
-
-  const number = Number(raw);
-  return Number.isFinite(number) ? number : null;
-}
-
-function normalizeSalesRow(row) {
-  const unidade = pickSalesField(row, ["UNIDADE", "Unidade", "unidade", "unit"]);
-  if (!unidade) return null;
-
-  return {
-    id: String(unidade).trim(),
-    unidade: String(unidade).trim(),
-    preco: commercialNumber(
-      pickSalesField(row, ["PREÇO A VISTA", "PRECO A VISTA", "Preço à vista", "precoAVista", "preco"])
-    ),
-    area: commercialNumber(
-      pickSalesField(row, ["ÁREA", "AREA", "Área", "areaM2", "area"])
-    ),
-    sinal: commercialNumber(
-      pickSalesField(row, ["SINAL", "Sinal", "sinal"])
-    ),
-    parcela: commercialNumber(
-      pickSalesField(row, ["PARCELA MENSAL", "40 PARC. MENSAIS", "Parcela Mensal", "parcelaMensal", "parcela"])
-    ),
-    intercalada: commercialNumber(
-      pickSalesField(row, ["INTERCALADA", "6 INTERCAL. SEMESTRAIS", "Intercalada", "intercalada"])
-    ),
-    chaves: commercialNumber(
-      pickSalesField(row, ["CHAVES", "Chaves", "chaves"])
-    ),
-    status: String(
-      pickSalesField(row, ["STATUS", "Status", "status"]) || "Disponível"
-    ),
-    tipologia: pickSalesField(row, ["TIPOLOGIA", "Tipologia", "tipologia"]) || "",
-    imagem: pickSalesField(row, ["IMAGEM", "Imagem", "imagem"]) || ""
-  };
 }
 
 async function readResponse(res) {

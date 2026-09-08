@@ -1712,7 +1712,7 @@ function openReviewModal({ title, subtitle, content, confirmText }) {
 
 // BETA 15D - PREFLIGHT LOCAL
 // No extra Firebase read/write is performed by this function.
-const BETA15D_DIAGNOSTIC_ONLY = true; // BETA 15F: diagnostico sem escrita
+const BETA15D_DIAGNOSTIC_ONLY = false; // Rules validadas; envio ainda depende de configuracoes/comercial.
 
 function beta15DPreflight(condition, analysis) {
   const checks = [];
@@ -2096,15 +2096,14 @@ function beta15FPreflight(condition, analysis) {
 
   const failed = checks.filter(item => !item.ok).map(item => item.code);
 
-  // Estimativa deliberadamente conservadora: conta chamadas escritas nas Rules sem assumir cache.
-  // O Firestore pode cachear leituras repetidas; portanto isto e um indicador de risco, nao uma prova.
-  const rawRuleAccessUpperBound = adminMode === true ? 20 : 17;
+  // O preflight não executa as Rules nem mede o orçamento do Firestore.
+  // A suíte firebase/tests valida a transação completa no emulador.
   const budget = {
     mode: adminMode === true ? "admin" : "broker",
-    rawUpperBound: rawRuleAccessUpperBound,
     transactionRequestLimit: 20,
     proposalOperationLimit: 10,
-    note: "Upper bound sem cache; se todos os predicados acima passarem, o orçamento de access calls/getAfter vira o principal suspeito."
+    expressionLimit: 1000,
+    note: "Limites de referência, não medições. As parcelas são validadas pelos dois históricos iniciais obrigatórios na mesma transação. Execute a suíte do emulador para verificar as Rules."
   };
 
   const result = {
@@ -2177,8 +2176,10 @@ async function submitProposal(condition, analysis) {
   const unitRef = doc(db, "unidades", id);
   const commercialUnitRef = doc(db, "site_units_test", commercialId);
   const proposalRef = doc(collection(db, "propostas"));
-  const unitHistoryRef = doc(collection(db, "historico_unidades"));
-  const proposalHistoryRef = doc(collection(db, "historico_propostas"));
+  // Os históricos iniciais usam o ID da proposta: as Rules exigem ambos
+  // na mesma transação e dividem entre eles a validação dos 12 grupos.
+  const unitHistoryRef = doc(db, "historico_unidades", proposalRef.id);
+  const proposalHistoryRef = doc(db, "historico_propostas", proposalRef.id);
   const expiresAt = Timestamp.fromDate(
     new Date(Date.now() + reservationSettings.prazoReservaDias * 24 * 60 * 60 * 1000)
   );

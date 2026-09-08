@@ -2,3 +2,10 @@
 img/fachada.png
 README.txt
 media/hero.mp4
+node_modules/
+*-debug.log
+firebase/resultado-testes.txt
+firebase/rule-coverage.json
+firebase/.emulator-tmp/
+firebase/.deployment-backups/
+tests/artifacts/

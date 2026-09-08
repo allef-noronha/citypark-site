@@ -1,0 +1,11 @@
+{
+  "indexes": [{
+    "collectionGroup": "propostas",
+    "queryScope": "COLLECTION",
+    "fields": [
+      { "fieldPath": "statusProposta", "order": "ASCENDING" },
+      { "fieldPath": "criadoEm", "order": "DESCENDING" }
+    ]
+  }],
+  "fieldOverrides": []
+}

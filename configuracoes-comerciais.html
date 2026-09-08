@@ -6,24 +6,27 @@
   <meta name="theme-color" content="#091253">
   <meta name="robots" content="noindex, nofollow">
   <title>Configurações Comerciais | City Park</title>
-  <link rel="stylesheet" href="css/configuracoes-comerciais.css?v=20260902-13">
+  <link rel="stylesheet" href="css/admin-shell.css?v=20260907-comercial">
+  <link rel="stylesheet" href="css/configuracoes-comerciais.css?v=20260907-visual">
   <link rel="icon" href="data:,">
   <style>html:not(.page-authorized) body { visibility: hidden; }</style>
 </head>
 <body>
-  <header class="topbar">
-    <a class="brand" href="painel-admin.html"><img src="img/CityPark-Branco.png" alt="City Park"></a>
-    <nav>
-      <a href="painel-admin.html">Ambiente Administrativo</a>
-      <a href="gestao-propostas.html">Propostas</a>
-      <a href="vendas.html">Tabela de Vendas</a>
-    </nav>
+  <header class="figma-topbar">
+    <a class="figma-brand" href="painel-admin.html" aria-label="Início do Ambiente Administrativo"><img src="img/CityPark-Branco.png" alt="City Park"><strong>Ambiente Administrativo</strong></a>
+    <a class="sales-link" href="vendas.html">Tabela de Vendas</a>
   </header>
+  <nav class="admin-navigation" aria-label="Módulos administrativos">
+    <a href="painel-admin.html">Visão geral</a>
+    <a href="tabela-admin.html">Tabela</a>
+    <a href="gestao-propostas.html">Propostas</a>
+    <button type="button" disabled aria-label="Corretores, módulo ainda não disponível">Corretores</button>
+    <a class="active" href="configuracoes-comerciais.html" aria-current="page">Configurações</a>
+  </nav>
 
   <main class="settings-shell">
     <header class="settings-heading">
       <div>
-        <p class="eyebrow">Ambiente Comercial</p>
         <h1>Configurações comerciais</h1>
         <p>Defina limites e comportamento de reserva sem alterar o código.</p>
       </div>

@@ -11,7 +11,7 @@ import {
   getDoc,
   getDocs,
   query,
-  where
+  where, limit, orderBy, startAfter, getCountFromServer
 } from "https://www.gstatic.com/firebasejs/10.12.1/firebase-firestore.js";
 
 const $ = id => document.getElementById(id);
@@ -28,11 +28,12 @@ const elements = {
   approvedCount: $("approvedCount"),
   closedCount: $("closedCount"),
   inactiveCount: $("inactiveCount"),
+  more: $("loadMoreProposals"), updatedAt: $("proposalLastUpdated"),
   toast: $("adminToast")
 };
 
 const state = {
-  proposals: [],
+  proposals: [], cursor: null, hasMore: false, loading: false, generation: 0,
   brokers: new Map(),
   units: new Map(),
   authorized: false,
@@ -75,8 +76,9 @@ function bindEvents() {
   if (state.initialized) return;
   state.initialized = true;
   elements.search.addEventListener("input", renderRows);
-  elements.filter.addEventListener("change", loadProposals);
-  elements.refresh.addEventListener("click", loadProposals);
+  elements.filter.addEventListener("change", () => loadProposals());
+  elements.refresh.addEventListener("click", () => loadProposals());
+  elements.more.addEventListener("click", () => loadProposals(true));
   elements.rows.addEventListener("click", event => {
     const link = event.target.closest("[data-proposal-id]");
     if (link) {
@@ -103,17 +105,28 @@ function proposalQueryForFilter(filter) {
   return proposals;
 }
 
-async function loadProposals() {
+async function loadProposals(append = false) {
+  if (append && state.loading) return;
+  const generation = ++state.generation;
+  state.loading = true;
+  elements.more.disabled = true;
   elements.refresh.disabled = true;
   elements.loading.hidden = false;
   elements.tableWrap.hidden = true;
   elements.empty.hidden = true;
 
   try {
-    const proposalSnapshot = await getDocs(proposalQueryForFilter(elements.filter.value));
-    state.proposals = proposalSnapshot.docs
+    const constraints = [orderBy("criadoEm", "desc"), limit(25)];
+    if (append && state.cursor) constraints.push(startAfter(state.cursor));
+    const proposalSnapshot = await getDocs(query(proposalQueryForFilter(elements.filter.value), ...constraints));
+    if (generation !== state.generation) return;
+    state.cursor = proposalSnapshot.docs.at(-1) || null;
+    state.hasMore = proposalSnapshot.size === 25;
+    const page = proposalSnapshot.docs
       .map(item => ({ id: item.id, ...item.data() }))
       .sort((a, b) => dateValue(b.criadoEm) - dateValue(a.criadoEm));
+
+    state.proposals = append ? [...state.proposals, ...page] : page;
 
     // BETA 15A · REDUÇÃO DE LEITURAS
     // Propostas novas ja carregam corretorSnapshot e unidadeSnapshot.
@@ -121,12 +134,12 @@ async function loadProposals() {
     // as colecoes inteiras de corretores e unidades (~300 documentos cada).
     const missingBrokerIds = [...new Set(
       state.proposals
-        .filter(proposal => proposal.corretorId && !proposal.corretorSnapshot)
+        .filter(proposal => proposal.corretorId && !proposal.corretorSnapshot && !state.brokers.has(proposal.corretorId))
         .map(proposal => proposal.corretorId)
     )];
     const missingUnitIds = [...new Set(
       state.proposals
-        .filter(proposal => proposal.unidadeId && !proposal.unidadeSnapshot)
+        .filter(proposal => proposal.unidadeId && !proposal.unidadeSnapshot && !state.units.has(proposal.unidadeId))
         .map(proposal => proposal.unidadeId)
     )];
 
@@ -135,34 +148,34 @@ async function loadProposals() {
       Promise.all(missingUnitIds.map(id => getDoc(doc(db, "unidades", id))))
     ]);
 
-    state.brokers = new Map(
-      brokerDocs
+    if (generation !== state.generation) return;
+    state.brokers = new Map([ ...state.brokers, ...brokerDocs
         .filter(snapshot => snapshot.exists())
         .map(snapshot => [snapshot.id, { id: snapshot.id, ...snapshot.data() }])
-    );
-    state.units = new Map(
-      unitDocs
+    ]);
+    state.units = new Map([ ...state.units, ...unitDocs
         .filter(snapshot => snapshot.exists())
         .map(snapshot => [snapshot.id, { id: snapshot.id, ...snapshot.data() }])
-    );
-    renderSummary();
+    ]);
+    if (!append) await renderSummary();
+    if (generation !== state.generation) return;
+    elements.updatedAt.textContent = `Atualizado em: ${formatDate(new Date())}`;
+    elements.more.hidden = !state.hasMore;
     renderRows();
   } catch (error) {
+    if (generation !== state.generation) return;
     console.error("[gestao-propostas] carregamento:", error);
     elements.loading.textContent = "Não foi possível carregar as propostas.";
     showToast("Falha ao atualizar a lista de propostas.", true);
   } finally {
-    elements.refresh.disabled = false;
+    if (generation === state.generation) { state.loading = false; elements.refresh.disabled = false; elements.more.disabled = false; }
   }
 }
 
-function renderSummary() {
-  const totals = { pending: 0, approved: 0, closed: 0, inactive: 0 };
-  state.proposals.forEach(proposal => { totals[statusGroup(proposal.statusProposta)] += 1; });
-  elements.pendingCount.textContent = String(totals.pending);
-  elements.approvedCount.textContent = String(totals.approved);
-  elements.closedCount.textContent = String(totals.closed);
-  elements.inactiveCount.textContent = String(totals.inactive);
+async function renderSummary() {
+  const groups = ["pending", "approved", "closed", "inactive"];
+  const results = await Promise.allSettled(groups.map(group => getCountFromServer(proposalQueryForFilter(group))));
+  results.forEach((result,index) => { elements[groups[index] + "Count"].textContent = result.status === "fulfilled" ? String(result.value.data().count) : "—"; });
 }
 
 function renderRows() {
@@ -206,7 +219,7 @@ function renderProposalRow(proposal) {
       </td>
       <td><span class="cell-title">${escapeHtml(brokerage)}</span></td>
       <td><span class="status-badge" data-group="${group}">${escapeHtml(statusLabel(proposal.statusProposta))}</span></td>
-      <td><a class="open-button" data-proposal-id="${escapeHtml(proposal.id)}" href="detalhes-proposta.html?id=${encodeURIComponent(proposal.id)}">Abrir</a></td>
+      <td><a class="open-button" data-proposal-id="${escapeHtml(proposal.id)}" href="detalhes-proposta.html?id=${encodeURIComponent(proposal.id)}">Abrir</a><span class="expiry-line">${escapeHtml(proposalExpiryLabel(proposal))}</span></td>
     </tr>`;
 }
 
@@ -261,6 +274,13 @@ function formatDate(value) {
   const date = toDate(value);
   if (!date) return "Não informada";
   return new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "short" }).format(date);
+}
+
+function proposalExpiryLabel(proposal) {
+  if (statusGroup(proposal.statusProposta) !== "pending") return "Sem prazo ativo";
+  const expiry = toDate(proposal.expiraEm);
+  if (!expiry) return "Prazo não informado";
+  return expiry.getTime() <= Date.now() ? "Prazo encerrado" : `Reserva até ${formatDate(expiry)}`;
 }
 
 function formatArea(value) {

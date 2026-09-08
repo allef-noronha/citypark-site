@@ -42,134 +42,97 @@ service cloud.firestore {
       return isAdmin() || ownsProposal(propostaId);
     }
 
-    function validPaymentComponent(component, periodicity, requireDates, maxQuantity) {
-      return component is map
-        && component.keys().hasAll([
-          'ativo', 'quantidade', 'valorUnitarioCentavos', 'totalCentavos',
-          'periodicidade', 'primeiroVencimento', 'vencimentos', 'descricao'
-        ])
-        && component.keys().hasOnly([
-          'ativo', 'quantidade', 'valorUnitarioCentavos', 'totalCentavos',
-          'periodicidade', 'primeiroVencimento', 'vencimentos', 'descricao'
-        ])
-        && component.ativo is bool
+    // Valida cada componente uma vez. Campos inativos têm uma forma canônica;
+    // não percorrem as validações de valor, calendário e periodicidade ativos.
+    function validInactivePaymentComponent(component, empty) {
+      return component == empty
         && component.quantidade is int
         && component.valorUnitarioCentavos is int
-        && component.totalCentavos is int
-        && component.periodicidade == periodicity
-        && component.vencimentos is list
-        && component.descricao is string
-        && component.descricao.size() <= 300
-        && (
-          (
-            component.ativo == true
-            && component.quantidade > 0
-            && component.quantidade <= maxQuantity
-            && component.valorUnitarioCentavos > 0
-            && component.totalCentavos == component.quantidade * component.valorUnitarioCentavos
-            && (
-              (
-                requireDates == true
-                && component.primeiroVencimento is timestamp
-                && component.vencimentos.size() == component.quantidade
-              )
-              ||
-              (
-                requireDates == false
-                && (component.primeiroVencimento == null || component.primeiroVencimento is timestamp)
-              )
-            )
-          )
-          ||
-          (
-            component.ativo == false
-            && component.quantidade == 0
-            && component.valorUnitarioCentavos == 0
-            && component.totalCentavos == 0
-            && component.primeiroVencimento == null
-            && component.vencimentos.size() == 0
-            && component.descricao == ''
-          )
-        );
+        && component.totalCentavos is int;
     }
 
-    function validOptionalFixedPaymentComponent(component, periodicity, requireDates, maxQuantity) {
-      return component is map && (
-        (
-          component.ativo == false
-          && validPaymentComponent(component, 'outra', requireDates, 1)
-        )
-        ||
-        (
-          component.ativo == true
-          && validPaymentComponent(component, periodicity, requireDates, maxQuantity)
-        )
-      );
+    function validActivePaymentComponent(component, requireDates, maxQuantity) {
+      let quantity = component.quantidade;
+      let unitValue = component.valorUnitarioCentavos;
+      let total = component.totalCentavos;
+      let description = component.descricao;
+      let firstDue = component.primeiroVencimento;
+      let dates = component.vencimentos;
+      // Todos os campos permitidos são acessados nesta validação ou no chamador.
+      // Campo ausente causa negativa; size impede campos extras.
+      return component.size() == 8
+        && quantity is int && quantity > 0 && quantity <= maxQuantity
+        && unitValue is int && unitValue > 0
+        && total is int && total == quantity * unitValue
+        && description is string && description.size() <= 300
+        && dates is list
+        && (requireDates
+          ? firstDue is timestamp && dates.size() == quantity
+          : firstDue == null || firstDue is timestamp);
     }
 
-    function validSignalPaymentComponent(component, requireDates) {
-      return component is map && (
-        (
-          component.ativo == false
-          && validPaymentComponent(component, 'outra', requireDates, 1)
-        )
-        ||
-        (
-          component.ativo == true
-          && (
-            validPaymentComponent(component, 'mensal', requireDates, 3)
-            ||
-            (
-              component.quantidade == 1
-              && validPaymentComponent(component, 'unica', requireDates, 1)
-            )
-          )
-        )
-      );
+    function validOptionalFixedPaymentComponent(component, periodicity, requireDates, maxQuantity, empty) {
+      return component.ativo
+        ? component.periodicidade == periodicity
+          && validActivePaymentComponent(component, requireDates, maxQuantity)
+        : validInactivePaymentComponent(component, empty);
     }
 
-    function validFlexiblePaymentComponent(component, requireDates) {
-      return component is map && (
-        (
-          component.ativo == false
-          && validPaymentComponent(component, 'outra', requireDates, 1)
-        ) || (
-          component.ativo == true
-          && (
-            validPaymentComponent(component, 'mensal', requireDates, 240)
-            || validPaymentComponent(component, 'semestral', requireDates, 60)
-            || validPaymentComponent(component, 'anual', requireDates, 30)
-            || (
-              validPaymentComponent(component, 'outra', requireDates, 1)
-              && component.descricao.size() > 0
-            )
-          )
-        )
-      );
+    function validSignalPaymentComponent(component, requireDates, empty) {
+      return component.ativo
+        ? (component.periodicidade == 'mensal'
+            || (component.periodicidade == 'unica' && component.quantidade == 1))
+          && validActivePaymentComponent(component, requireDates, 3)
+        : validInactivePaymentComponent(component, empty);
     }
 
-    function validPaymentSlots(slots, requireDates) {
-      return slots is map
-        && slots.keys().hasAll([
-          'grupo01', 'grupo02', 'grupo03', 'grupo04', 'grupo05', 'grupo06',
-          'grupo07', 'grupo08', 'grupo09', 'grupo10', 'grupo11', 'grupo12'
-        ])
-        && slots.keys().hasOnly([
-          'grupo01', 'grupo02', 'grupo03', 'grupo04', 'grupo05', 'grupo06',
-          'grupo07', 'grupo08', 'grupo09', 'grupo10', 'grupo11', 'grupo12'
-        ])
-        && validFlexiblePaymentComponent(slots.grupo01, requireDates)
-        && validFlexiblePaymentComponent(slots.grupo02, requireDates)
-        && validFlexiblePaymentComponent(slots.grupo03, requireDates)
-        && validFlexiblePaymentComponent(slots.grupo04, requireDates)
-        && validFlexiblePaymentComponent(slots.grupo05, requireDates)
-        && validFlexiblePaymentComponent(slots.grupo06, requireDates)
-        && validFlexiblePaymentComponent(slots.grupo07, requireDates)
-        && validFlexiblePaymentComponent(slots.grupo08, requireDates)
-        && validFlexiblePaymentComponent(slots.grupo09, requireDates)
-        && validFlexiblePaymentComponent(slots.grupo10, requireDates)
-        && validFlexiblePaymentComponent(slots.grupo11, requireDates)
-        && validFlexiblePaymentComponent(slots.grupo12, requireDates);
+    function validFlexiblePaymentComponent(component, requireDates, empty, limits) {
+      let periodicity = component.periodicidade;
+      return component.ativo
+        ? periodicity in limits
+          && (periodicity != 'outra' || component.descricao.size() > 0)
+          && validActivePaymentComponent(component, requireDates, limits[periodicity])
+        : validInactivePaymentComponent(component, empty);
+    }
+
+    // Cada histórico inicial verifica metade dos grupos. A criação da proposta
+    // exige os dois históricos novos na mesma transação, sem escritas extras.
+    function validInitialHistory(data, historyId, unitHistory) {
+      let proposal = getAfter(/databases/$(database)/documents/propostas/$(historyId)).data;
+      let condition = proposal.condicaoProposta;
+      let slots = condition.componentes.parcelas;
+      let requireDates = condition.tipo == 'personalizada';
+      let empty = {'ativo': false, 'quantidade': 0, 'valorUnitarioCentavos': 0,
+        'totalCentavos': 0, 'periodicidade': 'outra',
+        'primeiroVencimento': null, 'vencimentos': [], 'descricao': ''};
+      let limits = {'mensal': 240, 'semestral': 60, 'anual': 30, 'outra': 1};
+      return data.propostaId == historyId
+        && data.corretorId == proposal.corretorId
+        && data.unidadeId == proposal.unidadeId
+        && data.data == request.time
+        && !exists(/databases/$(database)/documents/propostas/$(historyId))
+        && (unitHistory
+          ? validFlexiblePaymentComponent(slots.grupo01, requireDates, empty, limits)
+            && validFlexiblePaymentComponent(slots.grupo02, requireDates, empty, limits)
+            && validFlexiblePaymentComponent(slots.grupo03, requireDates, empty, limits)
+            && validFlexiblePaymentComponent(slots.grupo04, requireDates, empty, limits)
+            && validFlexiblePaymentComponent(slots.grupo05, requireDates, empty, limits)
+            && validFlexiblePaymentComponent(slots.grupo06, requireDates, empty, limits)
+          : validFlexiblePaymentComponent(slots.grupo07, requireDates, empty, limits)
+            && validFlexiblePaymentComponent(slots.grupo08, requireDates, empty, limits)
+            && validFlexiblePaymentComponent(slots.grupo09, requireDates, empty, limits)
+            && validFlexiblePaymentComponent(slots.grupo10, requireDates, empty, limits)
+            && validFlexiblePaymentComponent(slots.grupo11, requireDates, empty, limits)
+            && validFlexiblePaymentComponent(slots.grupo12, requireDates, empty, limits));
+    }
+
+    function hasInitialHistories(proposalId) {
+      let unitHistory = getAfter(/databases/$(database)/documents/historico_unidades/$(proposalId)).data;
+      let proposalHistory = getAfter(/databases/$(database)/documents/historico_propostas/$(proposalId)).data;
+      return !exists(/databases/$(database)/documents/historico_unidades/$(proposalId))
+        && !exists(/databases/$(database)/documents/historico_propostas/$(proposalId))
+        && unitHistory.propostaId == proposalId && unitHistory.acao == 'unidade reservada'
+        && proposalHistory.propostaId == proposalId && proposalHistory.acao == 'proposta criada';
     }
 
     function validConditionShape(condition) {
@@ -177,31 +140,13 @@ service cloud.firestore {
         (
           condition.tipo == 'personalizada'
           && condition.schemaVersao == 3
-          && condition.keys().hasAll([
-            'schemaVersao', 'tipo', 'descricao', 'valorTabelaCentavos',
-            'totalCalculadoCentavos', 'diferencaCentavos', 'componentes'
-          ])
-          && condition.keys().hasOnly([
-            'schemaVersao', 'tipo', 'descricao', 'valorTabelaCentavos',
-            'totalCalculadoCentavos', 'diferencaCentavos', 'componentes'
-          ])
+          && condition.size() == 7
         )
         ||
         (
           condition.tipo == 'padrao'
           && condition.schemaVersao == 4
-          && condition.keys().hasAll([
-            'schemaVersao', 'tipo', 'descricao', 'tipologia',
-            'valorTabelaCentavos', 'totalCalculadoCentavos', 'diferencaCentavos',
-            'condicaoComercialSnapshot', 'resumoPublicado', 'componentes',
-            'diaVencimentoPadrao', 'dataBasePadrao', 'calendarioPadrao'
-          ])
-          && condition.keys().hasOnly([
-            'schemaVersao', 'tipo', 'descricao', 'tipologia',
-            'valorTabelaCentavos', 'totalCalculadoCentavos', 'diferencaCentavos',
-            'condicaoComercialSnapshot', 'resumoPublicado', 'componentes',
-            'diaVencimentoPadrao', 'dataBasePadrao', 'calendarioPadrao'
-          ])
+          && condition.size() == 13
           && condition.tipologia is string
           && condition.condicaoComercialSnapshot is map
           && condition.resumoPublicado is map
@@ -216,54 +161,57 @@ service cloud.firestore {
       let condition = data.condicaoProposta;
       let parts = condition.componentes;
       let slots = parts.parcelas;
-      let operationalUnit = getAfter(
+      let operationalUnit = get(
         /databases/$(database)/documents/unidades/$(unidadeId)
       ).data;
       let commercialUnit = getAfter(
         /databases/$(database)/documents/site_units_test/$(commercialUnitId)
       ).data;
-      let livePrice = commercialUnit.precoVista;
-      let livePriceCents = livePrice * 100;
+      let livePriceCents = commercialUnit.precoVista * 100;
       let tableValue = condition.valorTabelaCentavos;
+      let total = condition.totalCalculadoCentavos;
       let requireDates = condition.tipo == 'personalizada';
+      let empty = {'ativo': false, 'quantidade': 0, 'valorUnitarioCentavos': 0,
+        'totalCentavos': 0, 'periodicidade': 'outra',
+        'primeiroVencimento': null, 'vencimentos': [], 'descricao': ''};
 
       return condition is map
         && validConditionShape(condition)
         && condition.descricao is string
         && condition.descricao.size() > 0
         && condition.descricao.size() <= 1000
-        && condition.valorTabelaCentavos is int
-        && condition.totalCalculadoCentavos is int
+        && tableValue is int
+        && total is int
         && condition.diferencaCentavos is int
         && commercialUnit.precoVista is number
         && commercialUnit.precoVista > 0
+        && operationalUnit.status == 'disponivel'
         && operationalUnit.unidade is string
         && commercialUnit.unidade is string
         && commercialUnit.unidade == operationalUnit.unidade
-        && condition.valorTabelaCentavos >= livePriceCents - 0.5
-        && condition.valorTabelaCentavos <= livePriceCents + 0.5
-        && condition.totalCalculadoCentavos > 0
+        && tableValue >= livePriceCents - 0.5
+        && tableValue <= livePriceCents + 0.5
+        && total > 0
         && (
           (
             condition.tipo == 'padrao'
-            && condition.totalCalculadoCentavos == tableValue
+            && total == tableValue
             && condition.diferencaCentavos == 0
           )
           ||
           (
             condition.tipo == 'personalizada'
-            && condition.totalCalculadoCentavos * 100 >= tableValue * 85
-            && condition.diferencaCentavos == tableValue - condition.totalCalculadoCentavos
+            && total * 100 >= tableValue * 85
+            && condition.diferencaCentavos == tableValue - total
           )
         )
         && parts is map
-        && parts.keys().hasAll(['sinal', 'parcelas', 'chaves'])
-        && parts.keys().hasOnly(['sinal', 'parcelas', 'chaves'])
-        && validSignalPaymentComponent(parts.sinal, requireDates)
-        && validOptionalFixedPaymentComponent(parts.chaves, 'unica', false, 1)
-        && validPaymentSlots(slots, requireDates)
-        && parts.chaves.totalCentavos * 100 <= condition.totalCalculadoCentavos * 60
-        && condition.totalCalculadoCentavos ==
+        && parts.size() == 3
+        && validSignalPaymentComponent(parts.sinal, requireDates, empty)
+        && validOptionalFixedPaymentComponent(parts.chaves, 'unica', false, 1, empty)
+        && slots is map && slots.size() == 12
+        && parts.chaves.totalCentavos * 100 <= total * 60
+        && total ==
           parts.sinal.totalCentavos
           + slots.grupo01.totalCentavos
           + slots.grupo02.totalCentavos
@@ -357,6 +305,7 @@ service cloud.firestore {
         
         && request.resource.data.commercialUnitId is string
         && validPaymentCondition(request.resource.data, request.resource.data.unidadeId, request.resource.data.commercialUnitId)
+        && hasInitialHistories(propostaId)
         && getAfter(/databases/$(database)/documents/unidades/$(request.resource.data.unidadeId)).data.status == 'reservada'
         && getAfter(/databases/$(database)/documents/unidades/$(request.resource.data.unidadeId)).data.propostaAtualId == propostaId;
 
@@ -405,11 +354,12 @@ service cloud.firestore {
       allow read: if isAdmin() || (
         signedIn() && resource.data.corretorId == request.auth.uid
       );
-      allow create: if isAdmin() || (
+      allow create: if (isAdmin() || (
         isApprovedBroker()
         && request.resource.data.corretorId == request.auth.uid
         && request.resource.data.acao == 'proposta criada'
-      );
+      )) && (request.resource.data.acao != 'proposta criada'
+        || validInitialHistory(request.resource.data, historicoId, false));
       allow update, delete: if false;
     }
 
@@ -417,11 +367,12 @@ service cloud.firestore {
       allow read: if isAdmin() || (
         signedIn() && resource.data.corretorId == request.auth.uid
       );
-      allow create: if isAdmin() || (
+      allow create: if (isAdmin() || (
         isApprovedBroker()
         && request.resource.data.corretorId == request.auth.uid
         && request.resource.data.acao == 'unidade reservada'
-      );
+      )) && (request.resource.data.acao != 'unidade reservada'
+        || validInitialHistory(request.resource.data, historicoId, true));
       allow update, delete: if false;
     }
 
