@@ -67,7 +67,7 @@ let carregandoDados = false;
 let popupUnit = null;
 
 // BETA 15B Â· PROTECAO DE COTA DO FIRESTORE
-const SALES_CACHE_KEY = "citypark:vendas-cache:v1";
+const SALES_CACHE_KEY = "citypark:vendas-cache:v2";
 const SALES_CACHE_TTL_MS = 2 * 60 * 1000;
 
 // ===== UI REFS =====
@@ -286,7 +286,7 @@ function normalizeSalesRow(row) {
     id: String(unidade).trim(),
     unidade: String(unidade).trim(),
     preco: commercialNumber(
-      pickSalesField(row, ["PREÇO A VISTA", "PRECO A VISTA", "Preço à vista", "precoAVista", "preco"])
+      pickSalesField(row, ["PREÇO À VISTA", "PREÇO A VISTA", "PRECO À VISTA", "PRECO A VISTA", "Preço à vista", "precoAVista", "preco"])
     ),
     area: commercialNumber(
       pickSalesField(row, ["ÁREA", "AREA", "Área", "areaM2", "area"])
