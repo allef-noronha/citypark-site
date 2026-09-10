@@ -1,3 +1,4 @@
+import { runTransaction } from './transacao-estoque.js';
 import { auth, db } from "./firebase.js";
 
 import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.1/firebase-auth.js";
@@ -8,7 +9,7 @@ import {
   getDoc,
   getDocs,
   query,
-  runTransaction,
+
   serverTimestamp,
   Timestamp,
   where
@@ -208,7 +209,7 @@ function renderFinance() {
   elements.tableValue.textContent = formatMoney(tableValue);
   elements.proposalValue.textContent = formatMoney(calculated);
   elements.difference.textContent = formatMoney(difference);
-  elements.percentage.textContent = formatPercentage(percentage);
+  elements.percentage.textContent = formatPercentage(percentageOfTable(difference, tableValue));
   elements.differenceCard.classList.toggle("unbalanced", !balanced);
   const customCondition = ["outro", "personalizada", "personalizado"].includes(normalizeStatus(condition.tipo));
   elements.financeType.textContent = (customCondition ? "Personalizado" : "Padrão") + (state.proposal.condicaoVigente ? " · Atual" : " · Atual");
@@ -234,7 +235,7 @@ function renderFinanceTableRows(rows, currentSchema) {
 }
 
 function financeGroupLabel(groupKey, fallback) {
-  return { sinal:"Sinal", mensal:"Mensais", semestral:"Semestrais", anual:"Anuais", outra:"Outro", unica:"Parcela única", chaves:"Chaves / financiamento" }[groupKey] || fallback || "Parcela";
+  return { sinal:"Sinal", mensal:"Mensais", semestral:"Semestrais", anual:"Anuais", outra:"Outro", unica:"Parcela única", chaves:"Financiamento" }[groupKey] || fallback || "Parcela";
 }
 
 function structuredComponents(condition) {
@@ -242,16 +243,16 @@ function structuredComponents(condition) {
   if (!source || typeof source !== "object") return [];
   if (condition.schemaVersao >= 3 && source.parcelas && typeof source.parcelas === "object") {
     const installmentRows = Object.entries(source.parcelas).sort(([a], [b]) => a.localeCompare(b)).map(([key, component]) => ({ key, label: component?.descricao || periodicityLabel(component?.periodicidade), ...(component || {}) }));
-    return [{ key: "sinal", label: "Sinal", ...(source.sinal || {}) }, ...installmentRows, { key: "chaves", label: "Chaves / financiamento", ...(source.chaves || {}) }].filter(item => item.ativo);
+    return [{ key: "sinal", label: "Sinal", ...(source.sinal || {}) }, ...installmentRows, { key: "chaves", label: "Financiamento", ...(source.chaves || {}) }].filter(item => item.ativo);
   }
-  const labels = { sinal:"Sinal", mensais:"Parcelas mensais", semestrais:"Parcelas semestrais", anuais:"Parcelas anuais", negociacaoEspecial:"Negociação especial", chaves:"Chaves / financiamento" };
+  const labels = { sinal:"Sinal", mensais:"Parcelas mensais", semestrais:"Parcelas semestrais", anuais:"Parcelas anuais", negociacaoEspecial:"Negociação especial", chaves:"Financiamento" };
   return Object.entries(labels).map(([key, label]) => ({ key, label, ...(source[key] || {}) })).filter(item => item.ativo);
 }
 
 function legacyFinanceRows(condition) {
   if (normalizeStatus(condition.tipo) !== "padrao") return [];
   const values = unitData().valores || {};
-  const data = [["Sinal",1,moneyValue(values,["sinalCentavos","sinal"])],["Parcelas mensais",80,moneyValue(values,["parcelasMensaisCentavos","parcelasMensais"])],["Parcelas semestrais",12,moneyValue(values,["intercaladasSemestraisCentavos","intercaladasSemestrais"])],["Chaves / financiamento",1,moneyValue(values,["chavesCentavos","chaves"])]];
+  const data = [["Sinal",1,moneyValue(values,["sinalCentavos","sinal"])],["Parcelas mensais",80,moneyValue(values,["parcelasMensaisCentavos","parcelasMensais"])],["Parcelas semestrais",12,moneyValue(values,["intercaladasSemestraisCentavos","intercaladasSemestrais"])],["Financiamento",1,moneyValue(values,["chavesCentavos","chaves"])]];
   return data.filter(([, , value]) => Number.isInteger(value)).map(([label, quantidade, valor]) => ({ label, quantidade, valorUnitarioCentavos:valor, totalCentavos:quantidade*valor, primeiroVencimento:null }));
 }
 
@@ -466,7 +467,7 @@ function addCounterproposalRow(type = "mensal", values = null) {
       <option value="semestral" ${type === "semestral" ? "selected" : ""}>Semestral</option>
       <option value="anual" ${type === "anual" ? "selected" : ""}>Anual</option>
       <option value="outra" ${type === "outra" ? "selected" : ""}>Negociação especial</option>
-      <option value="chaves" ${type === "chaves" ? "selected" : ""}>Chaves / financiamento</option>
+      <option value="chaves" ${type === "chaves" ? "selected" : ""}>Financiamento</option>
     </select></label>
     <label><span>Quantidade</span><input data-counter-quantity type="number" min="1" max="240" value="1"></label>
     <label><span>Primeiro vencimento</span><input data-counter-date type="date"></label>
@@ -514,7 +515,7 @@ function renderCounterproposalTotals() {
   elements.counterTotalValue.textContent = formatMoney(total);
   elements.counterDifference.textContent = formatMoney(difference);
   elements.counterDifferenceCard.classList.toggle("unbalanced", Number.isInteger(difference) && difference !== 0);
-  elements.counterPercentage.textContent = formatPercentage(percentageOfTable(total, tableValue));
+  elements.counterPercentage.textContent = formatPercentage(percentageOfTable(difference, tableValue));
 }
 
 function buildCounterproposalCondition() {
@@ -538,13 +539,13 @@ function buildCounterproposalCondition() {
     if (!Number.isInteger(quantity) || quantity < 1 || quantity > max || !Number.isInteger(unitValue) || unitValue <= 0 || !schedule || schedule.length !== quantity) {
       throw new Error("Preencha tipo, quantidade, valor e vencimento de todas as parcelas.");
     }
-    const label = { sinal: "Sinal", mensal: "Parcelas mensais", semestral: "Parcelas semestrais", anual: "Parcelas anuais", outra: "Negociação especial", chaves: "Chaves / financiamento" }[rawType];
+    const label = { sinal: "Sinal", mensal: "Parcelas mensais", semestral: "Parcelas semestrais", anual: "Parcelas anuais", outra: "Negociação especial", chaves: "Financiamento" }[rawType];
     const component = { ativo: true, quantidade: quantity, valorUnitarioCentavos: unitValue, totalCentavos: quantity * unitValue, periodicidade: periodicity, primeiroVencimento: Timestamp.fromDate(schedule[0]), vencimentos: schedule.map(date => Timestamp.fromDate(date)), descricao: label };
     if (rawType === "sinal") {
       if (signal) throw new Error("Use apenas uma linha de Sinal.");
       signal = component;
     } else if (rawType === "chaves") {
-      if (keys) throw new Error("Use apenas uma linha de Chaves / financiamento.");
+      if (keys) throw new Error("Use apenas uma linha de Financiamento.");
       keys = component;
     } else {
       if (groupIndex >= 12) throw new Error("A contraproposta aceita no máximo 12 grupos de parcelas.");
@@ -552,7 +553,7 @@ function buildCounterproposalCondition() {
     }
     description.push(`${quantity}x ${label} de ${formatMoney(unitValue)}`);
   }
-  if (!signal || !keys) throw new Error("A contraproposta precisa ter uma linha de Sinal e uma de Chaves / financiamento.");
+  if (!signal || !keys) throw new Error("A contraproposta precisa ter uma linha de Sinal e uma de Financiamento.");
   const total = [signal, ...Object.values(slots), keys].reduce((sum, item) => sum + item.totalCentavos, 0);
   return { schemaVersao: 4, tipo: "personalizada", descricao: description.join(" · ").slice(0, 1000), valorTabelaCentavos: tableValue, totalCalculadoCentavos: total, diferencaCentavos: tableValue - total, porcentagemObra: percentageOfTable(total, tableValue), componentes: { sinal: signal, parcelas: slots, chaves: keys } };
 }

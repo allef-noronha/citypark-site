@@ -24,7 +24,7 @@ function run(args) {
   return result.status ?? 1;
 }
 
-const fixtures = run(['--test', 'tests/fixtures.test.mjs', '../tests/detalhes-proposta.test.cjs', '../tests/tabela-admin.test.cjs']);
+const fixtures = run(['--test', 'tests/fixtures.test.mjs', '../tests/detalhes-proposta.test.cjs', '../tests/tabela-admin.test.cjs', '../tests/disponibilidade-publica.test.cjs']);
 if (fixtures !== 0) process.exit(fixtures);
 process.exit(run([
   require.resolve('firebase-tools/lib/bin/firebase.js'),

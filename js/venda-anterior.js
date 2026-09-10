@@ -1,5 +1,6 @@
+import { runTransaction } from './transacao-estoque.js';
 import { db } from './firebase.js';
-import { collection, doc, getDocs, query, where, runTransaction, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.12.1/firebase-firestore.js';
+import { collection, doc, getDocs, query, where,  serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.12.1/firebase-firestore.js';
 
 export function validatePreviousSale(input) {
   for (const [key, max] of Object.entries({cliente:200,corretor:200,condicoes:4000,referencia:300})) {

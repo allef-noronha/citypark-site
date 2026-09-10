@@ -1,4 +1,4 @@
-import { watchAvailability, unitKey, publicStatus } from './disponibilidade.js';
+import { watchAvailability, unitKey, publicStatus } from './disponibilidade.js?v=20260910-estoque';
 // js/vendas.js — Tabela, filtros, popup e formulário (modal ou nova guia)
 // ------------------------------------------------------------------
 // - Card: "VER" só aparece para corretor aprovado (e pode ser ocultado para visitante via HideMode).
@@ -550,7 +550,7 @@ function mostrarDetalhes(index) {
     <p><strong>Sinal:</strong> ${mostrarValor(item.sinal)}</p>
     <p><strong>Parcelas mensais:</strong> ${mostrarValor(item.parcela)}</p>
     <p><strong>Intercaladas semestrais:</strong> ${mostrarValor(item.intercalada)}</p>
-    <p><strong>Chaves:</strong> ${mostrarValor(item.chaves)}</p>
+    <p><strong>Financiamento:</strong> ${mostrarValor(item.chaves)}</p>
 
     <div class="popup-botoes">
       ${podeProposta ? `<button class="ver-btn" data-action="propor" data-unidade="${encodeURIComponent(item.unidade)}">Enviar Proposta <i class="fa-solid fa-arrow-up-right-from-square" style="font-size: 0.8em; margin-left: 2px;" aria-hidden="true"></i></button>` : ""}

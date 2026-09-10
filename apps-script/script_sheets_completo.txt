@@ -618,7 +618,7 @@ function lerDisponibilidadeFirebase_() {
     const id = chaveDisponibilidade_(fields.unidade?.stringValue || entry.document.name.split('/').pop());
     if (!id || Object.prototype.hasOwnProperty.call(result, id)) throw new Error(`Identificação de unidade ambígua: ${id}`);
     const destination = fields.destinacao?.stringValue;
-    result[id] = destination && destination !== 'venda' && destination !== 'nao_classificada' ? 'bloqueada' : fields.status?.stringValue || '';
+    result[id] = ['administracao', 'permuta'].includes(destination) ? 'vendida' : fields.status?.stringValue || '';
   });
   if (!Object.keys(result).length) throw new Error('Nenhuma unidade retornada; planilha preservada.');
   return result;
@@ -658,7 +658,7 @@ function atualizarDisponibilidadeSheets() {
 }
 
 function sincronizarDiariamente() {
-  return executarSincronizacao_({ precos: publicarTodasUnidadesFirebaseTeste, disponibilidade: atualizarDisponibilidadeSheets_ });
+  return executarSincronizacao_({ precos: publicarTodasUnidadesFirebaseTeste, disponibilidade: atualizarDisponibilidadeSheets_, resumoPublico: publicarResumoDisponibilidade_ });
 }
 
 function executarSincronizacao_(jobs) {
@@ -693,26 +693,56 @@ function atualizarResumoDisponibilidade() {
   return executarSincronizacao_({ resumoPublico: publicarResumoDisponibilidade_ });
 }
 
+// Reconciliação diária transacional; não sobrescreve mudanças concorrentes.
 function publicarResumoDisponibilidade_() {
-  const statuses = lerDisponibilidadeFirebase_();
-  const units = {};
-  Object.entries(statuses).forEach(([id, value]) => {
-    units[id] = ['disponivel', 'reservada', 'aprovada', 'vendida', 'bloqueada'].includes(value) ? value : 'desconhecida';
-  });
-  const now = new Date();
-  executarBatchWrites_([buildFirestoreWrite_('disponibilidade_publica/atual', {
-    schemaVersao: 1, unidades: units, atualizadoEm: now,
-    validoAte: new Date(now.getTime() + 75 * 60 * 1000),
-    fonte: 'apps-script-periodico'
-  })]);
-  return { unidades: Object.keys(units).length, atualizadoEm: now.toISOString() };
+  const base = 'https://firestore.googleapis.com/v1/' + FIRESTORE_DOCUMENT_BASE;
+  const post = (method, payload) => {
+    const response = UrlFetchApp.fetch(base + ':' + method, {
+      method: 'post', contentType: 'application/json',
+      headers: { Authorization: 'Bearer ' + ScriptApp.getOAuthToken() },
+      payload: JSON.stringify(payload), muteHttpExceptions: true
+    });
+    if (response.getResponseCode() !== 200) throw new Error('Resumo público: ' + response.getContentText());
+    return JSON.parse(response.getContentText());
+  };
+  let transaction;
+  try {
+    const entries = post('runQuery', {
+      newTransaction: { readWrite: {} },
+      structuredQuery: { from: [{ collectionId: 'unidades' }],
+        select: { fields: ['unidade','status','destinacao'].map(fieldPath => ({fieldPath})) } }
+    });
+    transaction = entries.find(entry => entry.transaction)?.transaction;
+    if (!transaction) throw new Error('Consulta sem transação; resumo preservado.');
+    const units = {}, codes = new Set();
+    entries.forEach(entry => {
+      if (entry.error) throw new Error(JSON.stringify(entry.error));
+      if (!entry.document) return;
+      const id = entry.document.name.split('/').pop();
+      const f = entry.document.fields || {};
+      const unidade = f.unidade?.stringValue || id;
+      const code = chaveDisponibilidade_(unidade);
+      if (!code || codes.has(code)) throw new Error('Unidade ambígua: ' + unidade);
+      codes.add(code);
+      const status = ['administracao','permuta'].includes(f.destinacao?.stringValue) ? 'vendida' : f.status?.stringValue;
+      if (!['disponivel','reservada','aprovada','vendida','bloqueada'].includes(status)) throw new Error('Status inválido: ' + unidade);
+      units[id] = { unidade, status };
+    });
+    if (!Object.keys(units).length) throw new Error('Estoque vazio; resumo preservado.');
+    const now = new Date();
+    post('commit', { transaction, writes: [buildFirestoreWrite_('disponibilidade_publica/estoque', {
+      schemaVersao: 2, unidades: units, atualizadoEm: now, ultimaUnidade: ''
+    })] });
+    return { unidades: Object.keys(units).length, atualizadoEm: now.toISOString() };
+  } catch (error) {
+    if (transaction) { try { post('rollback', {transaction}); } catch (_) {} }
+    throw error;
+  }
 }
 
 function instalarGatilhoDisponibilidade() {
-  const handler = 'atualizarResumoDisponibilidade';
-  if (ScriptApp.getProjectTriggers().some(trigger => trigger.getHandlerFunction() === handler)) {
-    console.log('Gatilho de disponibilidade já existe para esta conta.');
-    return;
-  }
-  ScriptApp.newTrigger(handler).timeBased().everyMinutes(30).create();
+  ScriptApp.getProjectTriggers().filter(trigger => trigger.getHandlerFunction() === 'atualizarResumoDisponibilidade')
+    .forEach(trigger => ScriptApp.deleteTrigger(trigger));
+  instalarGatilhoDiario();
+  console.log('Resumo de 30 minutos removido desta conta. Reconciliação diária e atualização imediata pelo site.');
 }

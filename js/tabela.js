@@ -1,4 +1,4 @@
-import { watchAvailability, unitKey, publicStatus } from './disponibilidade.js';
+import { watchAvailability, unitKey, publicStatus } from './disponibilidade.js?v=20260910-estoque';
 // js/tabela.js
 (function () {
   'use strict';

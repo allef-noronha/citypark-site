@@ -1,3 +1,4 @@
+import { runTransaction } from './transacao-estoque.js';
 import { auth, db } from "./firebase.js";
 
 import {
@@ -12,7 +13,7 @@ import {
   getDoc,
   getDocs,
   query,
-  runTransaction,
+
   serverTimestamp,
   where
 } from "https://www.gstatic.com/firebasejs/10.12.1/firebase-firestore.js";
@@ -747,7 +748,7 @@ function renderUnitCard(unit) {
         <p>Sinal: ${formatMoney(values.downPayment)}</p>
         <p>Parcelas mensais: ${formatMoney(values.monthly)}</p>
         <p>Intercaladas semestrais: ${formatMoney(values.semestral)}</p>
-        <p>Chaves: ${formatMoney(values.keys)}</p>
+        <p>Financiamento: ${formatMoney(values.keys)}</p>
         <p>Status: <strong class="status-word">${escapeHtml(statusLabel(status))}</strong></p>
         <div class="unit-actions">
           ${canCreateProposal ? `<a class="unit-proposal-link" href="${escapeHtml(proposalFormUrl(unit))}">Enviar uma proposta</a>` : ""}
@@ -1575,7 +1576,7 @@ function showUnitDetails(unitId) {
       ${detailLine("Sinal", formatMoney(values.downPayment))}
       ${detailLine("Parcelas mensais", formatMoney(values.monthly))}
       ${detailLine("Intercaladas semestrais", formatMoney(values.semestral))}
-      ${detailLine("Chaves", formatMoney(values.keys))}
+      ${detailLine("Financiamento", formatMoney(values.keys))}
       ${detailLine("Proposta atual", unit.propostaAtualId)}
       ${detailLine("Atualizada em", formatDate(unit.atualizadoEm))}
     </div>`);

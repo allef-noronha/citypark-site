@@ -1,61 +1,44 @@
-# Disponibilidade no plano gratuito — 08/09/2026
+# Disponibilidade e ativação — 10/09/2026
 
-Esta configuração substitui a ativação por Cloud Functions. Não executar deploy de funções, bootstrap.js ou comandos de faturamento. A configuração do gcloud pode permanecer instalada, mas não é necessária neste fluxo.
+Esta versão substitui as instruções anteriores de resumo a cada 30 minutos. Não requer Cloud Functions, troca de conta ou ativação de faturamento.
 
-## Instalar no Apps Script
+## O que mudou
 
-1. Substitua o código do editor pelo conteúdo completo de `apps-script/script_sheets_completo.txt`. Esse arquivo reúne o script original de preços e a versão atualizada da disponibilidade. Se os arquivos estiverem separados no editor, substitua apenas Disponibilidade.gs e mantenha Code.gs; não duplique funções.
-2. Preserve o appsscript.json atual, inclusive os escopos já autorizados.
-3. Execute `atualizarResumoDisponibilidade` uma vez. Ela consulta as unidades e grava apenas `disponibilidade_publica/atual`. Não altera propostas, preços ou unidades operacionais.
-4. Execute `instalarGatilhoDisponibilidade` uma vez. Cria um gatilho a cada 30 minutos, separado do gatilho diário existente. A rotina diária de preços e atualização do Sheets continua entre 2h e 3h. Não precisa reinstalar o gatilho diário.
-5. Confira na lista de gatilhos os dois manipuladores: `sincronizarDiariamente` e `atualizarResumoDisponibilidade`.
+- O site público escuta somente `disponibilidade_publica/estoque`, com identificação e status das unidades. Não consulta a coleção operacional.
+- Reserva, aprovação, venda, recusa, cancelamento, distrato, ajuste e invalidação de teste atualizam a projeção pública na mesma transação. As regras rejeitam alteração de unidade sem projeção correspondente e projeção falsa. Uma reserva concorrente continua gerando apenas uma proposta.
+- Administração e Permuta aparecem como Vendido publicamente. Internamente permanecem classificadas com seus status originais. Todos, Todos exceto Administração, Venda comercial classificada, Administração e Permuta continuam distintos, inclusive no CSV. Outros bloqueios continuam Indisponível.
+- Leitura das unidades operacionais exige administrador ou corretor aprovado. Documentos de propostas continuam sujeitos às permissões próprias.
+- O Apps Script reconcilia o resumo diariamente, em transação. Uma falha preserva o resumo anterior. O site não espera essa rotina para receber mudanças feitas pelo novo programa.
+- Sem confirmação do servidor, a disponibilidade pública fica A confirmar. Não há expiração por idade do resumo: estoque sem movimentação continua válido.
+- Ajustes na tabela administrativa aproveitam a escuta existente, sem reler todo o estoque após cada ajuste.
 
-## Comportamento
+## Consumo estimado
 
-O site acompanha o resumo público e uma consulta em tempo real das unidades reservadas/aprovadas. A reserva operacional prevalece sobre o resumo antigo e aparece assim que a conexão entrega a atualização, sem esperar o Apps Script. A transação do formulário e as regras impedem duas reservas simultâneas da mesma unidade, mesmo antes da atualização visual. Sem confirmação da conexão de reservas, a tela exibe A confirmar.
+Com 389 unidades, a reconciliação do resumo cai de 18.672 para cerca de 389 leituras/dia (redução de 98% nessa rotina). A sincronização diária do Sheets acrescenta outras 389. Preços e outros consumidores permanecem separados.
 
-Venda, liberação e bloqueio podem aguardar o resumo periódico (30 minutos, sujeito ao agendador). Se o resumo vencer após 75 minutos, seus estados deixam de ser usados; reservas confirmadas em tempo real continuam visíveis. O Sheets continua recebendo disponibilidade diariamente.
+A disponibilidade pública custa uma leitura do documento no carregamento e por atualização recebida por sessão, além de reconexões conforme as regras de cobrança. Cada mudança operacional acrescenta uma gravação da projeção e leituras de validação das regras. Muitos visitantes e movimentações ainda podem consumir a cota; não é garantia de permanecer no limite. Referência: https://firebase.google.com/docs/firestore/pricing .
 
-Com 389 unidades e 48 execuções diárias, a consulta periódica soma aproximadamente 18.672 leituras/dia e 48 gravações/dia. A sincronização diária do Sheets acrescenta 389 leituras e a publicação de preços acrescenta 390 gravações. A consulta em tempo real acrescenta leituras das reservas/aprovações no carregamento e nas mudanças, conforme acessos e reconexões. Visitas ao site, painel administrativo, console e propostas consomem cotas adicionais. A cota gratuita de 50 mil leituras/dia é compartilhada pelo projeto; não se trata de garantia de consumo total.
+Um único documento recebe as movimentações. Os testes cobrem concorrência de reserva; volume elevado de gravações simultâneas exigirá reavaliar essa arquitetura. Ela evita a necessidade de serviços pagos para a entrada inicial em operação.
 
-Referências: [intervalos dos gatilhos](https://developers.google.com/apps-script/reference/script/clock-trigger-builder), [cotas do Firestore](https://firebase.google.com/docs/firestore/quotas).
+## Ativação coordenada
 
-## Histórico e distrato
+Execute em uma janela curta sem operações comerciais. Não publique apenas um dos componentes.
 
-Tabela administrativa → unidade → proposta vinculada → Registrar distrato. O motivo é obrigatório. A proposta e a data da venda são preservadas, os históricos recebem novos eventos e a unidade fica disponível para uma nova proposta. Propostas anteriores continuam acessíveis pela unidade. O mapa administrativo acompanha o estoque operacional em tempo real; use Atualizar para reconectar se necessário. O diálogo relê a unidade e a transação confere o estado antes de salvar.
+1. Preserve uma versão recuperável do site/regras e confira a unidade de teste 2208 A. Não libere essa unidade por inferência. As nove unidades da Administração já classificadas devem continuar assim. Identifique as permutas com o comercial, sem inventar a classificação das demais.
+2. Atualize o editor Apps Script com `apps-script/script_sheets_completo.txt`, preservando o manifesto e autorizações atuais. Ainda não execute rotinas de importação ou bootstrap de dados operacionais.
+3. Publique as regras deste checkout: `firebase deploy --only "firestore:rules" --project city-park-25e9c`. Elas interrompem escritas de versões antigas que não atualizam a projeção. A página pública antiga pode mostrar A confirmar durante a troca.
+4. Execute `atualizarResumoDisponibilidade` no Apps Script. Confirme o total esperado e a criação de `disponibilidade_publica/estoque`. A consulta e a gravação usam uma transação para não gravar uma leitura obsoleta. Em erro, não avance até resolver e repetir.
+5. Execute `instalarGatilhoDisponibilidade`. A função remove os gatilhos de 30 minutos pertencentes à conta atual e garante o diário. Se outra conta criou gatilhos, remova os de 30 minutos também nela. A rotina diária mantém preços e Sheets e reconcilia a projeção.
+6. Publique os arquivos do site desta revisão, incluindo `js/transacao-estoque.js`. Os pontos de entrada tiveram suas versões de cache atualizadas. Oriente a equipe a recarregar as páginas abertas.
+7. Valide login, administrador, corretor aprovado, disponibilidade pública, filtros e uma operação autorizada em duas sessões. Confirme a instalação dos índices exigidos e o domínio de login. Não crie testes sobre unidades reais disponíveis sem escolher e registrar o caso com o responsável.
+8. Interrompa novas propostas pelo fluxo Forms/Sheets/AppSheet; mantenha o legado apenas para conferência. Permutas ainda não identificadas e propostas legadas exigem validação humana.
 
-## Publicação
+Não há liberação automática de reservas antigas nesta revisão. Mantenha a revisão comercial de vencimentos; a presença de uma data vencida não significa que a unidade possa ser liberada.
 
-As regras do resumo já foram publicadas pelo usuário, conforme captura. A nova configuração local remove Cloud Functions do firebase.json. O diretório functions permanece apenas como código anterior, sem implantação automática.
+## Histórico e venda anterior
 
-O Apps Script deve inicializar o resumo antes da publicação dos arquivos do site. O script atualizado ainda precisa ser colado e executado pelo usuário. Nenhuma nova gravação de produção foi executada pelo agente nesta adaptação.
+Distrato preserva proposta e valores, registrando histórico. Invalidação do teste identificado preserva o registro e bloqueia a 2208 A para conferência. Cadastro de venda anterior aceita unidade comercial vendida sem vínculo pendente, mantém a venda e evita duplicação. Esses fluxos agora atualizam também a projeção pública.
 
+## Verificação local
 
-## Destinação, relatórios e ajustes
-
-A tabela administrativa oferece destinação Venda comercial, Administração ou Permuta, separada do status operacional. Unidades da Administração ficam bloqueadas. Permutas ficam bloqueadas ou concluídas; não aceitam reserva comercial. Dados antigos sem destinação aparecem como Não classificada, sem inferir que sejam vendas.
-
-Na tabela, a ação Classificar nove unidades apresenta a relação informada pelo responsável e registra cada classificação com histórico. Nenhuma classificação é executada ao abrir a página. O processamento é por unidade; falhas e sucessos são mostrados individualmente e a ação pode ser retomada.
-
-Unidades sem vínculo oferecem Ajuste administrativo com motivo e referência obrigatórios. Propostas ativas ou legadas pendentes impedem o ajuste. Os relatórios e a exportação CSV usam a visão selecionada: total, sem Administração, apenas Venda comercial classificada, Administração ou Permuta. O painel inicial continua identificado como estoque total, com bloqueadas separadas visualmente de vendidas.
-
-A proposta de teste Q22ovBXKxVdn8r9BZi3h oferece Invalidar teste: mantém preços, condições e histórico, marca teste_invalidado e bloqueia a 2208 A para conferência do legado. Não libera automaticamente a unidade e não é distrato real. Nenhum dado real foi invalidado por esta implementação.
-
-## Ativar esta revisão
-
-1. Publicar as regras atualizadas: `firebase deploy --only "firestore:rules" --project city-park-25e9c`.
-2. Atualizar o Apps Script com o arquivo completo desta revisão e executar atualizarResumoDisponibilidade. Os gatilhos existentes podem permanecer.
-3. Conferir o site local e publicar os arquivos do site pelo fluxo habitual.
-4. Na tabela administrativa, executar a classificação das nove unidades e verificar os resultados. A atualização do resumo torna o novo bloqueio visível publicamente; as reservas já usam o caminho em tempo real.
-
-Esta revisão foi preparada localmente. Publicação, classificação real e invalidação real são etapas de ativação, não efeitos de abrir o site.
-
-## Cadastrar venda anterior
-
-Na tabela administrativa, abra uma unidade vendida sem proposta vinculada. O formulário Cadastrar venda anterior recebe cliente/razão social, corretor da época, data original, valor, condições em texto e referência documental. A confirmação declara que se trata de venda comercial, mesmo quando a destinação antiga ainda não está classificada. Administração e permuta não são aceitas.
-
-O registro é criado como vendida, origem venda_anterior, com data de cadastro separada da data original. Não exige uma conta ativa para o corretor antigo e não concede acesso ao registro com base no nome informado. O valor histórico não é validado contra preços atuais. Os detalhes apresentam as condições originais em seção própria.
-
-Uma única transação cria proposta e dois históricos e vincula a unidade; não altera seu status nem a data de venda existente na unidade. ID estável por unidade impede duplicação por repetição. Propostas vinculadas ou legadas ainda abertas precisam ser conferidas antes. Propostas encerradas e históricos antigos são preservados. Um distrato posterior usa o fluxo normal, com justificativa.
-
-Esta funcionalidade requer publicar novamente firestore:rules e os arquivos do site. Nenhuma venda real é cadastrada pela instalação da funcionalidade.
+Testes das regras e transações no emulador, testes de projeção/Apps Script/filtros e testes de navegador desktop/mobile. Não validam dados, regras implantadas, índices ou gatilhos reais. Nenhuma regra ou dado de produção foi alterado pela preparação local.

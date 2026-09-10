@@ -1,3 +1,4 @@
+import {wrapInventoryTransaction} from './inventory-wrapper.mjs';
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
@@ -18,7 +19,7 @@ function screen(db, proposal, unit, uid='admin-test') {
   const nodes=new Map();
   const node=id=> { if(!nodes.has(id)) nodes.set(id,{value:'',checked:false,hidden:false,disabled:false,options:[],classList:{add(){},remove(){},toggle(){}},querySelectorAll:()=>[],querySelector:()=>({disabled:false}),focus(){}}); return nodes.get(id); };
   const context=vm.createContext({...firestore, db, auth:{}, onAuthStateChanged(){},
-    runTransaction: (database,callback)=>firestore.runTransaction(database,tx=>callback({get:ref=>tx.get(ref),update:(ref,data)=>tx.update(ref,localObject(data)),set:(ref,data)=>tx.set(ref,localObject(data))})),
+    runTransaction: (database,callback)=>firestore.runTransaction(database,tx=>callback(wrapInventoryTransaction({get:ref=>tx.get(ref),update:(ref,data)=>tx.update(ref,localObject(data)),set:(ref,data)=>tx.set(ref,localObject(data))},database))),
     window:{location:{search:'?id=p1',hash:'',pathname:'/detalhes-proposta.html'},confirm:()=>true,CityParkPaymentPlan:require('../../js/condicao-venda.js')},
     document:{getElementById:node,body:{classList:{remove(){}}}},sessionStorage:{getItem:()=>null}, URLSearchParams, Date, Intl, console:{error(){}}
   });
@@ -42,6 +43,7 @@ test('ações comerciais executam o código da página com regras reais no emula
       batch.set(doc(context.firestore(),'admins','admin-test'),{ativo:true,tipo:'admin'});
       batch.set(doc(context.firestore(),'propostas','p1'),proposal);
       batch.set(doc(context.firestore(),'unidades','u1'),unit);
+      batch.set(doc(context.firestore(),'disponibilidade_publica','estoque'),{schemaVersao:2,unidades:{},ultimaUnidade:'',atualizadoEm:new Date()});
       await batch.commit();
     });
     return screen(db,proposal,unit);
@@ -171,9 +173,29 @@ test('ações comerciais executam o código da página com regras reais no emula
       await assertFails(firestore.deleteDoc(doc(db,'propostas','p1')));
       const event=(await getDocs(collection(db,'historico_propostas'))).docs[0];
       await assertFails(firestore.deleteDoc(event.ref));
-      await updateDoc(doc(db,'unidades','u1'),{status:'reservada',propostaAtualId:'p2'});
+      await env.withSecurityRulesDisabled(context=>updateDoc(doc(context.firestore(),'unidades','u1'),{status:'reservada',propostaAtualId:'p2'}));
       await assert.rejects(ui.run('distractSoldProposal("Repetido")'));
       assert.equal((await unit()).propostaAtualId,'p2');
+    });
+    await t.test('estoque público: transições imediatas, destinações e acesso mínimo',async()=>{
+      await seed('reservada');
+      const publicDb=env.unauthenticatedContext().firestore();
+      await assertFails(getDoc(doc(publicDb,'unidades','u1')));
+      await assertFails(getDocs(collection(publicDb,'unidades')));
+      const publicRef=doc(db,'disponibilidade_publica','estoque');
+      await assertFails(updateDoc(publicRef,{'unidades.u1':{unidade:'2208 A',status:'disponivel'},ultimaUnidade:'u1',atualizadoEm:firestore.serverTimestamp()}));
+      await assertFails(updateDoc(doc(db,'unidades','u1'),{status:'vendida',atualizadoEm:firestore.serverTimestamp()}));
+      for (const [destinacao,status,expected] of [['venda','aprovada','aprovada'],['venda','vendida','vendida'],['venda','disponivel','disponivel'],['administracao','bloqueada','vendida'],['permuta','bloqueada','vendida'],['venda','bloqueada','bloqueada']]) {
+        await env.withSecurityRulesDisabled(context=>updateDoc(doc(context.firestore(),'unidades','u1'),{destinacao}));
+        await firestore.runTransaction(db,async raw=>{
+          const tx=wrapInventoryTransaction(raw,db), ref=doc(db,'unidades','u1');
+          await tx.get(ref); tx.update(ref,{status,atualizadoEm:firestore.serverTimestamp()});
+        });
+        const data=(await getDoc(doc(publicDb,'disponibilidade_publica','estoque'))).data();
+        assert.deepEqual(data.unidades.u1,{unidade:'2208 A',status:expected});
+        assert.equal((await unit()).destinacao,destinacao);
+        assert.equal((await unit()).status,status);
+      }
     });
     await t.test('resumo público pode ser lido mas não alterado por clientes',async()=>{
       await env.withSecurityRulesDisabled(async context=>{await firestore.setDoc(doc(context.firestore(),'disponibilidade_publica','atual'),{schemaVersao:1,unidades:{u1:'vendida'}});});

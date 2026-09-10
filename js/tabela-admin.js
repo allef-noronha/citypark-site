@@ -1,7 +1,7 @@
-import { registerPreviousSale } from './venda-anterior.js';
+import { registerPreviousSale } from './venda-anterior.js?v=20260910-estoque';
 import { auth, db } from "./firebase.js";
 import { ADMINISTRATION_UNITS, unitCode, destination, destinationLabel, inInventoryScope } from './estoque.js';
-import { adjustUnit } from './ajuste-unidade.js';
+import { adjustUnit } from './ajuste-unidade.js?v=20260910-estoque';
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.1/firebase-auth.js";
 import { collection, doc, getDoc, getDocs, query, where, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.1/firebase-firestore.js";
 
@@ -188,7 +188,7 @@ async function saveUnitAdjustment(event) {
   try {
     await adjustUnit({ id:unit.id, expectedStatus:unit.status, expectedDestination:destination(unit), nextStatus:$('adjustStatus').value,
       nextDestination:$('adjustDestination').value, reason:$('adjustReason').value, reference:$('adjustReference').value, uid:state.uid });
-    await loadUnits(); await openUnit(unit.id);
+    await openUnit(unit.id);
     showToast('Ajuste salvo com histórico. O resumo público refletirá a mudança na próxima atualização.');
   } catch (error) { $('adjustError').textContent = error.message; }
   finally { button.disabled = false; }
@@ -210,7 +210,7 @@ async function reviewAdministration() {
     } catch (error) { results.push(`${unit.unidade}: ${error.message}`); }
   }
   $('classificationResult').textContent = results.join('\n');
-  await loadUnits(); $('classifyAdministration').disabled = false;
+  $('classifyAdministration').disabled = false;
 }
 
 function exportInventory() {

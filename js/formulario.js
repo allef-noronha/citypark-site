@@ -1,3 +1,4 @@
+import { runTransaction } from './transacao-estoque.js';
 /* BETA 14L · MODO REAL SINCRONIZADO + VALIDAÇÃO DA FONTE COMERCIAL */
 /* BETA 14K · SINAL UNIFICADO ÀS PARCELAS + FINANCIAMENTO OPCIONAL */
 /* BETA 14G · SINAL COMO PARCELA */
@@ -8,7 +9,7 @@
 import { auth, db } from "./firebase.js";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.1/firebase-auth.js";
 import {
-  collection, doc, getDoc, getDocs, query, where, runTransaction, serverTimestamp, Timestamp
+  collection, doc, getDoc, getDocs, query, where,  serverTimestamp, Timestamp
 } from "https://www.gstatic.com/firebasejs/10.12.1/firebase-firestore.js";
 
 const PaymentPlan = window.CityParkPaymentPlan;
@@ -502,6 +503,7 @@ function requiredFieldIds() {
 }
 
 function validateCurrentStep() {
+  if (currentStep === 2 && !validateClientCpf()) return false;
   let firstInvalid = null;
   for (const id of requiredFieldIds()) {
     const field = document.getElementById(id);
@@ -516,6 +518,18 @@ function validateCurrentStep() {
   }
   clearMessage();
   return true;
+}
+
+function validateClientCpf() {
+  if (document.querySelector("input[name='clientType']:checked").value !== 'fisica') return true;
+  const field = document.getElementById('clientCpf');
+  const valid = window.CityParkCpf?.isValidCpf(field.value) === true;
+  field.classList.toggle('invalid', !valid);
+  if (!valid) {
+    showMessage('CPF inválido. Confira os 11 dígitos do CPF do cliente.', 'error');
+    field.focus();
+  }
+  return valid;
 }
 
 function showMessage(message, type) { formMessage.textContent = message; formMessage.className = `form-message ${type}`; }
@@ -836,7 +850,8 @@ function renderStandardConditionSummary() {
         ${row("Intercaladas", published.intercaladaQuantidade, published.intercaladaCentavos, semiannualSubtotal)}
         ${row("Financiamento", published.chavesQuantidade, published.chavesCentavos, published.chavesCentavos)}
         <span class="standard-condition-total"><span>Total da tabela</span><strong>${formatMoney(condition.valorTabelaCentavos)}</strong></span>
-      </span>`;
+      </span>
+      <span class="financing-note">O valor do financiamento poderá ser realizado com instituição bancária ou diretamente com a construtora (a consultar).</span>`;
   } catch (error) {
     target.textContent = error.message || "Condição padrão indisponível.";
   }
@@ -1342,6 +1357,7 @@ function updateValueSummary(customTotal = null, customDifference = null) {
 form.addEventListener("submit", async event => {
   event.preventDefault();
   if (!validateCurrentStep()) return;
+  if (!validateClientCpf()) { showStep(2); validateClientCpf(); return; }
   if (!currentUser || !brokerData || !proposalBrokerId) return showMessage("Aguarde a validação do seu cadastro de corretor.", "error");
 
   const declaration = document.getElementById("declaration");
@@ -1628,7 +1644,7 @@ function showPaymentReview(condition) {
   return openReviewModal({
     title: "Confirme a condição de pagamento",
     subtitle: "Confira valores, quantidades e vencimentos antes de avançar para o envio.",
-    confirmText: "Confirmar pagamento",
+    confirmText: "Confirmar reserva",
     content: `
       <section class="review-section">
         <h3>Proposta</h3>

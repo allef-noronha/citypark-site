@@ -1,3 +1,4 @@
+import {wrapInventoryTransaction} from './inventory-wrapper.mjs';
 import {test} from "node:test";
 import assert from "node:assert/strict";
 import {readFileSync, writeFileSync} from "node:fs";
@@ -40,6 +41,7 @@ async function seed(env) {
     batch.set(doc(db, "corretores", "other-fixture"), {aprovado: true, email: "other-fixture@example.test"});
     batch.set(doc(db, "corretores", "unapproved-fixture"), {aprovado: false, email: "unapproved-fixture@example.test"});
     batch.set(doc(db, "unidades", UNIT_ID), seedUnit());
+    batch.set(doc(db,"disponibilidade_publica","estoque"),{schemaVersao:2,unidades:{},ultimaUnidade:"",atualizadoEm:new Date()});
     batch.set(doc(db, "site_units_test", COMMERCIAL_ID), seedCommercial());
     await batch.commit();
   });
@@ -53,7 +55,8 @@ function context(env, actor) {
 
 async function send(db, condition, actor = "broker-fixture",
                     broker = "broker-fixture", id = "proposal-fixture", options = {}) {
-  return runTransaction(db, async tx => {
+  return runTransaction(db, async nativeTx => {
+    const tx = wrapInventoryTransaction(nativeTx, db);
     const unitRef = doc(db, "unidades", UNIT_ID);
     const commercialRef = doc(db, "site_units_test", COMMERCIAL_ID);
     const proposalRef = doc(db, "propostas", id);

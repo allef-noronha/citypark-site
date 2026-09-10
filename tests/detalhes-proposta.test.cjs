@@ -28,7 +28,7 @@ function presentation({ firebase = {}, confirm = () => true } = {}) {
   const source = fs.readFileSync(path.join(__dirname, "../js/detalhes-proposta.js"), "utf8")
     .replace(/^import[\s\S]*?from\s+["'][^"']+["'];\s*/gm, "");
   vm.runInContext(source, context);
-  const api = vm.runInContext(`({ clientFields, proposalExpiry, expiryLabel, toDate, renderGeneralData, renderSummary, renderReservation, renderCounterproposalTotals, buildCounterproposalCondition, counterproposalDraftRows, renderCounterproposal, saveCounterproposal, openFinanceModal, saveFinanceEdit, openConfirmation, executeConfirmedAction, cancelApprovedProposal, distractSoldProposal, invalidateTestProposal, approveProposal, rejectProposal,
+  const api = vm.runInContext(`({ renderFinance, clientFields, proposalExpiry, expiryLabel, toDate, renderGeneralData, renderSummary, renderReservation, renderCounterproposalTotals, buildCounterproposalCondition, counterproposalDraftRows, renderCounterproposal, saveCounterproposal, openFinanceModal, saveFinanceEdit, openConfirmation, executeConfirmedAction, cancelApprovedProposal, distractSoldProposal, invalidateTestProposal, approveProposal, rejectProposal,
     setData(proposal, unit = null) { state.proposal = proposal; state.unit = unit; },
     configureActions(notify, reload, components = []) { state.adminUser = { uid: "admin-test" }; showToast = notify; loadProposal = reload; state.financeComponents = components; },
     configureCounterMode(mode, revision) { state.counterproposalMode = mode; state.editingCounterproposalRevision = dateValue(revision); }
@@ -156,7 +156,7 @@ test("contraproposta: atualiza os quatro indicadores e o percentual de cada grup
   assert.match(api.node("counterTableValue").textContent, /100\.000,00/);
   assert.match(api.node("counterTotalValue").textContent, /100\.000,00/);
   assert.match(api.node("counterDifference").textContent, /0,00/);
-  assert.equal(api.node("counterPercentage").textContent, "100%");
+  assert.equal(api.node("counterPercentage").textContent, "0%");
   assert.equal(api.node("counterDifferenceCard").classList.contains("unbalanced"), false);
   assert.equal(signal.querySelector("[data-counter-quantity]").value, "1");
   assert.equal(keys.querySelector("[data-counter-quantity]").readOnly, false);
@@ -167,13 +167,13 @@ test("contraproposta: atualiza os quatro indicadores e o percentual de cada grup
   api.renderCounterproposalTotals();
   assert.match(api.node("counterTotalValue").textContent, /110\.000,00/);
   assert.match(api.node("counterDifference").textContent, /-R\$\s*10\.000,00/);
-  assert.equal(api.node("counterPercentage").textContent, "110%");
+  assert.equal(api.node("counterPercentage").textContent, "-10%");
   assert.equal(api.node("counterDifferenceCard").classList.contains("unbalanced"), true);
 
   rows.pop();
   api.renderCounterproposalTotals();
   assert.match(api.node("counterDifference").textContent, /70\.000,00/);
-  assert.equal(api.node("counterPercentage").textContent, "30%");
+  assert.equal(api.node("counterPercentage").textContent, "70%");
 });
 
 test("contraproposta: campos vazios e valor de tabela ausente não geram NaN", () => {
@@ -228,7 +228,7 @@ test("contraproposta: mantém a validação de data e a exigência de sinal e ch
   api.node("counterproposalRows").querySelectorAll = () => rows;
   assert.throws(() => api.buildCounterproposalCondition(), /Preencha tipo, quantidade, valor e vencimento/);
   rows[1].querySelector("[data-counter-date]").value = "2026-02-28";
-  assert.throws(() => api.buildCounterproposalCondition(), /linha de Sinal e uma de Chaves/);
+  assert.throws(() => api.buildCounterproposalCondition(), /linha de Sinal e uma de Financiamento/);
 });
 
 test("sinal e chaves parcelados: quantidades, totais e vencimentos mensais", () => {
@@ -427,3 +427,13 @@ test('invalidação recusa proposta real ou vínculo de outra proposta',async()=
   assert.equal(h.updates.length,0);
  }
 });
+
+ test("desconto da proposta usa diferença/tabela e mantém validação financeira", () => {
+ const api=presentation();
+ for(const [total,expected] of [[100000,"0%"],[90000,"10%"],[110000,"-10%"]]) {
+ api.setData({condicaoProposta:{valorTabelaCentavos:100000,totalCalculadoCentavos:total,diferencaCentavos:100000-total,porcentagemObra:100}});
+ api.renderFinance();
+ assert.equal(api.node("financePercentage").textContent,expected);
+ assert.equal(api.node("financeValidation").classList.contains("invalid"),false);
+ }
+ });
