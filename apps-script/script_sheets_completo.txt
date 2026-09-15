@@ -262,6 +262,7 @@ function publicarTodasUnidadesFirebaseTeste() {
 
   const idsEncontrados = new Set();
   const writes = [];
+  const tabelaPublica = [];
 
 
   // ----------------------------------------------------------
@@ -319,6 +320,7 @@ function publicarTodasUnidadesFirebaseTeste() {
       atualizadoEm: inicio
     };
 
+    tabelaPublica.push(dadosUnidade);
     writes.push(
       buildFirestoreWrite_(
         `site_units_test/${unidadeId}`,
@@ -327,7 +329,11 @@ function publicarTodasUnidadesFirebaseTeste() {
     );
   });
 
-  const totalGravacoes = executarBatchWrites_(writes);
+  let totalGravacoes = executarBatchWrites_(writes);
+  totalGravacoes += executarBatchWrites_([buildFirestoreWrite_("tabela_comercial/atual", {
+    schemaVersao: 1, versaoTabela, atualizadoEm: inicio,
+    quantidades: conditions.quantidades, unidades: tabelaPublica
+  })]);
 
   const resumo = {
     unidadesLidas: rows.length,

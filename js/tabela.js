@@ -1,11 +1,8 @@
+import { loadCommercialTable, commercialRows } from './tabela-comercial.js';
 import { watchAvailability, unitKey, publicStatus } from './disponibilidade.js?v=20260910-estoque';
 // js/tabela.js
 (function () {
   'use strict';
-
-  // URL do seu Web App (Apps Script publicado como Anyone)
-  const WEBAPP_URL =
-    'https://script.google.com/macros/s/AKfycbwD1zCtYAD_UMaFv9rF63QWJ-RYqZbTv5RbRSVCoUqpZB8WFnOqJAhdqCmd_kxhneewoA/exec';
 
   const $ = (s) => document.querySelector(s);
   const tbody = $('#tvBody');
@@ -14,6 +11,16 @@ import { watchAvailability, unitKey, publicStatus } from './disponibilidade.js?v
   const paymentPlan = window.CityParkPaymentPlan;
 
   let allRows = [];
+  let availability = {};
+  let publishedAt = '';
+  watchAvailability(units => {
+    availability = units;
+    if (allRows.length) applyAvailability();
+  });
+  function applyAvailability() {
+    allRows = allRows.map(row => ({ ...row, STATUS: publicStatus(availability[unitKey(row.UNIDADE)]) }));
+    applyFilter();
+  }
 
   const esc = (x) =>
     String(x ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -151,30 +158,16 @@ import { watchAvailability, unitKey, publicStatus } from './disponibilidade.js?v
     });
 
     tbody.appendChild(frag);
-    stamp.textContent = `Atualizado agora: ${new Date().toLocaleString('pt-BR')}`;
+    stamp.textContent = `Preços publicados em: ${publishedAt}`;
   }
 
   async function load() {
     try {
       stamp.textContent = 'Carregando dados…';
-      const res = await fetch(WEBAPP_URL, { cache: 'no-store', credentials: 'omit' });
-      if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
-
-      let data;
-      const ct = res.headers.get('content-type') || '';
-      if (ct.includes('application/json')) {
-        data = await res.json();
-      } else {
-        const txt = await res.text();
-        try { data = JSON.parse(txt); } catch { data = []; }
-      }
-
-      allRows = normalizeResponse(data).map(row => ({ ...row, STATUS: 'A confirmar' }));
-      applyFilter();
-      watchAvailability(units => {
-        allRows = allRows.map(row => ({ ...row, STATUS: publicStatus(units[unitKey(pick(row, ['UNIDADE', 'Unidade', 'unidade']))]) }));
-        applyFilter();
-      });
+      const data = await loadCommercialTable();
+      publishedAt = data.atualizadoEm ? new Date(data.atualizadoEm).toLocaleString('pt-BR') : 'data não informada';
+      allRows = commercialRows(data);
+      applyAvailability();
     } catch (e) {
       console.error('[tabela] erro:', e);
       stamp.textContent = 'Falha ao carregar a tabela. Tente recarregar a página.';

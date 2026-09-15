@@ -1,11 +1,10 @@
-import { db } from "./firebase.js";
-import { doc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.1/firebase-firestore.js";
+import { loadCommercialTable } from './tabela-comercial.js';
 
 document.addEventListener("DOMContentLoaded", loadPublishedQuantities);
 
 async function loadPublishedQuantities() {
   try {
-    const data = await readCondition();
+    const data = await loadCommercialTable();
     const monthly = Number(data?.quantidades?.mensais ?? data?.parcelasMensais);
     const intercaladas = Number(data?.quantidades?.intercaladas ?? data?.intercaladas);
 
@@ -29,18 +28,4 @@ async function loadPublishedQuantities() {
   } catch (error) {
     console.warn("[tabela] cabeçalhos mantidos: não foi possível ler a condição publicada.", error);
   }
-}
-
-async function readCondition() {
-  for (const [collectionName, documentId] of [
-    ["site_conditions_test", "current"],
-    ["site_conditions", "current"],
-    ["condicoes_comerciais", "atual"]
-  ]) {
-    try {
-      const snap = await getDoc(doc(db, collectionName, documentId));
-      if (snap.exists()) return snap.data() || {};
-    } catch (_) {}
-  }
-  throw new Error("Condição comercial publicada não encontrada.");
 }

@@ -2,6 +2,10 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
+    match /tabela_comercial/{documentId} {
+      allow get: if documentId == 'atual';
+      allow list, write: if false;
+    }
     // BETA 9 · LEITURA COMERCIAL TESTE
     // Coleções temporárias usadas somente durante a integração.
     // Escrita pelo cliente continua proibida.

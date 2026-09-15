@@ -1,3 +1,4 @@
+import { loadCommercialTable, commercialRows } from './tabela-comercial.js';
 import { watchAvailability, unitKey, publicStatus } from './disponibilidade.js?v=20260910-estoque';
 // js/vendas.js — Tabela, filtros, popup e formulário (modal ou nova guia)
 // ------------------------------------------------------------------
@@ -13,14 +14,10 @@ import { watchAvailability, unitKey, publicStatus } from './disponibilidade.js?v
 //   com zoom (wheel/dblclick), pan (arrastar) e pinch (touch).
 // ------------------------------------------------------------------
 
-// BETA 15G - Tabela de vendas sem leitura integral do Firestore.
-// A listagem comercial vem do Web App/Sheets. O Firestore operacional
-// continua sendo a autoridade no envio da proposta, dentro de formulario.js.
+// Preços vêm da publicação diária consolidada; status continuam em tempo real.
+// O Firestore operacional confirma a disponibilidade no envio da proposta.
 
 // ===== CONFIG =====
-const SALES_WEBAPP_URL =
-  "https://script.google.com/macros/s/AKfycbwD1zCtYAD_UMaFv9rF63QWJ-RYqZbTv5RbRSVCoUqpZB8WFnOqJAhdqCmd_kxhneewoA/exec";
-
 const CONFIG = {
   formsBase: "formulario.html",
 
@@ -66,10 +63,6 @@ let listaFiltrada = [];
 let carregandoDados = false;
 let popupUnit = null;
 
-// BETA 15B Â· PROTECAO DE COTA DO FIRESTORE
-const SALES_CACHE_KEY = "citypark:vendas-cache:v2";
-const SALES_CACHE_TTL_MS = 2 * 60 * 1000;
-
 // ===== UI REFS =====
 const btnToggleFiltros = document.getElementById("btn-toggle-filtros");
 const filtrosEl =
@@ -105,17 +98,22 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   mostrarCarregandoDados();
   carregandoDados = true;
+  let availability = {};
+  const applyAvailability = () => {
+    listaCompleta = listaCompleta.map(item => ({ ...item, status: publicStatus(availability[unitKey(item.unidade)]) }));
+    if (f.form) f.form.dispatchEvent(new Event('input')); else renderTabela(listaCompleta);
+    if (popupUnit && publicStatus(availability[unitKey(popupUnit.unidade)]) !== popupUnit.status) fecharPopup();
+  };
+  watchAvailability(units => {
+    availability = units;
+    if (listaCompleta.length) applyAvailability();
+  });
   const data = await fetchWebApp();
   carregandoDados = false;
 
   if (!data) return;
-  listaCompleta = data.map(item => ({ ...item, status: 'A confirmar' }));
-  renderTabela(listaCompleta);
-  watchAvailability(units => {
-    listaCompleta = listaCompleta.map(item => ({ ...item, status: publicStatus(units[unitKey(item.unidade)]) }));
-    if (f.form) f.form.dispatchEvent(new Event('input')); else renderTabela(listaCompleta);
-    if (popupUnit && publicStatus(units[unitKey(popupUnit.unidade)]) !== popupUnit.status) fecharPopup();
-  });
+  listaCompleta = data;
+  applyAvailability();
 });
 
 // ========================================================================
@@ -132,85 +130,14 @@ function mostrarCarregandoDados() {
   `;
 }
 
-function readSalesCache({ allowStale = false } = {}) {
-  try {
-    const raw = localStorage.getItem(SALES_CACHE_KEY);
-    if (!raw) return null;
-    const parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed?.data)) return null;
-
-    const age = Date.now() - Number(parsed.savedAt || 0);
-    if (!allowStale && (age < 0 || age > SALES_CACHE_TTL_MS)) return null;
-    return parsed.data;
-  } catch {
-    return null;
-  }
-}
-
-function writeSalesCache(data) {
-  try {
-    localStorage.setItem(SALES_CACHE_KEY, JSON.stringify({
-      savedAt: Date.now(),
-      data
-    }));
-  } catch {
-    // Modos de privacidade podem bloquear localStorage.
-  }
-}
-
 async function fetchWebApp() {
-  const cached = readSalesCache();
-  if (cached) {
-    console.info("[vendas] tabela carregada do cache local; leitura do Firestore evitada.");
-    return cached;
-  }
-
-  const data = await fetchSalesSnapshotFromWebApp();
-  if (Array.isArray(data)) {
-    writeSalesCache(data);
-    return data;
-  }
-
-  const stale = readSalesCache({ allowStale: true });
-  if (stale) {
-    console.warn("[vendas] usando o ultimo cache local conhecido.");
-    return stale;
-  }
-  return data;
-}
-async function fetchSalesSnapshotFromWebApp() {
   try {
-    const response = await fetch(SALES_WEBAPP_URL, {
-      cache: "no-store",
-      credentials: "omit"
-    });
-
-    if (!response.ok) {
-      throw new Error(`Tabela comercial indisponível (${response.status}).`);
-    }
-
-    const payload = await response.json();
-    const rows = normalizeSalesResponse(payload);
-
-    console.info(
-      `[vendas] tabela carregada do Web App; 0 leituras da coleção operacional "unidades" nesta carga. Linhas: ${rows.length}`
-    );
-
-    return rows
-      .map(normalizeSalesRow)
-      .filter(Boolean)
-      .sort((a, b) =>
-        String(a.unidade).localeCompare(String(b.unidade), "pt-BR", { numeric: true })
-      );
-  } catch (err) {
-    console.error("[vendas] erro ao carregar tabela comercial:", err);
-    if (tabelaEl) {
-      tabelaEl.innerHTML = `
-        <div class="alert">
-          Não foi possível carregar a Tabela de Vendas agora.
-          <br>Tente recarregar a página em alguns instantes.
-        </div>`;
-    }
+    const data = await loadCommercialTable();
+    return commercialRows(data).map(normalizeSalesRow).filter(Boolean)
+      .sort((a, b) => a.unidade.localeCompare(b.unidade, 'pt-BR', { numeric: true }));
+  } catch (error) {
+    console.error('[vendas] tabela consolidada:', error);
+    tabelaEl.innerHTML = '<div class="alert">Não foi possível carregar os preços publicados. Tente novamente em instantes.</div>';
     return null;
   }
 }
