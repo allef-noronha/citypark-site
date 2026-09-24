@@ -2409,3 +2409,90 @@ body.modal-open { overflow: hidden; }
 .signal-recurring-row.signal-fields-disabled {
   opacity: 1 !important;
 }
+
+/* A composição acompanha a largura do formulário em telas menores. */
+@media (max-width: 900px) {
+  .payment-grid .payment-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    grid-auto-flow: row !important;
+    row-gap: 14px !important;
+    overflow: visible !important;
+  }
+  .payment-grid .payment-row > * {
+    grid-column: auto !important;
+    grid-row: auto !important;
+    min-width: 0;
+  }
+  .payment-grid .payment-row > .payment-name { grid-column: 1 / -1 !important; }
+  .signal-recurring-row .payment-remove-spacer { display: none; }
+  .payment-grid .payment-row .payment-subtotal,
+  .payment-grid .payment-row .payment-percent-wrap,
+  .payment-grid .payment-row .payment-subtotal strong,
+  .payment-grid .payment-row .payment-percent-wrap strong { overflow: visible !important; }
+}
+
+@media (max-width: 620px) {
+  .payment-grid .payment-row { grid-template-columns: minmax(0, 1fr) !important; }
+  .payment-grid .payment-row > * { grid-column: 1 !important; }
+  .proposal-choices .choice-card > span {
+    min-width: 0;
+    flex: 1;
+    grid-template-columns: minmax(0, 1fr);
+  }
+  #standardConditionSummary { min-width: 0; }
+  .standard-condition-grid {
+    width: 100%;
+    min-width: 0;
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .proposal-choices .standard-condition-head { display: none; }
+  .standard-condition-row { grid-template-columns: minmax(0, 1fr) !important; }
+  .standard-condition-row > span {
+    grid-column: 1 !important;
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+  }
+  .standard-condition-row > span:not(.standard-condition-name)::before { flex: 0 0 auto; }
+  .payment-type-modal-card { max-height: calc(100dvh - 24px); overflow-y: auto; }
+}
+
+@media (max-width: 640px) {
+  /* O cartão não pode criar um contêiner de rolagem para o resumo fixo. */
+  .form-card { overflow: clip; }
+
+  .proposal-choices:has(input[name="proposalType"][value="outro"]:checked) .proposal-value-summary {
+    position: sticky;
+    top: 6px;
+    z-index: 3;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 4px;
+    margin: 16px -20px 0;
+    padding: 6px 8px;
+    border-radius: 9px;
+    background: #f7faf9;
+    box-shadow: 0 4px 14px rgba(9, 18, 83, .12);
+  }
+
+  .proposal-choices:has(input[name="proposalType"][value="outro"]:checked) .proposal-value-summary > div {
+    min-width: 0;
+    min-height: 64px;
+    padding: 6px 5px;
+    gap: 3px;
+    text-align: center;
+  }
+  .proposal-choices:has(input[name="proposalType"][value="outro"]:checked) .proposal-value-summary span {
+    font-size: clamp(.56rem, 2.7vw, .68rem);
+    letter-spacing: 0;
+    line-height: 1.2;
+  }
+  .proposal-choices:has(input[name="proposalType"][value="outro"]:checked) .proposal-value-summary strong {
+    font-size: clamp(.68rem, 3vw, .88rem);
+    line-height: 1.15;
+    overflow-wrap: anywhere;
+  }
+  .proposal-value-summary.is-past-financing {
+    opacity: 0;
+    pointer-events: none;
+  }
+}

@@ -24,7 +24,7 @@
   <meta property="og:description" content="Studios e apartamentos com lazer completo ao lado do Parque Shopping. Veja plantas e Tabela de Vendas.">
   <meta property="og:url" content="https://cityparkmcz.com.br/">
   <meta property="og:type" content="website">
-  <meta property="og:image" content="https://cityparkmcz.com.br/img/hero-poster.jpg">
+  <meta property="og:image" content="https://cityparkmcz.com.br/img/Folder.jpg">
   <meta name="twitter:card" content="summary_large_image">
 
   <!-- 1) Guard: colocar ANTES de qualquer outro script e, idealmente, antes do CSS também para evitar FOUC -->
@@ -59,7 +59,7 @@
     "@type": "Residence",
     "name": "City Park • Torre Liberty",
     "url": "https://cityparkmcz.com.br/",
-    "image": "https://cityparkmcz.com.br/img/hero-poster.jpg",
+    "image": "https://cityparkmcz.com.br/img/Folder.jpg",
     "address": {
       "@type": "PostalAddress",
       "addressLocality": "Maceió",
@@ -89,7 +89,7 @@
   <link rel="canonical" href="https://cityparkmcz.com.br/">
 </head>
 
-<body class="has-top-nav">
+<body class="has-top-nav has-mobile-menu">
 <!-- ======================= NAV FIXO ======================= -->
   <header class="top-nav fixed" id="siteHeader">
     <div class="nav-container">
@@ -135,24 +135,18 @@
 
   <!-- ======================= HERO ======================= -->
   <section class="hero">
-    <!-- Atualização -->
-    <!-- Para reduzir o consumo da CPU: Substituiu o WebM 19 MB para MP4 1,35 MB (Full HD) e reduziu o desfoque do cabeçalho. -->
+    <img class="hero-fallback" src="img/Folder.jpg" alt="City Park: fachada da Torre Liberty" fetchpriority="high">
   <video
     class="hero-video"
-    autoplay
     muted
     loop
     playsinline
-    preload="metadata"
-    poster="img/hero-poster.jpg"
+    preload="none"
+    poster="img/Folder.jpg"
+    aria-hidden="true"
   >
-    <source src="media/hero-1080p.mp4" type="video/mp4">
+    <source data-src="media/hero-1080p.mp4" type="video/mp4">
   </video>
-    <noscript>
-      <!-- Fallback quando JS estiver desabilitado -->
-      <img class="hero-fallback" src="img/hero-poster.jpg" alt="City Park">
-    </noscript>
-    </div>
   </section>
 
   <!-- ================== TORRE LIBERTY / FICHA ================ -->
