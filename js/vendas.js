@@ -325,7 +325,8 @@ function initFiltrosToggle() {
   function setFiltrosVisivel(show) {
     filtrosEl.classList.toggle("oculto", !show);
     filtrosEl.hidden = !show;
-    filtrosEl.style.display = show ? "flex" : "none";
+    filtrosEl.inert = !show;
+    filtrosEl.style.display = show ? "" : "none";
     btnToggleFiltros.setAttribute("aria-expanded", String(show));
     btnToggleFiltros.title = show ? "Ocultar filtros" : "Mostrar filtros";
   }

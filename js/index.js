@@ -22,19 +22,30 @@ document.addEventListener("DOMContentLoaded", () => {
   const EDGE_TABLET  = '12px';
   const EDGE_MOBILE  = '8px';
 
-  /* =================== HERO rotativo =================== */
+  /* Vídeo em todas as telas, respeitando a preferência por menos movimento. */
   const hero = $(".hero");
-  if (hero) {
-    const imagens = ["img/Folder.jpg"];
-    let hIdx = 0;
-    const trocar = () => {
-      hero.style.backgroundImage = `url('${imagens[hIdx]}')`;
-      hero.classList.add("hero-enter");
-      setTimeout(() => hero.classList.remove("hero-enter"), 800);
-      hIdx = (hIdx + 1) % imagens.length;
+  const heroVideo = $(".hero-video");
+  if (hero && heroVideo) {
+    const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
+    const updateHero = () => {
+      hero.classList.remove('is-playing');
+      if (reducedMotion.matches) {
+        heroVideo.pause();
+        return;
+      }
+      const source = heroVideo.querySelector('source');
+      if (!source.hasAttribute('src')) {
+        source.src = source.dataset.src;
+        heroVideo.load();
+      }
+      heroVideo.play().catch(() => hero.classList.remove('is-playing'));
     };
-    trocar();
-    setInterval(trocar, 10000);
+    heroVideo.addEventListener('playing', () => {
+      if (!reducedMotion.matches) hero.classList.add('is-playing');
+    });
+    heroVideo.addEventListener('error', () => hero.classList.remove('is-playing'));
+    reducedMotion.addEventListener('change', updateHero);
+    updateHero();
   }
 
   /* ========== Header hide on scroll ========== */
@@ -317,6 +328,10 @@ document.addEventListener("DOMContentLoaded", () => {
   }
   burger?.addEventListener("click", openMenu);
   closeBtn?.addEventListener("click", closeMenu);
+  overlay?.querySelectorAll('a').forEach(link => link.addEventListener('click', closeMenu));
+  matchMedia('(min-width: 901px)').addEventListener('change', e => {
+    if (e.matches && overlay?.classList.contains('open')) closeMenu();
+  });
   overlay?.addEventListener("click", (e) => { if (e.target === overlay) closeMenu(); });
   document.addEventListener("keydown", (e) => {
     if (e.key === "Escape" && overlay?.classList.contains("open")) closeMenu();

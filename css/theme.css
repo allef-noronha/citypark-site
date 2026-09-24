@@ -25,7 +25,6 @@ body{
   margin: 0;
   color: var(--cor-preto);
   background: var(--cor-bege);
-  overflow-x: hidden; /* evita barra horizontal global */
 }
 
 .hidden{ display:none !important; }
@@ -77,9 +76,9 @@ body.has-top-nav{ padding-top: var(--nav-h); }
 /* Menu mobile */
 .hamburger{ display:none; }
 @media (max-width:900px){
-  .nav-links{ display:none !important; }
+  .has-mobile-menu .nav-links{ display:none; }
   .hamburger{
-    display:inline-flex !important;
+    display:inline-flex;
     width:44px; height:44px; align-items:center; justify-content:center;
     background:transparent; border:0; border-radius:8px; cursor:pointer;
   }
@@ -88,15 +87,17 @@ body.has-top-nav{ padding-top: var(--nav-h); }
 }
 .mobile-overlay{
   position:fixed; inset:0; z-index:1200;
+  visibility:hidden; overflow:hidden;
   background: rgba(0,0,0,.55);
   opacity:0; pointer-events:none; transition:opacity .2s ease;
 }
-.mobile-overlay.open{ opacity:1; pointer-events:auto; }
+.mobile-overlay.open{ visibility:visible; opacity:1; pointer-events:auto; }
 .mobile-drawer{
   position:absolute; top:0; right:0;
   width:min(84vw,380px); height:100%;
   background:#0b0b0d; color:#e5e7eb;
   padding:16px; display:flex; flex-direction:column;
+  overflow-y:auto;
   transform: translateX(100%); transition: transform .26s ease;
   box-shadow:-12px 0 32px rgba(0,0,0,.25);
 }
@@ -167,7 +168,7 @@ body.has-top-nav{ padding-top: var(--nav-h); }
 .footer-dark{ background:#0b0b0d; color:#e5e7eb; }
 .footer-dark .footer-top{ text-align:center; padding:2rem 1rem 1rem; border-bottom:1px solid rgba(255,255,255,.1); }
 .footer-dark .slogan{ font-size:1.6rem; font-weight:300; margin:.25rem 0 1rem; }
-.footer-dark .footer-logo{ height:64px; margin:.3rem 0 1rem; filter:brightness(1.1); }
+.footer-dark .footer-logo{ height:64px; max-width:100%; object-fit:contain; margin:.3rem 0 1rem; filter:brightness(1.1); }
 .footer-dark .social{ display:flex; gap:.75rem; justify-content:center; font-size:1.1rem; }
 .footer-dark .social a{ color:#e5e7eb; opacity:.8; }
 .footer-dark .social a:hover{ opacity:1; }

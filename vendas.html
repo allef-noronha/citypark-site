@@ -93,42 +93,42 @@
     <span id="user-greet" class="user-pill hidden" role="button" tabindex="0"
           aria-haspopup="menu" aria-expanded="false"></span>
 
-    <!-- Demais ícones -->
-    <button class="icon-btn" id="btn-toggle-filtros" type="button" title="Mostrar filtros" aria-label="Mostrar filtros">
-      <i class="fa-solid fa-filter"></i>
+    <button class="icon-btn vendas-menu-toggle" id="btn-menu-vendas" type="button" aria-label="Abrir menu" aria-controls="vendas-nav" aria-expanded="false">
+      <i class="fa-solid fa-bars" aria-hidden="true"></i>
     </button>
-
+  </div>
+  <nav class="vendas-nav" id="vendas-nav" aria-label="Navegação de vendas">
     <!-- NOVOS BOTÕES (só quando aprovado) -->
 
     <!-- Tabela Resumo -->
     <a id="btn-folder" class="icon-btn" data-require-approved
       href="tabela.html"
       title="Tabela Resumo" aria-label="Tabela Resumo">
-      <i class="fa-solid fa-table-list"></i>
+      <i class="fa-solid fa-table-list" aria-hidden="true"></i><span>Tabela resumida</span>
     </a>
     <!-- Material Digital -->
     <a id="btn-material" class="icon-btn" data-require-approved
       href="https://drive.google.com/drive/folders/1LnuR5-yl-6MRkxO8EKRoLaCic02-yuQl?usp=sharing"
       target="_blank" rel="noopener noreferrer"
       title="Material Digital (Google Drive)" aria-label="Material Digital (Google Drive)">
-      <i class="fa-solid fa-file-lines"></i>
+      <i class="fa-solid fa-file-lines" aria-hidden="true"></i><span>Material digital</span>
     </a>
 
     <!-- Campo Admin Só aparece para admin -->
     <a id="btn-admin" class="icon-btn hidden" data-require-admin
       href="painel-admin.html"
       title="Ambiente Administrativo" aria-label="Ambiente Administrativo">
-      <i class="fa-solid fa-user-shield"></i>
+      <i class="fa-solid fa-user-shield" aria-hidden="true"></i><span>Administração</span>
     </a>
 
     <!-- NOVOS BOTÕES -->
 
     <a href="index.html" class="icon-btn" title="Página inicial" aria-label="Página inicial">
-      <i class="fa-solid fa-house"></i>
+      <i class="fa-solid fa-house" aria-hidden="true"></i><span>Início</span>
     </a>
-  </div>
+  </nav>
 
-  <!-- Dropdown do usuário (continua igual, fora do topo-botoes) -->
+  <!-- Dropdown do usuário -->
   <div class="user-menu dropdown hidden" id="userMenu" role="menu" aria-hidden="true">
     <button type="button" id="btnVerConta" class="dropdown-item" disabled>Ver conta</button>
     <button type="button" id="btnSair" class="dropdown-item">Sair</button>
@@ -188,19 +188,22 @@
 
 <section class="vendas-topo">
   <h2>Tabela de Vendas</h2>
+  <button class="icon-btn filtros-toggle" id="btn-toggle-filtros" type="button" aria-label="Filtros" aria-controls="filtros" aria-expanded="false">
+    <i class="fa-solid fa-filter" aria-hidden="true"></i> <span>Filtros</span>
+  </button>
 </section>
 
-<section id="filtros" class="filtros oculto">
+<section id="filtros" class="filtros oculto" inert aria-label="Filtros de unidades">
   <div class="sticky-bar">
     <div id="filtro-form">
-      <input type="text" id="filtro-unidade" placeholder="Filtrar por unidade" />
-      <select id="filtro-status">
+      <input type="text" id="filtro-unidade" placeholder="Filtrar por unidade" aria-label="Filtrar por unidade" />
+      <select id="filtro-status" aria-label="Filtrar por status">
         <option value="">Todos os Status</option>
         <option value="Vendido">Vendido</option>
         <option value="Disponível">Disponível</option>
         <option value="Reservado">Reservado</option>
       </select>
-      <select id="filtro-tipologia">
+      <select id="filtro-tipologia" aria-label="Filtrar por tipologia">
         <option value="">Todas as tipologias</option>
         <option value="3 Quartos">3 Quartos</option>
         <option value="2 Quartos">2 Quartos</option>
@@ -208,12 +211,12 @@
         <option value="Quarto/Sala">Quarto/Sala</option>
         <option value="Loft">Loft</option>
       </select>
-      <input type="number" id="filtro-valor" placeholder="Valor máximo (R$)" />
+      <input type="number" id="filtro-valor" placeholder="Valor máximo (R$)" aria-label="Valor máximo (R$)" />
     </div>
   </div>
 </section>
 
-<main style="padding: 1rem;">
+<main class="vendas-main">
   <div id="tabela-vendas">
     <div class="loading-dados" role="status" aria-live="polite">
       <span class="loading-spinner" aria-hidden="true"></span>
@@ -244,12 +247,7 @@
   </div>
 </footer>
 
-<script>
-  // Mostrar/ocultar filtros (UI)
-  const btnToggleFiltros = document.getElementById("btn-toggle-filtros");
-  const filtros = document.getElementById("filtros");
-  btnToggleFiltros.addEventListener("click", () => filtros.classList.toggle("oculto"));
-</script>
+<script src="js/vendas-ui.js"></script>
 
 <!-- Scripts modulares -->
 <script src="js/condicao-venda.js"></script>
