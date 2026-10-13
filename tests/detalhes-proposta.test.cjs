@@ -28,8 +28,9 @@ function presentation({ firebase = {}, confirm = () => true } = {}) {
   const source = fs.readFileSync(path.join(__dirname, "../js/detalhes-proposta.js"), "utf8")
     .replace(/^import[\s\S]*?from\s+["'][^"']+["'];\s*/gm, "");
   vm.runInContext(source, context);
-  const api = vm.runInContext(`({ renderFinance, clientFields, proposalExpiry, expiryLabel, toDate, renderGeneralData, renderSummary, renderReservation, renderCounterproposalTotals, buildCounterproposalCondition, counterproposalDraftRows, renderCounterproposal, saveCounterproposal, openFinanceModal, saveFinanceEdit, openConfirmation, executeConfirmedAction, cancelApprovedProposal, distractSoldProposal, invalidateTestProposal, approveProposal, rejectProposal,
+  const api = vm.runInContext(`({ renderFinance, clientFields, proposalExpiry, expiryLabel, toDate, renderGeneralData, renderSummary, renderReservation, renderCounterproposalTotals, formatCounterproposalCurrencyField, buildCounterproposalCondition, counterproposalDraftRows, renderCounterproposal, saveCounterproposal, openFinanceModal, saveFinanceEdit, openConfirmation, executeConfirmedAction, cancelApprovedProposal, distractSoldProposal, invalidateTestProposal, approveProposal, rejectProposal,
     setData(proposal, unit = null) { state.proposal = proposal; state.unit = unit; },
+    setSimulation(condition) { state.simulation = condition; },
     configureActions(notify, reload, components = []) { state.adminUser = { uid: "admin-test" }; showToast = notify; loadProposal = reload; state.financeComponents = components; },
     configureCounterMode(mode, revision) { state.counterproposalMode = mode; state.editingCounterproposalRevision = dateValue(revision); }
   })`, context);
@@ -161,19 +162,21 @@ test("contraproposta: atualiza os quatro indicadores e o percentual de cada grup
   assert.equal(signal.querySelector("[data-counter-quantity]").value, "1");
   assert.equal(keys.querySelector("[data-counter-quantity]").readOnly, false);
   assert.equal(monthly.querySelector("[data-counter-quantity]").readOnly, false);
-  assert.deepEqual(rows.map(row => row.querySelector("[data-counter-row-percentage]").textContent), ["10%", "10%", "80%"]);
+  assert.deepEqual(rows.map(row => row.querySelector("[data-counter-row-percentage]").textContent), ["10,00%", "10,00%", "80,00%"]);
 
   monthly.querySelector("[data-counter-value]").value = "2.000,00";
   api.renderCounterproposalTotals();
   assert.match(api.node("counterTotalValue").textContent, /110\.000,00/);
   assert.match(api.node("counterDifference").textContent, /-R\$\s*10\.000,00/);
   assert.equal(api.node("counterPercentage").textContent, "-10%");
+  assert.deepEqual(rows.map(row => row.querySelector("[data-counter-row-percentage]").textContent), ["9,09%", "18,18%", "72,73%"]);
   assert.equal(api.node("counterDifferenceCard").classList.contains("unbalanced"), true);
 
   rows.pop();
   api.renderCounterproposalTotals();
   assert.match(api.node("counterDifference").textContent, /70\.000,00/);
   assert.equal(api.node("counterPercentage").textContent, "70%");
+  assert.deepEqual(rows.map(row => row.querySelector("[data-counter-row-percentage]").textContent), ["33,33%", "66,67%"]);
 });
 
 test("contraproposta: campos vazios e valor de tabela ausente não geram NaN", () => {
@@ -186,7 +189,7 @@ test("contraproposta: campos vazios e valor de tabela ausente não geram NaN", (
   assert.equal(api.node("counterDifference").textContent, "—");
   assert.match(api.node("counterTotalValue").textContent, /0,00/);
   assert.equal(api.node("counterPercentage").textContent, "0%");
-  assert.equal(monthly.querySelector("[data-counter-row-percentage]").textContent, "0%");
+  assert.equal(monthly.querySelector("[data-counter-row-percentage]").textContent, "0,00%");
   assert.equal(api.node("counterDifferenceCard").classList.contains("unbalanced"), false);
 });
 
@@ -242,8 +245,8 @@ test("sinal e chaves parcelados: quantidades, totais e vencimentos mensais", () 
   assert.equal(signal.querySelector("[data-counter-quantity]").readOnly, false);
   assert.equal(keys.querySelector("[data-counter-quantity]").value, "7");
   assert.equal(keys.querySelector("[data-counter-quantity]").readOnly, false);
-  assert.equal(signal.querySelector("[data-counter-row-percentage]").textContent, "30%");
-  assert.equal(keys.querySelector("[data-counter-row-percentage]").textContent, "70%");
+  assert.equal(signal.querySelector("[data-counter-row-percentage]").textContent, "30,00%");
+  assert.equal(keys.querySelector("[data-counter-row-percentage]").textContent, "70,00%");
   const condition = api.buildCounterproposalCondition();
   assert.equal(condition.totalCalculadoCentavos, 10000000);
   assert.equal(condition.diferencaCentavos, 0);
@@ -437,3 +440,45 @@ test('invalidação recusa proposta real ou vínculo de outra proposta',async()=
  assert.equal(api.node("financeValidation").classList.contains("invalid"),false);
  }
  });
+
+test("contraproposta formata moeda ao digitar como no formulário de envio", () => {
+  const api = presentation();
+  const field = { value: "80000" };
+  api.formatCounterproposalCurrencyField(field);
+  assert.match(field.value, /^R\$\s*800,00$/);
+  field.value = "123456789";
+  api.formatCounterproposalCurrencyField(field);
+  assert.match(field.value, /^R\$\s*1\.234\.567,89$/);
+  field.value = "";
+  api.formatCounterproposalCurrencyField(field);
+  assert.equal(field.value, "");
+});
+
+test("proposta exibida e contraproposta impressa usam o total preenchido nas linhas", () => {
+  const api = presentation();
+  const original = {
+    schemaVersao: 3,
+    tipo: "personalizada",
+    valorTabelaCentavos: 10000000,
+    totalCalculadoCentavos: 8000000,
+    diferencaCentavos: 2000000,
+    componentes: {
+      sinal: { ativo: true, quantidade: 1, valorUnitarioCentavos: 2000000, totalCentavos: 2000000, periodicidade: "unica" },
+      parcelas: {},
+      chaves: { ativo: true, quantidade: 1, valorUnitarioCentavos: 6000000, totalCentavos: 6000000, periodicidade: "unica" }
+    }
+  };
+  const proposal = { id: "proposal-1", condicaoProposta: original };
+  const before = JSON.stringify(proposal);
+  api.setData(proposal, { valores: { precoAVistaCentavos: 10000000 } });
+  api.renderFinance();
+  assert.match(api.node("financeRows").innerHTML, /25,00%/);
+  assert.match(api.node("financeRows").innerHTML, /75,00%/);
+  assert.equal(api.node("financePercentage").textContent, "20%");
+  api.setSimulation(original);
+  api.node("counterproposalForm").hidden = true;
+  api.renderCounterproposal();
+  assert.match(api.node("counterproposalDisplay").innerHTML, /25,00%/);
+  assert.match(api.node("counterproposalDisplay").innerHTML, /75,00%/);
+  assert.equal(JSON.stringify(proposal), before);
+});
