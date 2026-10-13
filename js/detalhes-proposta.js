@@ -86,7 +86,10 @@ function bindEvents() {
   elements.cancelCounterproposal.addEventListener("click", closeCounterproposalBuilder);
   elements.addCounterproposalRow.addEventListener("click", () => addCounterproposalRow("mensal"));
   elements.counterproposalForm.addEventListener("submit", saveCounterproposal);
-  elements.counterproposalRows.addEventListener("input", renderCounterproposalTotals);
+  elements.counterproposalRows.addEventListener("input", event => {
+    if (event.target.matches("[data-counter-value]")) formatCounterproposalCurrencyField(event.target);
+    renderCounterproposalTotals();
+  });
   elements.counterproposalRows.addEventListener("change", renderCounterproposalTotals);
   elements.counterproposalRows.addEventListener("click", event => {
     const remove = event.target.closest("[data-remove-counter-row]");
@@ -216,11 +219,11 @@ function renderFinance() {
   elements.financeValidation.textContent = percentage >= 70 ? (balanced ? "Valores conferidos" : "Negociação permitida") : "Revisão necessária";
   elements.financeValidation.classList.toggle("invalid", percentage < 70);
   elements.financeRows.innerHTML = rows.length
-    ? renderFinanceTableRows(rows, condition.schemaVersao >= 3)
+    ? renderFinanceTableRows(rows, calculated)
     : `<tr><td class="empty-table" colspan="6">A condição financeira desta proposta não possui dados estruturados.</td></tr>`;
 }
 
-function renderFinanceTableRows(rows, currentSchema) {
+function renderFinanceTableRows(rows, proposalTotal) {
   const groups = new Map();
   rows.forEach(row => {
     const groupKey = row.key === "sinal" ? "sinal" : row.key === "chaves" ? "chaves" : row.periodicidade || row.label;
@@ -229,8 +232,7 @@ function renderFinanceTableRows(rows, currentSchema) {
   });
   return [...groups.entries()].flatMap(([groupKey, groupRows]) => groupRows.map((row, index) => {
     const groupCell = index === 0 ? `<td rowspan="${groupRows.length}">${escapeHtml(financeGroupLabel(groupKey, row.label))}</td>` : "";
-    const tableValue = Number.isInteger((state.proposal?.condicaoVigente || state.proposal?.condicaoProposta)?.valorTabelaCentavos) ? (state.proposal.condicaoVigente || state.proposal.condicaoProposta).valorTabelaCentavos : unitTableValue();
-    return `<tr>${groupCell}<td>${escapeHtml(row.quantidade || "—")}</td><td>${escapeHtml(formatDateOnly(row.primeiroVencimento))}</td><td>${formatMoney(row.valorUnitarioCentavos)}</td><td>${formatMoney(row.totalCentavos)}</td><td>${formatPercentage(percentageOfTable(row.totalCentavos, tableValue))}</td> </tr>`;
+    return `<tr>${groupCell}<td>${escapeHtml(row.quantidade || "—")}</td><td>${escapeHtml(formatDateOnly(row.primeiroVencimento))}</td><td>${formatMoney(row.valorUnitarioCentavos)}</td><td>${formatMoney(row.totalCentavos)}</td><td>${formatProposalShare(row.totalCentavos, proposalTotal)}</td> </tr>`;
   })).join("");
 }
 
@@ -472,7 +474,7 @@ function addCounterproposalRow(type = "mensal", values = null) {
     <label><span>Quantidade</span><input data-counter-quantity type="number" min="1" max="240" value="1"></label>
     <label><span>Primeiro vencimento</span><input data-counter-date type="date"></label>
     <label><span>Valor unitário</span><input data-counter-value type="text" inputmode="decimal" placeholder="R$ 0,00"></label>
-    <div class="counter-percentage-field"><span id="${id}-percentage-label">Porcentagem</span><output class="counter-row-percentage" data-counter-row-percentage aria-labelledby="${id}-percentage-label">0%</output></div>
+    <div class="counter-percentage-field"><span id="${id}-percentage-label">% da proposta</span><output class="counter-row-percentage" data-counter-row-percentage aria-labelledby="${id}-percentage-label">0%</output></div>
     <button type="button" data-remove-counter-row aria-label="Remover parcela">×</button>`;
   elements.counterproposalRows.appendChild(row);
   if (values) {
@@ -495,9 +497,15 @@ function counterproposalDraftRows(condition) {
   return rows.map(({ type, component }) => ({ type, quantity:component.quantidade || 1, dueDate:dateInputValue(component.primeiroVencimento), value:component.valorUnitarioCentavos }));
 }
 
+function formatCounterproposalCurrencyField(field) {
+  const digits = field.value.replace(/\D/g, "");
+  field.value = digits ? formatMoney(Number(digits)) : "";
+}
+
 function renderCounterproposalTotals() {
   const tableValue = unitTableValue();
   let total = 0;
+  const rowTotals = [];
   [...elements.counterproposalRows.querySelectorAll("[data-counter-row]")].forEach(row => {
     const type = row.querySelector("[data-counter-type]").value;
     const quantityField = row.querySelector("[data-counter-quantity]");
@@ -508,7 +516,10 @@ function renderCounterproposalTotals() {
     const value = PaymentPlan?.currencyToCents(row.querySelector("[data-counter-value]").value);
     const rowTotal = Number.isInteger(quantity) && Number.isInteger(value) ? quantity * value : 0;
     total += rowTotal;
-    row.querySelector("[data-counter-row-percentage]").textContent = formatPercentage(percentageOfTable(rowTotal, tableValue));
+    rowTotals.push({ row, rowTotal });
+  });
+  rowTotals.forEach(({ row, rowTotal }) => {
+    row.querySelector("[data-counter-row-percentage]").textContent = formatProposalShare(rowTotal, total);
   });
   const difference = Number.isInteger(tableValue) ? tableValue - total : null;
   elements.counterTableValue.textContent = formatMoney(tableValue);
@@ -608,7 +619,7 @@ function renderCounterproposal() {
   elements.counterproposalDisplay.innerHTML = `
     <header><h2>City Park · Contraproposta</h2><p>Unidade ${escapeHtml(unitData().unidade || state.proposal.unidadeId)} · Cliente: ${escapeHtml(clientName(state.proposal.cliente))}</p><p>Corretor: ${escapeHtml(brokerData().nome || "Não informado")} · ${escapeHtml(formatDate(new Date()))}</p><p>Simulação comercial para negociação.</p></header>
     <div class="finance-totals"><div><span>Valor da tabela</span><strong>${formatMoney(condition.valorTabelaCentavos)}</strong></div><div><span>Total da contraproposta</span><strong>${formatMoney(condition.totalCalculadoCentavos)}</strong></div><div><span>Diferença</span><strong>${formatMoney(condition.diferencaCentavos)}</strong></div></div>
-    <div class="finance-table-wrap"><table class="finance-table"><thead><tr><th>Parcelas</th><th>Qtd.</th><th>Vencimento</th><th>Valor unitário</th><th>Subtotal</th><th>Porcentagem</th></tr></thead><tbody>${rows.map(row=>`<tr><td>${escapeHtml(row.label)}</td><td>${row.quantidade}</td><td>${escapeHtml(formatDateOnly(row.primeiroVencimento))}</td><td>${formatMoney(row.valorUnitarioCentavos)}</td><td>${formatMoney(row.totalCentavos)}</td><td>${formatPercentage(percentageOfTable(row.totalCentavos,condition.valorTabelaCentavos))}</td></tr>`).join("")}</tbody></table></div>
+    <div class="finance-table-wrap"><table class="finance-table"><thead><tr><th>Parcelas</th><th>Qtd.</th><th>Vencimento</th><th>Valor unitário</th><th>Subtotal</th><th>% da proposta</th></tr></thead><tbody>${rows.map(row=>`<tr><td>${escapeHtml(row.label)}</td><td>${row.quantidade}</td><td>${escapeHtml(formatDateOnly(row.primeiroVencimento))}</td><td>${formatMoney(row.valorUnitarioCentavos)}</td><td>${formatMoney(row.totalCentavos)}</td><td>${formatProposalShare(row.totalCentavos,condition.totalCalculadoCentavos)}</td></tr>`).join("")}</tbody></table></div>
     <div class="counterproposal-decision-actions"><button type="button" class="secondary-button" data-edit-counterproposal>Ajustar simulação</button><button type="button" class="secondary-button" data-new-counterproposal>Nova simulação</button><button type="button" class="primary-button" data-print-counterproposal>Imprimir / Salvar PDF</button></div>`;
 }
 
@@ -690,6 +701,12 @@ function unitTableValue() {
 }
 function moneyValue(source, keys) { for (const key of keys) if (Number.isInteger(source?.[key])) return source[key]; return null; }
 function percentageOfTable(total, table) { return PaymentPlan?.percentageOfTable ? PaymentPlan.percentageOfTable(total, table) : (Number(table) > 0 ? Math.round((Number(total || 0) / Number(table)) * 10000) / 100 : 0); }
+function formatProposalShare(partCents, totalCents) {
+  const part = Number(partCents);
+  const total = Number(totalCents);
+  if (!Number.isFinite(part) || !Number.isFinite(total) || total <= 0 || part < 0) return "0,00%";
+  return `${((part / total) * 100).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}%`;
+}
 function detail(label, value) { return `<div><dt>${escapeHtml(label)}</dt><dd>${escapeHtml(value === null || value === undefined || value === "" ? "Não informado" : value)}</dd></div>`; }
 function conditionTypeLabel(value) { const status=normalizeStatus(value); return status === "padrao" ? "Condição padrão" : ["outro","personalizada","personalizado"].includes(status) ? "Condição personalizada" : "Condição não informada"; }
 function periodicityLabel(value) { return { mensal:"Parcelas mensais", semestral:"Parcelas semestrais", anual:"Parcelas anuais", outra:"Negociação especial", unica:"Parcela única" }[value] || "Parcela"; }
