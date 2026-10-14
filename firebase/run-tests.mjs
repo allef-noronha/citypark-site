@@ -29,5 +29,5 @@ if (fixtures !== 0) process.exit(fixtures);
 process.exit(run([
   require.resolve('firebase-tools/lib/bin/firebase.js'),
   'emulators:exec', '--only', 'firestore', '--project', 'demo-citypark-reserva',
-  '--config', 'firebase.json', process.argv.includes('--commercial') ? 'node --test tests/comercial.test.mjs' : 'node --test --test-concurrency=1 tests/reserva.test.mjs tests/comercial.test.mjs'
+  '--config', 'firebase.json', process.argv.includes('--commercial') ? 'node --test tests/comercial.test.mjs' : 'node --test --test-concurrency=1 tests/reserva.test.mjs tests/comercial.test.mjs tests/cadastro.test.mjs'
 ]));

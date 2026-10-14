@@ -26,6 +26,8 @@ import {
 let usuarioAtual = null;
 let dadosCorretorCache = null;
 let dadosAdminCache = null;
+let cadastroEmAndamento = false;
+let revisaoInterface = 0;
 
 function permissaoAtiva(valor) {
   if (valor === true || valor === 1) return true;
@@ -192,6 +194,7 @@ btnEsqueci?.addEventListener("click", async () => {
 // ------------------------------------------------------------------
 registerForm?.addEventListener("submit", async (e) => {
   e.preventDefault();
+  if (cadastroEmAndamento) return;
   const payload = {
     nome:        document.getElementById("registerNome")?.value.trim(),
     cpf:         (document.getElementById("registerCpf")?.value || "").replace(/\D/g, ""),
@@ -207,43 +210,65 @@ registerForm?.addEventListener("submit", async (e) => {
     return;
   }
 
+  const button = document.getElementById("btnCadastrar");
+  cadastroEmAndamento = true;
+  if (button) button.disabled = true;
+  if (alertAprovacaoPendente) alertAprovacaoPendente.style.display = "none";
   try {
-    const cred = await createUserWithEmailAndPassword(auth, payload.email, payload.senha);
-    await updateProfile(cred.user, { displayName: payload.nome });
-
-    await setDoc(doc(db, "corretores", cred.user.uid), {
-      nome: payload.nome,
-      cpf: payload.cpf,
-      creci: payload.creci,
-      telefone: payload.telefone,
-      email: payload.email,
-      imobiliaria: payload.imobiliaria,
-      aprovado: false,
-      criadoEm: serverTimestamp(),
-    }, { merge: true });
-
-    // Mensagem padrão "em análise"
-    if (alertAprovacaoPendente) alertAprovacaoPendente.style.display = "block";
+    let user;
+    try {
+      user = (await createUserWithEmailAndPassword(auth, payload.email, payload.senha)).user;
+    } catch (err) {
+      console.error("[auth] criação da conta:", err.code);
+      alert(err.code === "auth/email-already-in-use"
+        ? "Este e-mail já está em uso. Faça login ou use a recuperação de senha."
+        : err.code === "auth/weak-password" ? "Senha muito curta (mínimo 6 caracteres)."
+        : err.code === "auth/invalid-email" ? "E-mail inválido. Verifique e tente novamente."
+        : "Não foi possível criar sua conta agora. Tente novamente.");
+      return;
+    }
+    const perfil = {
+      nome: payload.nome, cpf: payload.cpf, creci: payload.creci,
+      telefone: payload.telefone, email: user.email,
+      imobiliaria: payload.imobiliaria, aprovado: false, criadoEm: serverTimestamp()
+    };
+    try {
+      await setDoc(doc(db, "corretores", user.uid), perfil);
+    } catch (err) {
+      console.error("[auth] gravação do corretor:", err.code);
+      alert("Sua conta de acesso foi criada, mas não foi possível confirmar a gravação dos dados do corretor. O cadastro não foi concluído. Contate o setor comercial antes de tentar cadastrar novamente. Sua conta foi preservada.");
+      return;
+    }
+    let nomeAtualizado = true;
+    try {
+      await updateProfile(user, { displayName: payload.nome });
+    } catch (err) {
+      nomeAtualizado = false;
+      console.warn("[auth] atualização do nome:", err.code);
+    }
+    if (auth.currentUser?.uid === user.uid) await sincronizarInterface(user, perfil);
+    if (alertAprovacaoPendente) {
+      alertAprovacaoPendente.textContent = "Seu cadastro foi enviado e está em análise. Aguarde aprovação para enviar propostas.";
+      alertAprovacaoPendente.style.display = "block";
+    }
+    if (!nomeAtualizado) alert("Cadastro salvo e aguardando aprovação. Não foi possível atualizar o nome da conta de acesso; os dados do corretor foram preservados.");
     setTimeout(() => {
-      // Fecha modal após breve confirmação
       closeAuth();
       if (alertAprovacaoPendente) alertAprovacaoPendente.style.display = "none";
     }, 1400);
-
-  } catch (err) {
-    console.error("[auth] cadastro error:", err);
-    const msg =
-      err.code === "auth/email-already-in-use" ? "Este e-mail já está em uso." :
-      err.code === "auth/weak-password"       ? "Senha muito curta (mínimo 6 caracteres)." :
-      "Não foi possível concluir o cadastro agora.";
-    alert(msg);
+  } finally {
+    cadastroEmAndamento = false;
+    if (button) button.disabled = false;
   }
 });
 
 // ------------------------------------------------------------------
 /** Observa mudanças de autenticação (ícone/estados/gating) */
 // ------------------------------------------------------------------
-onAuthStateChanged(auth, async (user) => {
+onAuthStateChanged(auth, user => sincronizarInterface(user));
+
+async function sincronizarInterface(user, perfilConfirmado = null) {
+  const revisao = ++revisaoInterface;
   // estado em memória
   usuarioAtual = user || null;
   dadosCorretorCache = null;
@@ -310,9 +335,12 @@ onAuthStateChanged(auth, async (user) => {
         getDoc(doc(db, "corretores", user.uid)),
         getDoc(doc(db, "admins", user.uid))
       ]);
-      dadosCorretorCache = corretorSnapshot.exists() ? corretorSnapshot.data() : null;
+      if (revisao !== revisaoInterface || auth.currentUser?.uid !== user.uid) return;
+      dadosCorretorCache = corretorSnapshot.exists() ? corretorSnapshot.data() : perfilConfirmado;
       dadosAdminCache = adminSnapshot.exists() ? adminSnapshot.data() : null;
     } catch (e) {
+      if (revisao !== revisaoInterface || auth.currentUser?.uid !== user.uid) return;
+      dadosCorretorCache = perfilConfirmado;
       console.error("[auth] erro ao obter perfil:", e);
     }
     const aprovado = permissaoAtiva(dadosCorretorCache?.aprovado);
@@ -412,7 +440,7 @@ onAuthStateChanged(auth, async (user) => {
       })
     );
   }
-});
+}
 
 // ------------------------------------------------------------------
 /** Dropdown: ações */
