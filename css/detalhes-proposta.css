@@ -123,14 +123,14 @@ body.modal-open { overflow: hidden; }
 .counterproposal-heading > button, .modal-close { width: 40px; height: 40px; flex-shrink: 0; color: #505a69; background: #edf0f4; border: 0; border-radius: 9px; font-size: 1.5rem; cursor: pointer; }
 .counterproposal-summary { margin: 20px 0; }
 .counterproposal-rows { display: grid; gap: 14px; margin-bottom: 16px; overflow-x: auto; }
-.counterproposal-row { min-width: 900px; padding: 16px; display: grid; grid-template-columns: minmax(180px,1.4fr) minmax(95px,.65fr) minmax(160px,1fr) minmax(140px,1fr) minmax(110px,.75fr) 44px; align-items: end; gap: 12px; background: #fff; border: 1px solid #d8dde6; border-radius: 12px; }
-.counterproposal-row label, .counter-percentage-field, .edit-grid label, .reason-field { min-width: 0; display: grid; gap: 7px; }
+.counterproposal-row { min-width: 960px; padding: 16px; display: grid; grid-template-columns: minmax(155px,1.3fr) minmax(85px,.6fr) minmax(150px,1fr) minmax(135px,1fr) minmax(135px,1fr) minmax(105px,.7fr) 44px; align-items: end; gap: 12px; background: #fff; border: 1px solid #d8dde6; border-radius: 12px; }
+.counterproposal-row label, .counter-subtotal-field, .counter-percentage-field, .edit-grid label, .reason-field { min-width: 0; display: grid; gap: 7px; }
 .counterproposal-row label > span, .edit-grid label > span, .reason-field > span { color: #505a69; font-size: .875rem; font-weight: 700; line-height: 1.35; }
 .counterproposal-row input, .counterproposal-row select, .edit-grid input, .reason-field textarea { width: 100%; min-width: 0; min-height: 44px; padding: 10px; color: var(--admin-ink); background: #f8f9fc; border: 1px solid #d8dde6; border-radius: 9px; font-size: 1rem; }
-.counterproposal-row label > span, .counter-percentage-field > span { color: var(--admin-ink); font-size: .875rem; font-weight: 800; line-height: 1.4; }
-.counterproposal-row input, .counterproposal-row select, .counter-row-percentage { height: 44px; font-family: inherit; font-size: 1rem; font-weight: 600; line-height: 1.4; font-variant-numeric: tabular-nums; }
+.counterproposal-row label > span, .counter-subtotal-field > span, .counter-percentage-field > span { color: var(--admin-ink); font-size: .875rem; font-weight: 800; line-height: 1.4; }
+.counterproposal-row input, .counterproposal-row select, .counter-row-subtotal, .counter-row-percentage { height: 44px; font-family: inherit; font-size: 1rem; font-weight: 600; line-height: 1.4; font-variant-numeric: tabular-nums; }
 .reason-field textarea { resize: vertical; }
-.counter-row-percentage { padding: 10px; display: flex; align-items: center; justify-content: center; color: #000; background: #f8f9fc; border: 1px solid #d8dde6; border-radius: 9px; }
+.counter-row-subtotal, .counter-row-percentage { padding: 10px; display: flex; align-items: center; justify-content: center; color: #000; background: #f8f9fc; border: 1px solid #d8dde6; border-radius: 9px; }
 .counterproposal-row > button { width: 44px; height: 44px; justify-self: end; display: grid; place-items: center; border: 0; border-radius: 9px; color: #9e3434; background: #fbe9e9; font-size: 1.5rem; cursor: pointer; }
 .counterproposal-actions, .modal-actions { margin-top: 20px; display: flex; justify-content: flex-end; flex-wrap: wrap; gap: 10px; }
 .counterproposal-title { margin-bottom: 18px; flex-wrap: wrap; }
@@ -208,6 +208,10 @@ body.modal-open { overflow: hidden; }
   .summary-back, .anchor-sidebar a, .primary-button, .success-button, .danger-button, .secondary-button, .toast { transition: none; }
 }
 .commercial-stage-form { display: grid; gap: 12px; margin-top: 20px; padding-top: 18px; border-top: 1px solid #dce3ef; }
+.previous-sale-summary { display: grid; grid-template-columns: repeat(auto-fit,minmax(180px,1fr)); gap: 18px; margin: 24px 0; }
+.previous-sale-summary dt { margin-bottom: 6px; color: #526581; font-size: 13px; }
+.previous-sale-summary dd { margin: 0; font-weight: 700; overflow-wrap: anywhere; }
+.previous-sale-terms { white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.6; }
 .commercial-stage-form label { display: grid; gap: 6px; font-size: 14px; }
 .commercial-stage-form select, .commercial-stage-form textarea { width: 100%; padding: 10px; border: 1px solid #ccd5e5; border-radius: 8px; font: inherit; background: white; color: #14254b; }
 .commercial-stage-form label:has(input) { display: flex; align-items: start; }

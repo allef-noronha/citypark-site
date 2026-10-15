@@ -48,6 +48,10 @@ onAuthStateChanged(auth, async user => {
     }
     state.adminUser = user;
     state.admin = admin;
+    // Keep the explicit ID after servers redirect .html URLs to a clean path.
+    const proposalUrl = new URL(window.location.href);
+    proposalUrl.searchParams.set('id', state.proposalId);
+    window.history.replaceState(null, '', proposalUrl.href);
     document.documentElement.classList.add("page-authorized");
     bindEvents();
     await loadProposal();
@@ -117,14 +121,13 @@ function bindEvents() {
 async function loadProposal() {
   const proposalSnapshot = await getDoc(doc(db, "propostas", state.proposalId));
   if (!proposalSnapshot.exists()) throw new Error("A proposta solicitada não foi encontrada.");
-  state.proposal = { id: proposalSnapshot.id, ...proposalSnapshot.data() };
-  try { sessionStorage.setItem("cityparkAdminProposalId", state.proposalId); } catch { /* URL ainda mantém o ID. */ }
+  state.proposal = { ...proposalSnapshot.data(), id: proposalSnapshot.id };
   const [unitSnapshot, brokerSnapshot] = await Promise.all([
     state.proposal.unidadeId ? getDoc(doc(db, "unidades", state.proposal.unidadeId)) : null,
     !state.proposal.corretorSnapshot && state.proposal.corretorId ? getDoc(doc(db, "corretores", state.proposal.corretorId)) : null
   ]);
-  state.unit = unitSnapshot?.exists() ? { id: unitSnapshot.id, ...unitSnapshot.data() } : null;
-  state.broker = brokerSnapshot?.exists() ? { id: brokerSnapshot.id, ...brokerSnapshot.data() } : null;
+  state.unit = unitSnapshot?.exists() ? { ...unitSnapshot.data(), id: unitSnapshot.id } : null;
+  state.broker = brokerSnapshot?.exists() ? { ...brokerSnapshot.data(), id: brokerSnapshot.id } : null;
   renderAll();
   await loadHistory();
   elements.loading.hidden = true;
@@ -135,8 +138,9 @@ async function loadProposal() {
 function renderAll() {
   const previous = state.proposal.vendaAnterior;
   $('previousSaleDetails').hidden = !previous;
-  $('condicao-proposta').hidden = !!previous;
-  if (previous) $('previousSaleDetails').innerHTML = `<h2>Venda anterior cadastrada</h2><p>Data original: ${escapeHtml(previous.dataVenda)} · Valor contratado: ${formatMoney(previous.valorCentavos)}</p><p style="white-space:pre-wrap">${escapeHtml(previous.condicoes)}</p><p>Referência: ${escapeHtml(previous.referencia)}</p><p>Cadastro retrospectivo. As condições originais acima não são uma simulação da tabela atual.</p>`;
+  $('currentProposalFinance').hidden = !!previous && !state.proposal.condicaoProposta;
+  $('originalCondition').hidden = !!previous;
+  if (previous) $('previousSaleDetails').innerHTML = previousSaleSummary(previous, !!state.proposal.condicaoProposta);
 
   renderSummary();
   renderReservation();
@@ -147,6 +151,16 @@ function renderAll() {
   renderCommercialStage();
   $("originalConditionContent").innerHTML = conditionSummary(state.proposal.condicaoOriginal || state.proposal.condicaoProposta);
   document.title = `${state.proposal.id} | City Park`;
+}
+
+function previousSaleSummary(sale, structured = false) {
+  const date = /^\d{4}-\d{2}-\d{2}$/.test(sale.dataVenda || '') ? formatDateOnly(sale.dataVenda + 'T12:00:00') : 'Não informada';
+  return `<div class="condition-heading"><h2>${structured ? 'Dados da venda anterior' : 'Condição de Proposta:'}</h2><span>Venda anterior cadastrada</span></div>
+    <dl class="previous-sale-summary">
+      <div><dt>Valor contratado</dt><dd data-previous-sale-value>${formatMoney(sale.valorCentavos)}</dd></div>
+      <div><dt>Data original da venda</dt><dd data-previous-sale-date>${escapeHtml(date)}</dd></div>
+      <div><dt>Referência documental</dt><dd data-previous-sale-reference>${escapeHtml(sale.referencia)}</dd></div>
+    </dl><h3>${structured ? 'Observações / resumo do contrato' : 'Condições contratadas'}</h3><p class="previous-sale-terms" data-previous-sale-conditions>${escapeHtml(sale.condicoes)}</p>`;
 }
 
 function renderSummary() {
@@ -200,6 +214,7 @@ function showDataTab(tab) {
 }
 
 function renderFinance() {
+  if (state.proposal.vendaAnterior && !state.proposal.condicaoProposta) { state.financeComponents = []; return; }
   const condition = state.proposal.condicaoVigente || state.proposal.condicaoProposta || {};
   const components = structuredComponents(condition);
   state.financeComponents = components;
@@ -474,6 +489,7 @@ function addCounterproposalRow(type = "mensal", values = null) {
     <label><span>Quantidade</span><input data-counter-quantity type="number" min="1" max="240" value="1"></label>
     <label><span>Primeiro vencimento</span><input data-counter-date type="date"></label>
     <label><span>Valor unitário</span><input data-counter-value type="text" inputmode="decimal" placeholder="R$ 0,00"></label>
+    <div class="counter-subtotal-field"><span id="${id}-subtotal-label">Subtotal</span><output class="counter-row-subtotal" data-counter-row-subtotal aria-labelledby="${id}-subtotal-label">R$ 0,00</output></div>
     <div class="counter-percentage-field"><span id="${id}-percentage-label">% da proposta</span><output class="counter-row-percentage" data-counter-row-percentage aria-labelledby="${id}-percentage-label">0%</output></div>
     <button type="button" data-remove-counter-row aria-label="Remover parcela">×</button>`;
   elements.counterproposalRows.appendChild(row);
@@ -516,6 +532,7 @@ function renderCounterproposalTotals() {
     const value = PaymentPlan?.currencyToCents(row.querySelector("[data-counter-value]").value);
     const rowTotal = Number.isInteger(quantity) && Number.isInteger(value) ? quantity * value : 0;
     total += rowTotal;
+    row.querySelector("[data-counter-row-subtotal]").textContent = formatMoney(rowTotal);
     rowTotals.push({ row, rowTotal });
   });
   rowTotals.forEach(({ row, rowTotal }) => {
@@ -611,6 +628,12 @@ async function saveProposalCondition(condition) {
   });
 }
 function renderCounterproposal() {
+  if (state.proposal.vendaAnterior) {
+    elements.openCounterproposal.hidden = true;
+    elements.counterproposalForm.hidden = true;
+    elements.counterproposalDisplay.hidden = true;
+    return;
+  }
   const condition=state.simulation;
   elements.openCounterproposal.hidden = !elements.counterproposalForm.hidden;
   elements.counterproposalDisplay.hidden = !condition || !elements.counterproposalForm.hidden;
@@ -658,12 +681,10 @@ function observeSections() {
 function resolveProposalId() {
   const params = new URLSearchParams(window.location.search);
   const fromQuery = params.get("id") || params.get("propostaId") || params.get("proposta");
-  const fromHash = window.location.hash.startsWith("#proposta=") ? window.location.hash.slice(10) : "";
+  const fromHash = new URLSearchParams(window.location.hash.slice(1)).get('proposta') || '';
   const pathPart = decodeURIComponent(window.location.pathname.split("/").filter(Boolean).at(-1) || "");
   const fromPath = /^PROP[-_]/i.test(pathPart) ? pathPart : "";
-  let fromSession = "";
-  try { fromSession = sessionStorage.getItem("cityparkAdminProposalId") || ""; } catch { fromSession = ""; }
-  return String(fromQuery || fromHash || fromPath || fromSession).trim();
+  return String(fromQuery || fromHash || fromPath).trim();
 }
 
 function brokerData() { return { ...(state.broker || {}), ...(state.proposal?.corretorSnapshot || {}) }; }

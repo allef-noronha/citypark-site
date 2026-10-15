@@ -15,7 +15,7 @@ const root=path.resolve(__dirname,'..');
   export function collection(db,name){return {name}};
   export function query(ref,...constraints){return {...ref,constraints}};
   export const where=(...args)=>({type:'where',args}),orderBy=(...args)=>({type:'orderBy',args}),limit=n=>({type:'limit',n}),startAfter=cursor=>({type:'cursor',cursor});
-  export async function getDoc(ref){if(window.previousSaleTest && ref.path.startsWith('unidades/'))return snapshot('2208-A',{unidade:'2208 A',status:'vendida'}); if(window.previousSaleTest && ref.path.startsWith('propostas/'))return snapshot('old',{...proposal,statusProposta:'vendida',origem:'venda_anterior',vendaAnterior:{dataVenda:'2025-10-10',valorCentavos:12345678,condicoes:'Contrato original <teste>',referencia:'Contrato 123'}});if(ref.path==='configuracoes/comercial')return snapshot('comercial',{descontoMaximoPercentual:15,alertaChavesPercentual:60,prazoReservaDias:7,modoEnvioTeste:false}); if(ref.path.startsWith('admins/'))return snapshot('admin',{ativo:true,tipo:'admin',nome:'Administradora'}); if(ref.path.startsWith('propostas/'))return snapshot('p1',proposal); if(ref.path.startsWith('unidades/'))return snapshot('2208-A',{...proposal.unidadeSnapshot,status:'aprovada',propostaAtualId:'p1'}); throw Error('Unexpected related read: '+ref.path);}
+  export async function getDoc(ref){if(window.previousSaleTest && ref.path.startsWith('unidades/'))return snapshot('2208-A',{unidade:'2208 A',status:'vendida'}); if(window.previousSaleTest && ref.path.startsWith('propostas/'))return snapshot('old',{...proposal,condicaoProposta:null,statusProposta:'vendida',origem:'venda_anterior',vendaAnterior:{dataVenda:'2025-10-10',valorCentavos:12345678,condicoes:'Contrato original <teste>',referencia:'Contrato 123'}});if(ref.path==='configuracoes/comercial')return snapshot('comercial',{descontoMaximoPercentual:15,alertaChavesPercentual:60,prazoReservaDias:7,modoEnvioTeste:false}); if(ref.path.startsWith('admins/'))return snapshot('admin',{ativo:true,tipo:'admin',nome:'Administradora'}); if(ref.path.startsWith('propostas/'))return snapshot('p1',proposal); if(ref.path.startsWith('unidades/'))return snapshot('2208-A',{...proposal.unidadeSnapshot,status:'aprovada',propostaAtualId:'p1'}); throw Error('Unexpected related read: '+ref.path);}
   export async function getCountFromServer(){return {data:()=>({count:30})}};
   export async function getDocs(ref){
     if(ref.name==='corretores')throw Error('Full broker collection read');
@@ -78,10 +78,13 @@ const root=path.resolve(__dirname,'..');
         await page.locator('[data-counter-value]').first().fill('');
         await page.locator('[data-counter-value]').first().fill('80000');
         assert.match(await page.locator('[data-counter-value]').first().inputValue(), /^R\$\s*800,00$/);
+        assert.match(await page.locator('[data-counter-row-subtotal]').first().innerText(), /^R\$\s*800,00$/);
         const totalCents = Number((await page.locator('#counterTotalValue').innerText()).replace(/\D/g, ''));
         const expectedShare = `${((80000 / totalCents) * 100).toLocaleString('pt-BR', {minimumFractionDigits:2,maximumFractionDigits:2})}%`;
         assert.equal(await page.locator('[data-counter-row-percentage]').first().innerText(), expectedShare);
         await page.locator('[data-counter-value]').first().fill(signalValue);
+        assert.equal(await page.locator('[data-counter-row-subtotal]').first().getAttribute('contenteditable'), null);
+        await page.screenshot({path:path.join(root,'tests/artifacts/contraproposta-editor.png')});
         await page.locator('[data-counter-date]').last().fill('2029-12-15');
         await page.locator('#saveCounterproposal').click();
         await page.waitForSelector('#counterproposalDisplay:not([hidden])');
@@ -115,7 +118,8 @@ const root=path.resolve(__dirname,'..');
     await page.locator('#previousSaleDetails:not([hidden])').waitFor();
     assert.match(await page.locator('#previousSaleDetails').innerText(),/123.456,78/);
     assert.match(await page.locator('#previousSaleDetails').innerText(),/Contrato original <teste>/);
-    assert.equal(await page.locator('#condicao-proposta').isVisible(),false);
+    assert.equal(await page.locator('#condicao-proposta').isVisible(),true);
+    assert.equal(await page.locator('#currentProposalFinance').isVisible(),false);
     assert.deepEqual(errors,[]);console.log('Four commercial pages: desktop/mobile, pagination, search, original condition and counterproposal UI passed. No Firebase network access.');
   }finally{if(browser)await browser.close();await new Promise(resolve=>server.close(resolve));}
 })().catch(error=>{console.error(error);process.exitCode=1});

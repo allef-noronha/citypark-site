@@ -71,7 +71,7 @@ async function loadDashboard() {
       getCountFromServer(query(units, where("status", "==", "vendida"))),
       getCountFromServer(query(proposalsRef, where("statusProposta", "==", "reservada")))
     ]);
-    const proposals = proposalSnapshot.docs.map(item => ({ id: item.id, ...item.data() }));
+    const proposals = proposalSnapshot.docs.map(item => ({ ...item.data(), id: item.id }));
     renderMetrics({ available: available.data().count, reserved: reserved.data().count, sold: sold.data().count }, total.data().count, pending.data().count);
     renderRecentProposals(proposals);
     elements.updatedAt.textContent = `Atualizado em: ${new Intl.DateTimeFormat("pt-BR", {
@@ -114,7 +114,7 @@ function renderRecentProposals(proposals) {
     const unit = proposal.unidadeSnapshot?.unidade || proposal.unidadeId || "Unidade não informada";
     const client = proposal.cliente?.nomeCompleto || proposal.cliente?.razaoSocial || "Cliente não informado";
     const group = proposalStatusGroup(proposal.statusProposta);
-    return `<a class="recent-item" href="detalhes-proposta.html?id=${encodeURIComponent(proposal.id)}">
+    return `<a class="recent-item" href="detalhes-proposta.html?id=${encodeURIComponent(proposal.id)}#proposta=${encodeURIComponent(proposal.id)}">
       <span data-status="${group}">${escapeHtml(proposalStatusLabel(proposal.statusProposta))}</span>
       <strong>Unidade ${escapeHtml(unit)}</strong>
       <small>${escapeHtml(client)} · ${escapeHtml(formatDate(proposal.criadoEm))}</small>

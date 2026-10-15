@@ -39,6 +39,20 @@ Não há liberação automática de reservas antigas nesta revisão. Mantenha a 
 
 Distrato preserva proposta e valores, registrando histórico. Invalidação do teste identificado preserva o registro e bloqueia a 2208 A para conferência. Cadastro de venda anterior aceita unidade comercial vendida sem vínculo pendente, mantém a venda e evita duplicação. Esses fluxos agora atualizam também a projeção pública.
 
+No Mapa (`tabela-admin.html`), unidades com proposta vinculada oferecem acesso direto a `detalhes-proposta.html?id=...`. O cadastro de venda anterior cria a proposta e o vínculo e abre automaticamente o detalhamento após o sucesso da transação. A unidade permanece vendida. Cliente e corretor usam os dados gerais da mesma página; valor, data original, referência e condições contratadas aparecem em Condição de Proposta. O cadastro preserva a tipologia e a área da unidade em seu snapshot quando disponíveis. Em falha, o formulário mantém os valores preenchidos e apresenta o erro.
+
+Os links também carregam o ID em `#proposta=...`, preservando a seleção quando o servidor redireciona para uma URL sem `.html` e remove a query. O detalhamento repõe o ID na query da URL atual e exige identificação explícita; não abre a última proposta guardada na sessão. IDs retornados pelo Firestore prevalecem sobre campos `id` eventualmente gravados dentro dos documentos.
+
+Para uma unidade comercial vendida sem vínculo, o administrador também pode selecionar uma proposta existente já vendida da mesma unidade. `js/vinculo-proposta.js` grava `propostaAtualId`, `vinculoHistoricoId` e a atualização da unidade junto à projeção pública e aos dois históricos, na mesma transação. Não altera a proposta, as condições contratadas nem o status vendido. Propostas de outra unidade, vínculos existentes e outras propostas ativas ou legadas pendentes bloqueiam a operação.
+
+Esta opção exige publicar as regras atualizadas de `firebase/firestore.rules` junto aos arquivos do Mapa. Não exige migração nem recria dados ausentes de vendas antigas. A verificação de navegador dedicada é `node tests/mapa-browser.cjs`, com Firebase substituído por dados isolados.
+
+O cadastro de venda anterior inclui agora nome, CRECI, telefone, e-mail e imobiliária do corretor da época, além dos dados completos de cliente PF/PJ do formulário. O corretor histórico permanece em `corretorSnapshot`, sem criar uma conta ou atribuir a venda ao administrador. Os dados do cliente seguem o mesmo mapa `cliente` das propostas comuns.
+
+Os pagamentos são registrados em `condicaoProposta` (schema 3, personalizada): sinal opcional em até 3 parcelas, até 12 grupos mensais/semestrais/anuais/únicos e financiamento opcional. O cadastro usa as funções de moeda e calendário de `js/condicao-venda.js`. Subtotais, total, diferença e percentuais usam centavos e a soma efetivamente contratada; subtotal, total e percentuais não são editáveis. O valor de tabela e os vencimentos são os informados do contrato original, sem aplicar retroativamente a tabela, os limites de desconto/financiamento ou o calendário comercial vigente. As observações em texto são opcionais e não substituem as parcelas.
+
+A proposta histórica mantém o status vendido e usa a tabela financeira e os dados gerais de `detalhes-proposta.html`. Registros antigos sem `condicaoProposta` continuam exibindo as condições em texto; não são migrados ou sobrescritos. As regras verificam os snapshots, componentes, totais e os dois históricos na mesma transação, distribuindo a validação para respeitar o limite de expressões do Firestore. Publique `firebase/firestore.rules` desta revisão juntamente com os novos scripts `js/venda-anterior-modelo.js` e `js/venda-anterior-form.js` e os arquivos alterados do Mapa/detalhamento.
+
 ## Verificação local
 
 Testes das regras e transações no emulador, testes de projeção/Apps Script/filtros e testes de navegador desktop/mobile. Não validam dados, regras implantadas, índices ou gatilhos reais. Nenhuma regra ou dado de produção foi alterado pela preparação local.

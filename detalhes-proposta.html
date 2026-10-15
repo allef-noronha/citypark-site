@@ -7,7 +7,7 @@
   <meta name="robots" content="noindex, nofollow">
   <title>Detalhamento da Proposta | City Park</title>
   <link rel="stylesheet" href="css/admin-shell.css?v=20260908-negociacao">
-  <link rel="stylesheet" href="css/detalhes-proposta.css?v=20260908-negociacao">
+  <link rel="stylesheet" href="css/detalhes-proposta.css?v=20261015-venda-anterior">
   <link rel="icon" href="data:,">
   <style>html:not(.page-authorized) body { visibility: hidden; }</style>
 </head>
@@ -23,7 +23,7 @@
 
   <nav class="admin-navigation" aria-label="Módulos administrativos">
     <a href="painel-admin.html">Visão geral</a>
-    <a href="tabela-admin.html">Tabela</a>
+    <a href="tabela-admin.html">Mapa</a>
     <a class="active" href="gestao-propostas.html" aria-current="page">Propostas</a>
     <button type="button" disabled aria-label="Corretores, módulo ainda não disponível">Corretores</button>
     <a href="configuracoes-comerciais.html">Configurações</a>
@@ -85,7 +85,8 @@
         </section>
 
         <section id="condicao-proposta" class="detail-section">
-          <article class="finance-card">
+          <article id="previousSaleDetails" class="finance-card" hidden></article>
+          <article id="currentProposalFinance" class="finance-card">
             <div class="condition-heading"><h2>Condição de Proposta:</h2><span id="financeConditionType">—</span><span id="financeValidation" class="validation-badge">—</span></div>
             <div class="finance-totals">
               <div><span>Valor da tabela</span><strong id="financeTableValue">—</strong></div><div><span>Total preenchido</span><strong id="financeProposalValue">—</strong></div><div id="financeDifferenceCard"><span>Diferença</span><strong id="financeDifference">—</strong></div><div><span>Desconto (%)</span><strong id="financePercentage">—</strong></div>
@@ -116,7 +117,6 @@
           <div id="historyTimeline" class="history-timeline" aria-live="polite"></div>
         </section>
 
-        <section id="previousSaleDetails" hidden class="detail-section"></section>
         <section id="invalidateTestSection" hidden class="detail-section cancellation-section">
           <h2>Proposta de teste</h2>
           <p>Invalide o teste preservando os dados e o histórico. A unidade ficará bloqueada até a conferência das propostas anteriores.</p>
@@ -162,6 +162,6 @@
   </div>
 
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
-  <script src="js/condicao-venda.js?v=20260908-negociacao"></script><script type="module" src="js/detalhes-proposta.js?v=20261013-parcelas"></script>
+  <script src="js/condicao-venda.js?v=20260908-negociacao"></script><script type="module" src="js/detalhes-proposta.js?v=20261015-parcelas"></script>
 </body>
 </html>

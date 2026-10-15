@@ -28,7 +28,7 @@ function presentation({ firebase = {}, confirm = () => true } = {}) {
   const source = fs.readFileSync(path.join(__dirname, "../js/detalhes-proposta.js"), "utf8")
     .replace(/^import[\s\S]*?from\s+["'][^"']+["'];\s*/gm, "");
   vm.runInContext(source, context);
-  const api = vm.runInContext(`({ renderFinance, clientFields, proposalExpiry, expiryLabel, toDate, renderGeneralData, renderSummary, renderReservation, renderCounterproposalTotals, formatCounterproposalCurrencyField, buildCounterproposalCondition, counterproposalDraftRows, renderCounterproposal, saveCounterproposal, openFinanceModal, saveFinanceEdit, openConfirmation, executeConfirmedAction, cancelApprovedProposal, distractSoldProposal, invalidateTestProposal, approveProposal, rejectProposal,
+  const api = vm.runInContext(`({ renderFinance, previousSaleSummary, clientFields, proposalExpiry, expiryLabel, toDate, renderGeneralData, renderSummary, renderReservation, renderCounterproposalTotals, formatCounterproposalCurrencyField, buildCounterproposalCondition, counterproposalDraftRows, renderCounterproposal, saveCounterproposal, openFinanceModal, saveFinanceEdit, openConfirmation, executeConfirmedAction, cancelApprovedProposal, distractSoldProposal, invalidateTestProposal, approveProposal, rejectProposal,
     setData(proposal, unit = null) { state.proposal = proposal; state.unit = unit; },
     setSimulation(condition) { state.simulation = condition; },
     configureActions(notify, reload, components = []) { state.adminUser = { uid: "admin-test" }; showToast = notify; loadProposal = reload; state.financeComponents = components; },
@@ -44,6 +44,16 @@ test("PF: nome antes do tipo e somente rótulos de pessoa física", () => {
   assert.equal(fields[0][1], "Cliente PF");
   assert.equal(fields[1][1], "Pessoa física (PF)");
   assert.equal(fields[2][1], "123.456.789-01");
+});
+
+test('venda anterior apresenta os dados contratuais originais na condição da proposta',()=>{
+  const api=presentation();
+  const html=api.previousSaleSummary({dataVenda:'2025-10-10',valorCentavos:12345678,referencia:'Contrato <123>',condicoes:'Entrada R$ 20.000,00\nSaldo conforme contrato <original>'});
+  assert.match(html,/123\.456,78/);
+  assert.match(html,/10\/10\/2025/);
+  assert.match(html,/Contrato &lt;123&gt;/);
+  assert.match(html,/Saldo conforme contrato &lt;original&gt;/);
+  assert.doesNotMatch(html,/Desconto|Valor da tabela/);
 });
 
 test("PJ: razão social, CNPJ e contatos comerciais", () => {
@@ -140,6 +150,7 @@ function counterRow(type, quantity, value, dueDate = "2026-09-04") {
     "[data-counter-quantity]": { value: quantity },
     "[data-counter-value]": { value },
     "[data-counter-date]": { value: dueDate },
+    "[data-counter-row-subtotal]": { textContent: "" },
     "[data-counter-row-percentage]": { textContent: "" }
   };
   return { querySelector: selector => fields[selector] };
@@ -163,6 +174,7 @@ test("contraproposta: atualiza os quatro indicadores e o percentual de cada grup
   assert.equal(keys.querySelector("[data-counter-quantity]").readOnly, false);
   assert.equal(monthly.querySelector("[data-counter-quantity]").readOnly, false);
   assert.deepEqual(rows.map(row => row.querySelector("[data-counter-row-percentage]").textContent), ["10,00%", "10,00%", "80,00%"]);
+  assert.deepEqual(rows.map(row => row.querySelector("[data-counter-row-subtotal]").textContent.replace(/\s/g, " ")), ["R$ 10.000,00", "R$ 10.000,00", "R$ 80.000,00"]);
 
   monthly.querySelector("[data-counter-value]").value = "2.000,00";
   api.renderCounterproposalTotals();
@@ -170,6 +182,7 @@ test("contraproposta: atualiza os quatro indicadores e o percentual de cada grup
   assert.match(api.node("counterDifference").textContent, /-R\$\s*10\.000,00/);
   assert.equal(api.node("counterPercentage").textContent, "-10%");
   assert.deepEqual(rows.map(row => row.querySelector("[data-counter-row-percentage]").textContent), ["9,09%", "18,18%", "72,73%"]);
+  assert.deepEqual(rows.map(row => row.querySelector("[data-counter-row-subtotal]").textContent.replace(/\s/g, " ")), ["R$ 10.000,00", "R$ 20.000,00", "R$ 80.000,00"]);
   assert.equal(api.node("counterDifferenceCard").classList.contains("unbalanced"), true);
 
   rows.pop();
@@ -189,6 +202,7 @@ test("contraproposta: campos vazios e valor de tabela ausente não geram NaN", (
   assert.equal(api.node("counterDifference").textContent, "—");
   assert.match(api.node("counterTotalValue").textContent, /0,00/);
   assert.equal(api.node("counterPercentage").textContent, "0%");
+  assert.match(monthly.querySelector("[data-counter-row-subtotal]").textContent, /0,00/);
   assert.equal(monthly.querySelector("[data-counter-row-percentage]").textContent, "0,00%");
   assert.equal(api.node("counterDifferenceCard").classList.contains("unbalanced"), false);
 });
