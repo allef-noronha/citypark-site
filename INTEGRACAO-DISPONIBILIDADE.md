@@ -53,6 +53,10 @@ Os pagamentos são registrados em `condicaoProposta` (schema 3, personalizada): 
 
 A proposta histórica mantém o status vendido e usa a tabela financeira e os dados gerais de `detalhes-proposta.html`. Registros antigos sem `condicaoProposta` continuam exibindo as condições em texto; não são migrados ou sobrescritos. As regras verificam os snapshots, componentes, totais e os dois históricos na mesma transação, distribuindo a validação para respeitar o limite de expressões do Firestore. Publique `firebase/firestore.rules` desta revisão juntamente com os novos scripts `js/venda-anterior-modelo.js` e `js/venda-anterior-form.js` e os arquivos alterados do Mapa/detalhamento.
 
+Vendas anteriores com parcelas estruturadas também oferecem **Editar proposta** e **Fazer uma Contraproposta**, usando o editor compartilhado. A edição é permitida enquanto a proposta histórica e sua unidade vinculada permanecem vendidas. Preserva `condicaoOriginal`, incrementa `financeiroRevisao` e registra a condição anterior/nova no histórico, com proteção contra alterações simultâneas. Valor contratado, data original, referência e observações da venda anterior permanecem como dados do contrato original. A condição atual é exibida separadamente.
+
+O editor mantém o financiamento histórico sem vencimento e permite a ausência de sinal/financiamento, conforme o cadastro. Ao alterar apenas valores, conserva os calendários e as descrições existentes. A contraproposta continua sendo uma simulação para impressão, sem gravar alterações na proposta. O resumo contratual separa os grupos por item de lista apenas na apresentação, sem reescrever o texto armazenado. Registros legados sem parcelas estruturadas continuam com sua leitura anterior.
+
 ## Verificação local
 
 Testes das regras e transações no emulador, testes de projeção/Apps Script/filtros e testes de navegador desktop/mobile. Não validam dados, regras implantadas, índices ou gatilhos reais. Nenhuma regra ou dado de produção foi alterado pela preparação local.

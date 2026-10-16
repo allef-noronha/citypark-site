@@ -139,7 +139,7 @@ function renderAll() {
   const previous = state.proposal.vendaAnterior;
   $('previousSaleDetails').hidden = !previous;
   $('currentProposalFinance').hidden = !!previous && !state.proposal.condicaoProposta;
-  $('originalCondition').hidden = !!previous;
+  $('originalCondition').hidden = !!previous && !state.proposal.condicaoProposta;
   if (previous) $('previousSaleDetails').innerHTML = previousSaleSummary(previous, !!state.proposal.condicaoProposta);
 
   renderSummary();
@@ -147,7 +147,7 @@ function renderAll() {
   renderGeneralData();
   renderFinance();
   renderCounterproposal();
-  $("editProposalCondition").hidden = !["reservada", "aprovada"].includes(state.proposal.statusProposta);
+  $("editProposalCondition").hidden = !canEditProposalCondition(state.proposal);
   renderCommercialStage();
   $("originalConditionContent").innerHTML = conditionSummary(state.proposal.condicaoOriginal || state.proposal.condicaoProposta);
   document.title = `${state.proposal.id} | City Park`;
@@ -155,12 +155,19 @@ function renderAll() {
 
 function previousSaleSummary(sale, structured = false) {
   const date = /^\d{4}-\d{2}-\d{2}$/.test(sale.dataVenda || '') ? formatDateOnly(sale.dataVenda + 'T12:00:00') : 'Não informada';
+  const terms = String(sale.condicoes || '').split(/\s*·\s*|\r?\n/).map(line => line.trim()).filter(Boolean);
   return `<div class="condition-heading"><h2>${structured ? 'Dados da venda anterior' : 'Condição de Proposta:'}</h2><span>Venda anterior cadastrada</span></div>
     <dl class="previous-sale-summary">
       <div><dt>Valor contratado</dt><dd data-previous-sale-value>${formatMoney(sale.valorCentavos)}</dd></div>
       <div><dt>Data original da venda</dt><dd data-previous-sale-date>${escapeHtml(date)}</dd></div>
       <div><dt>Referência documental</dt><dd data-previous-sale-reference>${escapeHtml(sale.referencia)}</dd></div>
-    </dl><h3>${structured ? 'Observações / resumo do contrato' : 'Condições contratadas'}</h3><p class="previous-sale-terms" data-previous-sale-conditions>${escapeHtml(sale.condicoes)}</p>`;
+    </dl><h3>${structured ? 'Observações / resumo do contrato' : 'Condições contratadas'}</h3><ul class="previous-sale-terms" data-previous-sale-conditions>${terms.map(line => `<li>${escapeHtml(line)}</li>`).join('')}</ul>`;
+}
+
+function canEditProposalCondition(proposal) {
+  const status = normalizeStatus(proposal.statusProposta);
+  return ["reservada", "aprovada"].includes(status)
+    || (status === "vendida" && !!proposal.vendaAnterior && structuredComponents(proposal.condicaoVigente || proposal.condicaoProposta || {}).length > 0);
 }
 
 function renderSummary() {
@@ -494,6 +501,8 @@ function addCounterproposalRow(type = "mensal", values = null) {
     <button type="button" data-remove-counter-row aria-label="Remover parcela">×</button>`;
   elements.counterproposalRows.appendChild(row);
   if (values) {
+    row.sourcePayment = values.component;
+    row.sourcePaymentType = type;
     row.querySelector("[data-counter-type]").value = type;
     row.querySelector("[data-counter-quantity]").value = String(values.quantity || 1);
     row.querySelector("[data-counter-date]").value = values.dueDate || "";
@@ -510,7 +519,7 @@ function counterproposalDraftRows(condition) {
     rows.push({ type:["mensal", "semestral", "anual", "outra"].includes(component.periodicidade) ? component.periodicidade : "outra", component });
   });
   if (components.chaves?.ativo) rows.push({ type:"chaves", component:components.chaves });
-  return rows.map(({ type, component }) => ({ type, quantity:component.quantidade || 1, dueDate:dateInputValue(component.primeiroVencimento), value:component.valorUnitarioCentavos }));
+  return rows.map(({ type, component }) => ({ type, quantity:component.quantidade || 1, dueDate:dateInputValue(component.primeiroVencimento), value:component.valorUnitarioCentavos, component }));
 }
 
 function formatCounterproposalCurrencyField(field) {
@@ -547,6 +556,7 @@ function renderCounterproposalTotals() {
 }
 
 function buildCounterproposalCondition() {
+  const historical = !!state.proposal.vendaAnterior;
   const tableValue = unitTableValue();
   if (!Number.isInteger(tableValue)) throw new Error("O valor da unidade não está disponível.");
   const rows = [...elements.counterproposalRows.querySelectorAll("[data-counter-row]")];
@@ -559,16 +569,24 @@ function buildCounterproposalCondition() {
   for (const row of rows) {
     const rawType = row.querySelector("[data-counter-type]").value;
     const quantity = Number(row.querySelector("[data-counter-quantity]").value);
-    const periodicity = ["sinal", "chaves"].includes(rawType) ? (quantity > 1 ? "mensal" : "unica") : rawType;
+    let periodicity = ["sinal", "chaves"].includes(rawType) ? (quantity > 1 ? "mensal" : "unica") : rawType;
     const unitValue = PaymentPlan?.currencyToCents(row.querySelector("[data-counter-value]").value);
     const dueDate = row.querySelector("[data-counter-date]").value;
     const max = { unica: 1, mensal: 240, semestral: 60, anual: 30, outra: 1 }[periodicity];
-    const schedule = PaymentPlan?.buildSchedule(dueDate, quantity, periodicity);
-    if (!Number.isInteger(quantity) || quantity < 1 || quantity > max || !Number.isInteger(unitValue) || unitValue <= 0 || !schedule || schedule.length !== quantity) {
+    const undatedFinancing = historical && rawType === "chaves" && quantity === 1 && !dueDate;
+    const source = row.sourcePayment;
+    const unchangedCalendar = row.sourcePaymentType === rawType && source?.quantidade === quantity && dateInputValue(source.primeiroVencimento) === dueDate;
+    let schedule = undatedFinancing ? [] : PaymentPlan?.buildSchedule(dueDate, quantity, periodicity);
+    // Ao alterar apenas valores, mantém o calendário original, inclusive dia 30 após fevereiro.
+    if (unchangedCalendar && source.vencimentos?.length === quantity && source.vencimentos.every(date => toDate(date))) {
+      schedule = source.vencimentos.map(toDate);
+      periodicity = source.periodicidade;
+    }
+    if (!Number.isInteger(quantity) || quantity < 1 || quantity > max || !Number.isInteger(unitValue) || unitValue <= 0 || !schedule || (!undatedFinancing && schedule.length !== quantity)) {
       throw new Error("Preencha tipo, quantidade, valor e vencimento de todas as parcelas.");
     }
     const label = { sinal: "Sinal", mensal: "Parcelas mensais", semestral: "Parcelas semestrais", anual: "Parcelas anuais", outra: "Negociação especial", chaves: "Financiamento" }[rawType];
-    const component = { ativo: true, quantidade: quantity, valorUnitarioCentavos: unitValue, totalCentavos: quantity * unitValue, periodicidade: periodicity, primeiroVencimento: Timestamp.fromDate(schedule[0]), vencimentos: schedule.map(date => Timestamp.fromDate(date)), descricao: label };
+    const component = { ativo: true, quantidade: quantity, valorUnitarioCentavos: unitValue, totalCentavos: quantity * unitValue, periodicidade: periodicity, primeiroVencimento: schedule.length ? Timestamp.fromDate(schedule[0]) : null, vencimentos: schedule.map(date => Timestamp.fromDate(date)), descricao: row.sourcePaymentType === rawType && source?.descricao ? source.descricao : label };
     if (rawType === "sinal") {
       if (signal) throw new Error("Use apenas uma linha de Sinal.");
       signal = component;
@@ -581,7 +599,9 @@ function buildCounterproposalCondition() {
     }
     description.push(`${quantity}x ${label} de ${formatMoney(unitValue)}`);
   }
-  if (!signal || !keys) throw new Error("A contraproposta precisa ter uma linha de Sinal e uma de Financiamento.");
+  if ((!signal || !keys) && !historical) throw new Error("A contraproposta precisa ter uma linha de Sinal e uma de Financiamento.");
+  signal ||= inactiveCounterComponent();
+  keys ||= inactiveCounterComponent();
   const total = [signal, ...Object.values(slots), keys].reduce((sum, item) => sum + item.totalCentavos, 0);
   return { schemaVersao: 4, tipo: "personalizada", descricao: description.join(" · ").slice(0, 1000), valorTabelaCentavos: tableValue, totalCalculadoCentavos: total, diferencaCentavos: tableValue - total, porcentagemObra: percentageOfTable(total, tableValue), componentes: { sinal: signal, parcelas: slots, chaves: keys } };
 }
@@ -620,7 +640,7 @@ async function saveProposalCondition(condition) {
     if(!ps.exists() || !us.exists()) throw new Error("Proposta ou unidade não encontrada.");
     const proposal=ps.data(),unit=us.data();
     assertCurrentUnit(proposal,unit);
-    if(!["reservada","aprovada"].includes(proposal.statusProposta) || unit.status!==proposal.statusProposta) throw new Error("Esta proposta não está disponível para edição.");
+    if(!canEditProposalCondition(proposal) || unit.status!==proposal.statusProposta) throw new Error("Esta proposta não está disponível para edição.");
     if((proposal.financeiroRevisao || 0)!==expectedRevision || dateValue(proposal.atualizadoEm)!==expectedUpdatedAt) throw new Error("A proposta foi alterada por outra sessão. Atualize antes de editar novamente.");
     const previous=proposal.condicaoVigente || proposal.condicaoProposta;
     transaction.update(proposalRef,{condicaoOriginal:proposal.condicaoOriginal || proposal.condicaoProposta,condicaoProposta:condition,condicaoVigente:deleteField(),financeiroRevisao:expectedRevision+1,adminId:state.adminUser.uid,atualizadoEm:serverTimestamp()});
@@ -628,7 +648,7 @@ async function saveProposalCondition(condition) {
   });
 }
 function renderCounterproposal() {
-  if (state.proposal.vendaAnterior) {
+  if (state.proposal.vendaAnterior && !state.proposal.condicaoProposta) {
     elements.openCounterproposal.hidden = true;
     elements.counterproposalForm.hidden = true;
     elements.counterproposalDisplay.hidden = true;

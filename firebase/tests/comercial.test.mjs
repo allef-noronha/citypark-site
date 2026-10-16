@@ -215,6 +215,30 @@ test('ações comerciais executam o código da página com regras reais no emula
       await assert.rejects(ui.run('saveProposalCondition(state.proposal.condicaoProposta)'),/outra sessão/);
       assert.equal((await getDocs(collection(db,'historico_propostas'))).size,0);
     });
+    await t.test('edição de venda anterior mantém contrato original, vínculo e status, com revisão e histórico',async()=>{
+      const condition=require('../../js/venda-anterior-modelo.js').buildCondition(require('../../tests/previous-sale-fixture.cjs')().condicao);
+      await seed('vendida','p1',{origem:'venda_anterior',vendaAnterior:{dataVenda:'2025-10-10',valorCentavos:12345678,referencia:'Contrato 123',condicoes:condition.descricao},condicaoProposta:condition,vendidoEm:firestore.Timestamp.fromMillis(1000)});
+      const before=await proposal(), unitBefore=await unit();
+      const ui=screen(db,before,unitBefore);
+      await ui.run('saveProposalCondition({...state.proposal.condicaoProposta,totalCalculadoCentavos:13345678,diferencaCentavos:1654322,componentes:{...state.proposal.condicaoProposta.componentes,parcelas:{...state.proposal.condicaoProposta.componentes.parcelas,grupo01:{...state.proposal.condicaoProposta.componentes.parcelas.grupo01,valorUnitarioCentavos:200000,totalCentavos:2000000}}}})');
+      const result=await proposal();
+      assert.equal(result.statusProposta,'vendida');
+      assert.deepEqual(await unit(),unitBefore);
+      assert.deepEqual(result.vendaAnterior,before.vendaAnterior);
+      assert.deepEqual(result.condicaoOriginal,before.condicaoProposta);
+      assert.equal(result.condicaoProposta.totalCalculadoCentavos,13345678);
+      assert.equal(result.financeiroRevisao,1);
+      assert.deepEqual(result.vendidoEm,before.vendidoEm);
+      const events=(await getDocs(collection(db,'historico_propostas'))).docs;
+      assert.equal(events.length,1);
+      assert.deepEqual(events[0].data().condicaoAnterior,before.condicaoProposta);
+      assert.deepEqual(events[0].data().condicaoNova,result.condicaoProposta);
+      await assert.rejects(ui.run('saveProposalCondition(state.proposal.condicaoProposta)'),/outra sessão/);
+      await ui.run('distractSoldProposal("Distrato do contrato 123")');
+      const ended=screen(db,await proposal(),await unit());
+      await assert.rejects(ended.run('saveProposalCondition(state.proposal.condicaoProposta)'),/vinculada|edição/);
+      assert.deepEqual((await proposal()).condicaoOriginal,before.condicaoProposta);
+    });
     await t.test('etapas sequenciais terminam em venda com unidade e histórico atômicos',async()=>{
       await seed('aprovada');
       for(const target of ['documentos','assinatura','sienge','concluida']) {
