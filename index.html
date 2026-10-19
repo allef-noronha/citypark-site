@@ -83,7 +83,7 @@
 
   <!-- CSS e demais assets -->
   <link rel="stylesheet" href="css/theme.css" />
-  <link rel="stylesheet" href="css/index.css" />
+  <link rel="stylesheet" href="css/index.css?v=20261019-hero" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
   <link rel="icon" href="data:,">
   <link rel="canonical" href="https://cityparkmcz.com.br/">
@@ -135,18 +135,19 @@
 
   <!-- ======================= HERO ======================= -->
   <section class="hero">
-    <img class="hero-fallback" src="img/Folder.jpg" alt="City Park: fachada da Torre Liberty" fetchpriority="high">
+    <img class="hero-fallback" data-src="img/Folder.jpg" alt="City Park: fachada da Torre Liberty">
   <video
     class="hero-video"
+    src="media/hero-1080p.mp4"
+    autoplay
     muted
     loop
     playsinline
-    preload="none"
-    poster="img/Folder.jpg"
+    preload="auto"
     aria-hidden="true"
   >
-    <source data-src="media/hero-1080p.mp4" type="video/mp4">
   </video>
+  <script src="js/hero.js?v=20261019-hero"></script>
   </section>
 
   <!-- ================== TORRE LIBERTY / FICHA ================ -->
@@ -439,6 +440,6 @@
     </div>
   </footer>
 
-  <script src="js/index.js" defer></script>
+  <script src="js/index.js?v=20261019-hero" defer></script>
 </body>
 </html>
