@@ -109,3 +109,17 @@
 #previousSaleForm label {display:block;margin:12px 0;}
 #previousSaleForm input:not([type=checkbox]), #previousSaleForm textarea {display:block;width:100%;box-sizing:border-box;padding:10px;border:1px solid #aab7cb;border-radius:6px;font:inherit;}
 #previousError {color:#a32222;}
+#previousSaleForm fieldset { min-width: 0; margin: 18px 0; padding: 12px; border: 1px solid #ccd5e5; border-radius: 6px; }
+#previousSaleForm legend { font-weight: 700; }
+#previousSaleForm select { display: block; width: 100%; box-sizing: border-box; padding: 10px; border: 1px solid #aab7cb; border-radius: 6px; font: inherit; }
+#previousSaleForm input[readonly] { background: #eef1f5; }
+#linkProposalForm { border-top: 1px solid #ccd5e5; margin-top: 24px; padding-top: 20px; }
+#linkProposalForm label { display: block; margin: 12px 0; }
+#linkProposalForm select, #linkProposalForm textarea, #linkProposalForm input:not([type=checkbox]) { display: block; width: 100%; box-sizing: border-box; padding: 10px; border: 1px solid #aab7cb; border-radius: 6px; font: inherit; }
+#linkProposalError { color: #a32222; }
+#unitDialog button:disabled { opacity: .55; cursor: not-allowed; }
+.linked-proposal { margin: 12px 0 24px; padding: 18px; border: 1px solid #ccd5e5; border-radius: 12px; background: #f5f7fc; overflow-wrap: anywhere; }
+.linked-proposal h3 { margin: 0 0 8px; }
+.linked-proposal p { margin: 8px 0; }
+.linked-proposal small { color: #596477; }
+#unitDialog .proposal-detail-link { display: inline-block; margin-top: 8px; padding: 11px 16px; border-radius: 8px; background: #1729a5; color: #fff; text-decoration: none; }

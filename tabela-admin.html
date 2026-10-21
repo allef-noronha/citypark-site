@@ -7,7 +7,7 @@
   <meta name="robots" content="noindex, nofollow">
   <title>Tabela Administrativa | City Park</title>
   <link rel="stylesheet" href="css/admin-shell.css?v=20260907-comercial">
-  <link rel="stylesheet" href="css/tabela-admin.css?v=20260907-comercial">
+  <link rel="stylesheet" href="css/tabela-admin.css?v=20261015-parcelas">
   <link rel="icon" href="data:,">
   <style>html:not(.page-authorized) body { visibility: hidden; }</style>
 </head>
@@ -22,7 +22,7 @@
 
   <nav class="admin-navigation" aria-label="Módulos administrativos">
     <a href="painel-admin.html">Visão geral</a>
-    <a class="active" href="tabela-admin.html" aria-current="page">Tabela</a>
+    <a class="active" href="tabela-admin.html" aria-current="page">Mapa</a>
     <a href="gestao-propostas.html">Propostas</a>
     <button type="button" disabled aria-label="Corretores, módulo ainda não disponível">Corretores</button>
     <a href="configuracoes-comerciais.html">Configurações</a>
@@ -101,17 +101,62 @@
   <dialog id="unitDialog" aria-labelledby="unitDialogTitle">
     <header><h2 id="unitDialogTitle">Unidade</h2><button id="closeUnitDialog" type="button">Fechar</button></header>
     <div id="unitDialogBody" aria-live="polite"></div>
+    <form id="linkProposalForm" hidden>
+      <h3>Vincular proposta existente</h3>
+      <p>Selecione uma proposta já vendida desta unidade. O vínculo preservará os dados e as condições da proposta.</p>
+      <p id="linkProposalEmpty" hidden>Nenhuma proposta vendida desta unidade disponível para vínculo. Use o cadastro de venda anterior abaixo se a venda ainda não estiver registrada.</p>
+      <div id="linkProposalFields">
+        <label>Proposta<select id="linkProposalSelect" required></select></label>
+        <p><a id="linkProposalPreview" hidden>Ver proposta selecionada</a></p>
+        <label>Motivo do vínculo<textarea id="linkProposalReason" required maxlength="2000"></textarea></label>
+        <label>Referência documental<input id="linkProposalReference" required maxlength="300" placeholder="Número do contrato ou referência da venda"></label>
+        <label><input id="linkProposalChecked" type="checkbox" required>Conferi a unidade, o cliente e os documentos desta proposta.</label>
+        <p id="linkProposalError" role="alert"></p>
+        <button id="linkProposalSubmit" type="submit">Vincular proposta à unidade</button>
+      </div>
+    </form>
     <form id="previousSaleForm" hidden>
       <h3>Cadastrar venda anterior</h3>
-      <p>Reconstrua o registro de uma venda comercial já concluída. A unidade continuará vendida. Não use para Administração ou permuta.</p>
-      <label>Cliente / razão social<input id="previousClient" required maxlength="200"></label>
-      <label>Corretor responsável à época<input id="previousBroker" required maxlength="200"></label>
+      <p>Cadastre os dados do contrato original para gerar uma proposta vinculada a esta unidade e consultar seu detalhamento. A unidade continuará vendida.</p>
+      <p id="previousSaleConflict" hidden>Há uma proposta ativa ou legada pendente nesta unidade. Confira as propostas acima; se a venda já estiver registrada, use o vínculo de proposta existente.</p>
+      <fieldset><legend>Dados do corretor responsável à época</legend>
+        <label>Nome completo<input id="previousBroker" required maxlength="200"></label>
+        <label>CRECI<input id="previousCreci" required maxlength="50"></label>
+        <label>Telefone<input id="previousBrokerPhone" type="tel" required maxlength="30"></label>
+        <label>E-mail<input id="previousBrokerEmail" type="email" required maxlength="254"></label>
+        <label>Imobiliária (opcional)<input id="previousRealEstate" maxlength="200"></label>
+      </fieldset>
+      <fieldset><legend>Dados do cliente</legend>
+        <label>Tipo de cliente<select id="previousClientType"><option value="PF">Pessoa física</option><option value="PJ">Pessoa jurídica</option></select></label>
+        <div id="previousPF">
+          <label>Nome completo<input id="previousClient" required maxlength="200"></label>
+          <label>CPF<input id="previousCpf" inputmode="numeric" required maxlength="14"></label>
+          <label>Telefone<input id="previousClientPhone" type="tel" required maxlength="30"></label>
+          <label>E-mail<input id="previousClientEmail" type="email" required maxlength="254"></label>
+        </div>
+        <div id="previousPJ" hidden>
+          <label>Razão social<input id="previousCompany" maxlength="200" disabled></label>
+          <label>CNPJ<input id="previousCnpj" inputmode="numeric" maxlength="18" disabled></label>
+          <label>Telefone comercial<input id="previousCompanyPhone" type="tel" maxlength="30" disabled></label>
+          <label>E-mail comercial<input id="previousCompanyEmail" type="email" maxlength="254" disabled></label>
+        </div>
+      </fieldset>
       <label>Data original da venda<input id="previousDate" type="date" required></label>
-      <label>Valor da venda (R$)<input id="previousValue" type="number" min="0.01" max="1000000000" step="0.01" required></label>
-      <label>Condições contratadas<textarea id="previousConditions" required maxlength="4000" placeholder="Entrada, parcelas, vencimentos e demais condições do contrato original"></textarea></label>
+      <fieldset><legend>Condições da proposta contratada</legend>
+        <p>Informe os valores e vencimentos do contrato original. O total e os percentuais são calculados pelas parcelas, como no formulário de proposta. Dia 30 em fevereiro usa o último dia do mês.</p>
+        <label>Valor de tabela original<input id="previousTableValue" data-currency inputmode="decimal" placeholder="R$ 0,00" required></label>
+        <label>Total da proposta<input id="previousValue" readonly tabindex="-1"></label>
+        <label>Diferença para a tabela<input id="previousDifference" readonly tabindex="-1"></label>
+        <div id="previousSignal"></div>
+        <div id="previousPayments"></div>
+        <button id="previousAddPayment" type="button">Adicionar grupo de parcelas (até 12)</button>
+        <label>Financiamento (opcional)<input id="previousFinancing" data-currency inputmode="decimal" placeholder="R$ 0,00"></label>
+        <label>% da proposta — financiamento<input id="previousFinancingShare" readonly tabindex="-1"></label>
+        <label>Observações do contrato (opcional)<textarea id="previousConditions" maxlength="4000" placeholder="Demais condições ou observações do contrato original"></textarea></label>
+      </fieldset>
       <label>Referência documental<input id="previousReference" required maxlength="300" placeholder="Número do contrato ou referência do registro antigo"></label>
       <label><input id="previousChecked" type="checkbox" required>Conferi o histórico e os documentos. Confirmo que é uma venda comercial anterior.</label>
-      <p id="previousError" role="alert"></p><button id="previousSubmit" type="submit">Cadastrar venda anterior com histórico</button>
+      <p id="previousError" role="alert"></p><button id="previousSubmit" type="submit">Cadastrar venda anterior e abrir proposta</button>
     </form>
     <form id="saveUnitAdjustment" hidden>
       <h3>Ajustar disponibilidade e destinação</h3>
@@ -125,6 +170,10 @@
     </form>
   </dialog>
   <div id="adminToast" class="admin-toast" role="status" aria-live="polite"></div>
-  <script type="module" src="js/tabela-admin.js?v=20260910-estoque"></script>
+  <script src="js/condicao-venda.js"></script>
+  <script src="js/cpf.js"></script>
+  <script src="js/venda-anterior-modelo.js?v=20261015-parcelas"></script>
+  <script src="js/venda-anterior-form.js?v=20261015-parcelas"></script>
+  <script type="module" src="js/tabela-admin.js?v=20261015-parcelas"></script>
 </body>
 </html>

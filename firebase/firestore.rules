@@ -321,13 +321,37 @@ service cloud.firestore {
         && history.referencia is string && history.referencia.size() > 0 && history.referencia.size() <= 300;
     }
 
+    function validExistingSaleLink(unitId) {
+      let data = request.resource.data;
+      let proposalId = data.propostaAtualId;
+      let p = get(/databases/$(database)/documents/propostas/$(proposalId)).data;
+      let uh = getAfter(/databases/$(database)/documents/historico_unidades/$(data.vinculoHistoricoId)).data;
+      let ph = getAfter(/databases/$(database)/documents/historico_propostas/$(data.vinculoHistoricoId)).data;
+      return resource.data.status == 'vendida' && data.status == 'vendida'
+        && resource.data.get('destinacao', 'nao_classificada') in ['venda', 'nao_classificada']
+        && resource.data.get('propostaAtualId', null) == null && resource.data.get('propostaId', null) == null
+        && proposalId is string && p.statusProposta == 'vendida' && p.unidadeId == unitId
+        && getAfter(/databases/$(database)/documents/propostas/$(proposalId)).data == p
+        && data.diff(resource.data).affectedKeys().hasOnly(['propostaAtualId', 'atualizadoEm', 'vinculoHistoricoId'])
+        && data.atualizadoEm == request.time && data.vinculoHistoricoId is string
+        && !exists(/databases/$(database)/documents/historico_unidades/$(data.vinculoHistoricoId))
+        && !exists(/databases/$(database)/documents/historico_propostas/$(data.vinculoHistoricoId))
+        && uh == ph && uh.acao == 'proposta vinculada a unidade vendida'
+        && uh.unidadeId == unitId && uh.propostaId == proposalId
+        && uh.statusAnterior == 'vendida' && uh.statusNovo == 'vendida'
+        && uh.adminId == request.auth.uid && uh.data == request.time
+        && uh.observacao is string && uh.observacao.size() > 0 && uh.observacao.size() <= 2000
+        && uh.referencia is string && uh.referencia.size() > 0 && uh.referencia.size() <= 300;
+    }
+
     match /unidades/{unidadeId} {
       allow read: if isAdmin() || isApprovedBroker();
       allow create, delete: if false;
 
       allow update: if publicInventoryMatches(unidadeId) && ((isAdmin()
         && (request.resource.data.get('destinacao', 'venda') == 'venda' || request.resource.data.status in ['bloqueada', 'vendida'])
-        && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['destinacao','ajusteHistoricoId']) || validInventoryAdjustment(unidadeId))) || (
+        && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['destinacao','ajusteHistoricoId']) || validInventoryAdjustment(unidadeId))
+        && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['vinculoHistoricoId']) || validExistingSaleLink(unidadeId))) || (
         isApprovedBroker()
         && resource.data.status == 'disponivel'
         && resource.data.get('destinacao', 'venda') == 'venda'
@@ -338,6 +362,50 @@ service cloud.firestore {
         && getAfter(/databases/$(database)/documents/propostas/$(request.resource.data.propostaAtualId)).data.corretorId == request.auth.uid
         && getAfter(/databases/$(database)/documents/propostas/$(request.resource.data.propostaAtualId)).data.unidadeId == unidadeId
       ));
+    }
+
+    function validHistoricalClient(p) {
+      let c = p.cliente;
+      let b = p.corretorSnapshot;
+      let sale = p.vendaAnterior;
+      return p.declaracaoAceita == true
+        && c.nomeCompleto is string && c.nomeCompleto.size() > 0 && c.nomeCompleto.size() <= 200
+        && b.nome is string && b.nome.size() > 0 && b.nome.size() <= 200
+        && sale.dataVenda is string && sale.dataVenda.matches('[0-9]{4}-[0-9]{2}-[0-9]{2}')
+        && sale.condicoes is string && sale.condicoes.size() > 0 && sale.condicoes.size() <= 4000
+        && sale.referencia is string && sale.referencia.size() > 0 && sale.referencia.size() <= 300
+        && sale.conferidoPor == request.auth.uid
+        && b.creci is string && b.creci.size() > 0 && b.creci.size() <= 50
+        && b.telefone is string && b.telefone.matches('[0-9]{10,13}')
+        && b.email is string && b.email.size() <= 254 && b.email.matches('[^ @]+@[^ @]+[.][^ @]+')
+        && (b.imobiliaria == null || (b.imobiliaria is string && b.imobiliaria.size() <= 200))
+        && (c.tipoCliente == 'PF'
+          ? c.cpf is string && c.cpf.matches('[0-9]{11}')
+            && c.telefone is string && c.telefone.matches('[0-9]{10,13}')
+            && c.email is string && c.email.size() <= 254 && c.email.matches('[^ @]+@[^ @]+[.][^ @]+')
+          : c.tipoCliente == 'PJ' && c.razaoSocial == c.nomeCompleto
+            && c.cnpj is string && c.cnpj.matches('[0-9]{14}')
+            && c.telefoneComercial is string && c.telefoneComercial.matches('[0-9]{10,13}')
+            && c.emailComercial is string && c.emailComercial.size() <= 254 && c.emailComercial.matches('[^ @]+@[^ @]+[.][^ @]+'));
+    }
+
+    // O contrato histórico usa o mesmo schema de parcelas, com preços e datas da época.
+    // Os grupos são verificados na proposta e nos dois históricos obrigatórios.
+    function validHistoricalCondition(p) {
+      let c = p.condicaoProposta;
+      let parts = c.componentes;
+      let slots = parts.parcelas;
+      return validConditionShape(c) && c.tipo == 'personalizada'
+        && c.descricao is string && c.descricao.size() > 0 && c.descricao.size() <= 1000
+        && c.valorTabelaCentavos is int && c.valorTabelaCentavos > 0 && c.valorTabelaCentavos <= 100000000000
+        && c.totalCalculadoCentavos == p.vendaAnterior.valorCentavos
+        && c.diferencaCentavos == c.valorTabelaCentavos - c.totalCalculadoCentavos
+        && parts.size() == 3 && slots.size() == 12
+        && c.totalCalculadoCentavos == parts.sinal.totalCentavos + parts.chaves.totalCentavos
+          + slots.grupo01.totalCentavos + slots.grupo02.totalCentavos + slots.grupo03.totalCentavos
+          + slots.grupo04.totalCentavos + slots.grupo05.totalCentavos + slots.grupo06.totalCentavos
+          + slots.grupo07.totalCentavos + slots.grupo08.totalCentavos + slots.grupo09.totalCentavos
+          + slots.grupo10.totalCentavos + slots.grupo11.totalCentavos + slots.grupo12.totalCentavos;
     }
 
     function validPreviousSale(proposalId) {
@@ -355,19 +423,61 @@ service cloud.firestore {
         && after.status == 'vendida' && after.propostaAtualId == proposalId
         && after.atualizadoEm == request.time
         && after.diff(u).affectedKeys().hasOnly(['propostaAtualId','atualizadoEm'])
-        && p.cliente.nomeCompleto is string && p.cliente.nomeCompleto.size() > 0 && p.cliente.nomeCompleto.size() <= 200
-        && p.corretorSnapshot.nome is string && p.corretorSnapshot.nome.size() > 0 && p.corretorSnapshot.nome.size() <= 200
+        && validHistoricalCondition(p) && validHistoricalFirstGroups(p.condicaoProposta)
         && p.vendaAnterior.valorCentavos is int && p.vendaAnterior.valorCentavos > 0 && p.vendaAnterior.valorCentavos <= 100000000000
-        && p.vendaAnterior.dataVenda is string && p.vendaAnterior.dataVenda.matches('[0-9]{4}-[0-9]{2}-[0-9]{2}')
-        && p.vendaAnterior.condicoes is string && p.vendaAnterior.condicoes.size() > 0 && p.vendaAnterior.condicoes.size() <= 4000
-        && p.vendaAnterior.referencia is string && p.vendaAnterior.referencia.size() > 0 && p.vendaAnterior.referencia.size() <= 300
-        && p.vendaAnterior.conferidoPor == request.auth.uid
         && !exists(/databases/$(database)/documents/historico_unidades/$(proposalId))
         && !exists(/databases/$(database)/documents/historico_propostas/$(proposalId))
         && uh == ph && uh.propostaId == proposalId && uh.unidadeId == p.unidadeId
         && uh.adminId == request.auth.uid && uh.data == request.time
         && uh.statusAnterior == 'vendida' && uh.statusNovo == 'vendida'
         && uh.acao == 'venda anterior cadastrada' && uh.vendaAnterior == p.vendaAnterior;
+    }
+
+    function validHistoricalGroup(c, empty, limits) {
+      let q = c.quantidade;
+      let v = c.valorUnitarioCentavos;
+      let period = c.periodicidade;
+      return c.ativo == false ? validInactivePaymentComponent(c, empty)
+        : c.ativo == true && c.size() == 8
+          && period in limits && q is int && q > 0 && q <= limits[period]
+          && v is int && v > 0 && c.totalCentavos is int && c.totalCentavos == q * v
+          && c.descricao is string && c.descricao.size() <= 300
+          && (period != 'outra' || c.descricao.size() > 0)
+          && c.primeiroVencimento is timestamp && c.vencimentos is list && c.vencimentos.size() == q;
+    }
+
+    function validHistoricalFirstGroups(condition) {
+      let slots = condition.componentes.parcelas;
+      let empty = {'ativo': false, 'quantidade': 0, 'valorUnitarioCentavos': 0,
+        'totalCentavos': 0, 'periodicidade': 'outra', 'primeiroVencimento': null, 'vencimentos': [], 'descricao': ''};
+      let limits = {'mensal': 240, 'semestral': 60, 'anual': 30, 'outra': 1};
+      return validHistoricalGroup(slots.grupo01, empty, limits) && validHistoricalGroup(slots.grupo02, empty, limits)
+        && validHistoricalGroup(slots.grupo03, empty, limits);
+    }
+
+    function validHistoricalHistory(data, historyId, unitHistory) {
+      let p = getAfter(/databases/$(database)/documents/propostas/$(historyId)).data;
+      let slots = p.condicaoProposta.componentes.parcelas;
+      let empty = {'ativo': false, 'quantidade': 0, 'valorUnitarioCentavos': 0,
+        'totalCentavos': 0, 'periodicidade': 'outra', 'primeiroVencimento': null, 'vencimentos': [], 'descricao': ''};
+      let limits = {'mensal': 240, 'semestral': 60, 'anual': 30, 'outra': 1};
+      return p.origem == 'venda_anterior'
+        && data.propostaId == historyId && data.unidadeId == p.unidadeId
+        && data.corretorId == p.corretorId && data.data == request.time
+        && !exists(/databases/$(database)/documents/propostas/$(historyId))
+        && (unitHistory
+          ? validSignalPaymentComponent(p.condicaoProposta.componentes.sinal, true, empty)
+            && validOptionalFixedPaymentComponent(p.condicaoProposta.componentes.chaves, 'unica', false, 1, empty)
+            && validHistoricalGroup(slots.grupo04, empty, limits)
+            && validHistoricalGroup(slots.grupo05, empty, limits)
+            && validHistoricalGroup(slots.grupo06, empty, limits)
+            && validHistoricalGroup(slots.grupo07, empty, limits)
+            && validHistoricalGroup(slots.grupo08, empty, limits)
+          : validHistoricalClient(p)
+            && validHistoricalGroup(slots.grupo09, empty, limits)
+            && validHistoricalGroup(slots.grupo10, empty, limits)
+            && validHistoricalGroup(slots.grupo11, empty, limits)
+            && validHistoricalGroup(slots.grupo12, empty, limits));
     }
 
     match /propostas/{propostaId} {
@@ -451,8 +561,9 @@ service cloud.firestore {
         isApprovedBroker()
         && request.resource.data.corretorId == request.auth.uid
         && request.resource.data.acao == 'proposta criada'
-      )) && (request.resource.data.acao != 'proposta criada'
-        || validInitialHistory(request.resource.data, historicoId, false));
+      )) && (request.resource.data.acao == 'venda anterior cadastrada'
+        ? validHistoricalHistory(request.resource.data, historicoId, false)
+        : request.resource.data.acao != 'proposta criada' || validInitialHistory(request.resource.data, historicoId, false));
       allow update, delete: if false;
     }
 
@@ -464,8 +575,9 @@ service cloud.firestore {
         isApprovedBroker()
         && request.resource.data.corretorId == request.auth.uid
         && request.resource.data.acao == 'unidade reservada'
-      )) && (request.resource.data.acao != 'unidade reservada'
-        || validInitialHistory(request.resource.data, historicoId, true));
+      )) && (request.resource.data.acao == 'venda anterior cadastrada'
+        ? validHistoricalHistory(request.resource.data, historicoId, true)
+        : request.resource.data.acao != 'unidade reservada' || validInitialHistory(request.resource.data, historicoId, true));
       allow update, delete: if false;
     }
 

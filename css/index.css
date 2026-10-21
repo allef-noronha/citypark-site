@@ -67,15 +67,16 @@
 .hero-video{
   object-fit: cover;
   object-position: 50% 35%;
-  opacity: 0;
+  opacity: 1;
 }
 
 .hero-fallback{
   object-fit: contain;
+  visibility: hidden;
 }
 
-.hero.is-playing .hero-video{ opacity:1; }
-.hero.is-playing .hero-fallback{ visibility:hidden; }
+.hero.is-fallback .hero-video{ visibility:hidden; }
+.hero.is-fallback .hero-fallback{ visibility:visible; }
 
 .hero-overlay{
   position: relative;
@@ -97,7 +98,7 @@
     height:auto;
     aspect-ratio:2 / 1;
   }
-  .hero.is-playing .hero-fallback{ visibility:visible; }
+  .hero .hero-fallback{ visibility:visible; }
 }
 
 /* responsivo */

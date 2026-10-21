@@ -1,4 +1,5 @@
-import { registerPreviousSale } from './venda-anterior.js?v=20260910-estoque';
+import { registerPreviousSale } from './venda-anterior.js?v=20261015-parcelas';
+import { linkExistingSale } from './vinculo-proposta.js?v=20261015-vinculos';
 import { auth, db } from "./firebase.js";
 import { ADMINISTRATION_UNITS, unitCode, destination, destinationLabel, inInventoryScope } from './estoque.js';
 import { adjustUnit } from './ajuste-unidade.js?v=20260910-estoque';
@@ -41,7 +42,10 @@ onAuthStateChanged(auth, async user => {
     $('inventoryScope').addEventListener('change', render);
     $('exportInventory').addEventListener('click', exportInventory);
     $('classifyAdministration').addEventListener('click', reviewAdministration);
+    state.previousSaleEditor = window.CityParkPreviousSaleForm.create($('previousSaleForm'));
     $('previousSaleForm').addEventListener('submit', savePreviousSale);
+    $('linkProposalForm').addEventListener('submit', saveExistingSaleLink);
+    $('linkProposalSelect').addEventListener('change', updateProposalPreview);
     $('saveUnitAdjustment').addEventListener('submit', saveUnitAdjustment);
     elements.content.addEventListener('click', event => {
       const button = event.target.closest('[data-unit-id]');
@@ -62,7 +66,7 @@ async function loadUnits() {
   state.stopUnits?.();
   return new Promise((resolve, reject) => {
     state.stopUnits = onSnapshot(collection(db, 'unidades'), snapshot => {
-      state.units = snapshot.docs.map(item => ({ id:item.id, ...item.data() }));
+      state.units = snapshot.docs.map(item => ({ ...item.data(), id:item.id }));
       elements.updatedAt.textContent = `Atualizado em: ${new Intl.DateTimeFormat('pt-BR', {dateStyle:'short',timeStyle:'short'}).format(new Date())}`;
       render(); resolve();
     }, error => { showToast('Conexão com o estoque interrompida. Atualize antes de operar.', true); reject(error); });
@@ -108,6 +112,23 @@ function renderUnit(unit) {
 }
 
 let unitRequest = 0;
+const proposalStatusLabels = { reservada: 'Reservada', aprovada: 'Aprovada', vendida: 'Vendida', recusada: 'Recusada', cancelada: 'Cancelada', distratada: 'Distratada', expirada: 'Expirada', teste_invalidado: 'Teste invalidado', pendente_correcao: 'Legada — pendente de correção' };
+function proposalHref(id) {
+  const encodedId = encodeURIComponent(id);
+  return `detalhes-proposta.html?id=${encodedId}#proposta=${encodedId}`;
+}
+function proposalClient(proposal) {
+  const client = proposal.cliente || {};
+  return (client.tipoCliente === 'PJ' ? client.razaoSocial || client.nomeCompleto : client.nomeCompleto || client.razaoSocial) || 'Cliente não informado';
+}
+function proposalLink(item) {
+  const proposal = item.data();
+  return `<a href="${proposalHref(item.id)}">Proposta ${escapeHtml(item.id)} — ${escapeHtml(proposalStatusLabels[proposal.statusProposta] || proposal.statusProposta || 'Status não informado')}</a>`;
+}
+function linkedProposalCard(item) {
+  const proposal = item.data();
+  return `<section class="linked-proposal" aria-label="Proposta vinculada"><h3>Proposta vinculada</h3><p>${escapeHtml(proposalClient(proposal))} · ${escapeHtml(proposalStatusLabels[proposal.statusProposta] || proposal.statusProposta || '')}</p><small>${escapeHtml(item.id)}</small><p><a class="proposal-detail-link" href="${proposalHref(item.id)}">Abrir proposta vinculada</a></p></section>`;
+}
 async function openUnit(id) {
   const request = ++unitRequest;
   const dialog = $('unitDialog');
@@ -115,6 +136,8 @@ async function openUnit(id) {
   $('unitDialogBody').textContent = '';
   $('saveUnitAdjustment').hidden = true;
   $('previousSaleForm').hidden = true;
+  $('linkProposalForm').hidden = true;
+  state.selectedUnit = null;
   if (!dialog.open) dialog.showModal();
   try {
     const [unitSnapshot, proposals, history] = await Promise.all([
@@ -125,13 +148,34 @@ async function openUnit(id) {
     if (request !== unitRequest || !dialog.open) return;
     if (!unitSnapshot.exists()) throw new Error('Unidade não encontrada.');
     const unit = unitSnapshot.data();
-    $('previousSaleForm').reset();
-    $('previousError').textContent = '';
-    $('previousSaleForm').hidden = !(unit.status === 'vendida' && !unit.propostaAtualId && !unit.propostaId && ['venda','nao_classificada'].includes(unit.destinacao || 'nao_classificada'));
-
-    state.selectedUnit = { id, ...unit };
     const links = [...new Set([unit.propostaAtualId, unit.propostaId].filter(Boolean))];
-    const current = links.length === 1 ? proposals.docs.find(item => item.id === links[0]) : null;
+    const proposalRows = [...proposals.docs];
+    // Resolve explicit document references even when a legacy record is absent from the unit query.
+    const missingLinks = links.filter(link => !proposalRows.some(item => item.id === link));
+    const linkedSnapshots = await Promise.all(missingLinks.map(link => getDoc(doc(db, 'propostas', link))));
+    if (request !== unitRequest || !dialog.open) return;
+    proposalRows.push(...linkedSnapshots.filter(item => item.exists()));
+    const current = links.length === 1 ? proposalRows.find(item => item.id === links[0]) : null;
+    const canRegisterSale = unit.status === 'vendida' && !links.length && ['venda','nao_classificada'].includes(unit.destinacao || 'nao_classificada');
+    $('previousSaleForm').reset();
+    state.previousSaleEditor?.reset();
+    $('previousError').textContent = '';
+    $('previousSaleForm').hidden = !canRegisterSale;
+    $('linkProposalForm').reset();
+    $('linkProposalError').textContent = '';
+    $('linkProposalForm').hidden = !canRegisterSale;
+    const candidates = proposalRows.filter(item => item.data().unidadeId === id && item.data().statusProposta === 'vendida');
+    $('linkProposalSelect').innerHTML = '<option value="">Selecione a proposta</option>' + candidates.map(item => `<option value="${escapeHtml(item.id)}">${escapeHtml(proposalClient(item.data()))} — ${escapeHtml(item.id)}</option>`).join('');
+    $('linkProposalSelect').disabled = !candidates.length;
+    $('linkProposalSubmit').disabled = !candidates.length;
+    $('linkProposalFields').hidden = !candidates.length;
+    $('linkProposalEmpty').hidden = candidates.length > 0;
+    const hasActiveProposal = proposalRows.some(item => !['recusada','cancelada','expirada','distratada','teste_invalidado'].includes(item.data().statusProposta));
+    $('previousSaleConflict').hidden = !hasActiveProposal;
+    $('previousSubmit').disabled = hasActiveProposal;
+    updateProposalPreview();
+
+    state.selectedUnit = { ...unit, id };
     const millis = value => {
       if (!value) return 0;
       if (value.toMillis) return value.toMillis();
@@ -139,13 +183,13 @@ async function openUnit(id) {
       return seconds != null ? Number(seconds) * 1000 : (Date.parse(value) || 0);
     };
     const date = value => millis(value) ? new Date(millis(value)).toLocaleString('pt-BR') : 'Data não informada';
-    const labels = { reservada: 'Reservada', aprovada: 'Aprovada', vendida: 'Vendida', recusada: 'Recusada', cancelada: 'Cancelada', distratada: 'Distratada', expirada: 'Expirada', teste_invalidado:'Teste invalidado', pendente_correcao:'Legada — pendente de correção' };
-    const proposalLink = item => `<a href="detalhes-proposta.html?id=${encodeURIComponent(item.id)}">Proposta ${escapeHtml(item.id)} — ${escapeHtml(labels[item.data().statusProposta] || item.data().statusProposta)}</a>`;
     $('unitDialogTitle').textContent = `Unidade ${unit.unidade || id} — ${statusLabel(unit.status)} — ${destinationLabel(destination(unit))}`;
-    const actions = current ? `<p>${proposalLink(current)}</p><p>${unit.status === 'vendida' ? 'Abra a proposta e escolha Registrar distrato para liberar a unidade com justificativa.' : 'Abra a proposta para analisar, aprovar, recusar ou cancelar conforme a etapa atual.'}</p>`
+    const actions = current ? `${linkedProposalCard(current)}${current.data().unidadeId !== id ? '<p role="alert">Confira o vínculo: a proposta aponta para outra unidade ou está sem identificação de unidade.</p>' : ''}`
       : unit.status === 'disponivel' && (!unit.destinacao || unit.destinacao === 'venda') && !links.length ? `<p><a href="formulario.html?unidade=${encodeURIComponent(id)}&admin=1">Criar nova proposta</a></p>`
-      : links.length ? '<p>O vínculo com a proposta precisa ser conferido antes de alterar a disponibilidade.</p>' : '<p>Sem proposta vinculada. Use o ajuste administrativo abaixo com motivo e referência; propostas legadas pendentes impedem a alteração.</p>';
-    const proposalRows = [...proposals.docs].sort((a, b) => millis(b.data().criadoEm) - millis(a.data().criadoEm));
+      : links.length ? '<p role="alert">A proposta vinculada não foi encontrada ou há vínculos conflitantes. Confira os registros antes de alterar a unidade.</p>'
+      : canRegisterSale ? '<p>Esta unidade está vendida e ainda não possui proposta vinculada. Vincule uma proposta existente ou cadastre a venda anterior nos formulários abaixo.</p>'
+      : '<p>Sem proposta vinculada. Use o ajuste administrativo abaixo com motivo e referência; propostas legadas pendentes impedem a alteração.</p>';
+    proposalRows.sort((a, b) => millis(b.data().criadoEm) - millis(a.data().criadoEm));
     const events = [...history.docs].sort((a, b) => millis(b.data().data) - millis(a.data().data));
     $('unitDialogBody').innerHTML = `${actions}<h3>Propostas desta unidade</h3>${proposalRows.length ? `<ul>${proposalRows.map(item => `<li>${proposalLink(item)}<br><small>${escapeHtml(date(item.data().criadoEm))}</small></li>`).join('')}</ul>` : '<p>Nenhuma proposta registrada.</p>'}<h3>Histórico da unidade</h3>${events.length ? `<ul>${events.map(item => { const data = item.data(); return `<li><strong>${escapeHtml(data.acao)}</strong> — ${escapeHtml(date(data.data))}<p>${escapeHtml(data.observacao || '')}</p></li>`; }).join('')}</ul>` : '<p>Nenhum evento registrado.</p>'}`;
     if (!links.length) {
@@ -240,12 +284,38 @@ function showToast(message, isError = false) {
 async function savePreviousSale(event) {
   event.preventDefault();
   if (!state.selectedUnit) return;
+  const unitId = state.selectedUnit.id;
   const button=$('previousSubmit'); button.disabled=true;
+  $('previousError').textContent = '';
   try {
-    const value=Number($('previousValue').value);
-    await registerPreviousSale({id:state.selectedUnit.id,uid:state.uid,cliente:$('previousClient').value,corretor:$('previousBroker').value,dataVenda:$('previousDate').value,valorCentavos:Math.round(value*100),condicoes:$('previousConditions').value,referencia:$('previousReference').value,confirmado:$('previousChecked').checked});
-    await openUnit(state.selectedUnit.id);
-    showToast('Venda anterior cadastrada. A unidade continua vendida.');
+    const proposalId = await registerPreviousSale({id:unitId,uid:state.uid,...state.previousSaleEditor.read()});
+    if ($('unitDialog').open && state.selectedUnit?.id === unitId) {
+      window.location.assign(proposalHref(proposalId));
+      return;
+    }
+    showToast('Venda anterior cadastrada e proposta vinculada. O detalhamento está disponível na unidade.');
   } catch(error) { $('previousError').textContent=error.message; }
   finally { button.disabled=false; }
+}
+
+function updateProposalPreview() {
+  const id = $('linkProposalSelect').value;
+  $('linkProposalPreview').hidden = !id;
+  if (id) $('linkProposalPreview').href = proposalHref(id);
+  else $('linkProposalPreview').removeAttribute('href');
+}
+
+async function saveExistingSaleLink(event) {
+  event.preventDefault();
+  if (!state.selectedUnit) return;
+  const unitId = state.selectedUnit.id;
+  const button = $('linkProposalSubmit'); button.disabled = true;
+  $('linkProposalError').textContent = '';
+  try {
+    await linkExistingSale({ id: unitId, proposalId: $('linkProposalSelect').value, uid: state.uid,
+      reason: $('linkProposalReason').value, reference: $('linkProposalReference').value, confirmed: $('linkProposalChecked').checked });
+    if ($('unitDialog').open && state.selectedUnit?.id === unitId) await openUnit(unitId);
+    showToast('Proposta vinculada. O detalhamento está disponível na unidade.');
+  } catch (error) { $('linkProposalError').textContent = error.message; }
+  finally { button.disabled = $('linkProposalSelect').disabled; }
 }

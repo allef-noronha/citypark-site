@@ -79,12 +79,6 @@ function bindEvents() {
   elements.filter.addEventListener("change", () => loadProposals());
   elements.refresh.addEventListener("click", () => loadProposals());
   elements.more.addEventListener("click", () => loadProposals(true));
-  elements.rows.addEventListener("click", event => {
-    const link = event.target.closest("[data-proposal-id]");
-    if (link) {
-      try { sessionStorage.setItem("cityparkAdminProposalId", link.dataset.proposalId); } catch { /* O ID continua presente na URL. */ }
-    }
-  });
   elements.logout.addEventListener("click", async () => {
     await signOut(auth);
     window.location.replace("vendas.html");
@@ -123,7 +117,7 @@ async function loadProposals(append = false) {
     state.cursor = proposalSnapshot.docs.at(-1) || null;
     state.hasMore = proposalSnapshot.size === 25;
     const page = proposalSnapshot.docs
-      .map(item => ({ id: item.id, ...item.data() }))
+      .map(item => ({ ...item.data(), id: item.id }))
       .sort((a, b) => dateValue(b.criadoEm) - dateValue(a.criadoEm));
 
     state.proposals = append ? [...state.proposals, ...page] : page;
@@ -219,7 +213,7 @@ function renderProposalRow(proposal) {
       </td>
       <td><span class="cell-title">${escapeHtml(brokerage)}</span></td>
       <td><span class="status-badge" data-group="${group}">${escapeHtml(statusLabel(proposal.statusProposta))}</span></td>
-      <td><a class="open-button" data-proposal-id="${escapeHtml(proposal.id)}" href="detalhes-proposta.html?id=${encodeURIComponent(proposal.id)}">Abrir</a><span class="expiry-line">${escapeHtml(proposalExpiryLabel(proposal))}</span></td>
+      <td><a class="open-button" data-proposal-id="${escapeHtml(proposal.id)}" href="detalhes-proposta.html?id=${encodeURIComponent(proposal.id)}#proposta=${encodeURIComponent(proposal.id)}">Abrir</a><span class="expiry-line">${escapeHtml(proposalExpiryLabel(proposal))}</span></td>
     </tr>`;
 }
 
