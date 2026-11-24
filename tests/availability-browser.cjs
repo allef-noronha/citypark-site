@@ -21,10 +21,11 @@ const root = path.resolve(__dirname, '..');
       if (url.pathname.endsWith('/firebase.js') || url.hostname === 'www.gstatic.com') return route.fulfill({ contentType:'text/javascript', body:`
         export const db={},auth={}; export const doc=()=>({}); export const collection=()=>({reservations:true}); export const query=r=>r; export const where=()=>({});
         export const onAuthStateChanged=(_auth,callback)=>callback({uid:'test'});
+        export async function getDocFromServer(){return {exists:()=>true,data:()=>({schemaVersao:1,versaoTabela:'test',quantidades:{mensais:39,intercaladas:5},unidades:[{unidade:'2208 A',tipologia:'Loft',areaM2:56.9,precoVista:100000,sinal:10000}]})}};
         export async function getDoc(){return {exists:()=>true,data:()=>({aprovado:true,quantidades:{mensais:39,intercaladas:5}})}};
         export function onSnapshot(ref,options,callback,error){
           if(ref.reservations){window.changeReservation=status=>callback({metadata:{fromCache:false},docs:status?[{id:'2208A',data:()=>({status})}]:[]});window.changeReservation(null);return ()=>{};}
-          window.changeStatus=(status,cache=false)=>callback({exists:()=>true,metadata:{fromCache:cache},data:()=>({schemaVersao:1,unidades:{'2208A':status}})});
+          window.changeStatus=(status,cache=false)=>callback({exists:()=>true,metadata:{fromCache:cache},data:()=>({schemaVersao:2,unidades:{'2208-A':{unidade:'2208 A',status}}})});
           window.failStatus=()=>error(new Error('offline-test'));
           window.changeStatus('vendida'); return ()=>{};
         }` });
@@ -44,14 +45,15 @@ const root = path.resolve(__dirname, '..');
       assert.equal(await status.innerText(),'Reservado');
       await page.evaluate(()=>window.changeStatus('disponivel'));
       assert.equal(await status.innerText(),'Disponível');
-      await page.evaluate(()=>window.changeReservation('reservada'));
+      await page.evaluate(()=>window.changeStatus('reservada'));
       assert.equal(await status.innerText(),'Reservado');
-      await page.evaluate(()=>window.changeStatus('disponivel'));
-      assert.equal(await status.innerText(),'Reservado');
-      await page.evaluate(()=>window.changeReservation(null));
+      await page.evaluate(()=>window.changeStatus('vendida'));
+      assert.equal(await status.innerText(),'Vendido');
       await page.evaluate(()=>window.changeStatus('bloqueada'));
       assert.equal(await status.innerText(),'Indisponível');
       await page.evaluate(()=>window.changeStatus('disponivel',true));
+      assert.equal(await status.innerText(),'A confirmar');
+      await page.evaluate(()=>window.failStatus());
       assert.equal(await status.innerText(),'A confirmar');
       await page.evaluate(()=>window.changeStatus('vendida'));
       assert.equal(await status.innerText(),'Vendido');

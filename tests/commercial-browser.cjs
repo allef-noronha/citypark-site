@@ -57,9 +57,10 @@ const root=path.resolve(__dirname,'..');
       }
       if(file.startsWith('tabela-admin')){
         await page.locator('[data-unit-id]').first().click();
+        await page.locator('#unitDialogHistory > summary').click();
         await page.getByRole('link',{name:/Proposta p-old/}).waitFor();
-        assert.match(await page.locator('#unitDialogBody').innerText(), /Distratada/);
-        assert.match(await page.locator('#unitDialogBody').innerText(), /Registro preservado/);
+        assert.match(await page.locator('#unitHistoryContent').innerText(), /Distratada/);
+        assert.match(await page.locator('#unitHistoryContent').innerText(), /Registro preservado/);
         await page.screenshot({path:path.join(root,'tests/artifacts/unidade-dialog.png')});
         await page.setViewportSize({width:390,height:844});
         assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);

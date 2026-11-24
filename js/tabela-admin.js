@@ -25,7 +25,13 @@ const elements = {
   soldCount: $("soldCount"),
   soldPercentage: $("soldPercentage")
 };
-const state = { units: [], toastTimer: null, uid: null, selectedUnit: null, visible: [] };
+const state = { units: [], toastTimer: null, uid: null, selectedUnit: null, visible: [],
+  unitAction: null, allowedActions: {}, dirtyForms: new Set(), formBaselines: new Map(), saving: false };
+const unitActions = {
+  previous: { form: 'previousSaleForm', button: 'choosePreviousSale', label: 'cadastro da venda anterior' },
+  link: { form: 'linkProposalForm', button: 'chooseExistingProposal', label: 'vínculo da proposta' },
+  adjust: { form: 'saveUnitAdjustment', button: 'chooseUnitAdjustment', label: 'situação e destinação' }
+};
 
 onAuthStateChanged(auth, async user => {
   if (!user) return location.replace("vendas.html");
@@ -51,7 +57,19 @@ onAuthStateChanged(auth, async user => {
       const button = event.target.closest('[data-unit-id]');
       if (button) openUnit(button.dataset.unitId);
     });
-    $('closeUnitDialog').addEventListener('click', () => $('unitDialog').close());
+    $('closeUnitDialog').addEventListener('click', closeUnit);
+    $('unitDialog').addEventListener('cancel', event => { event.preventDefault(); closeUnit(); });
+    for (const [action, config] of Object.entries(unitActions)) {
+      $(config.button).addEventListener('click', () => selectUnitAction(action));
+      for (const event of ['input', 'change', 'click']) {
+        $(config.form).addEventListener(event, () => trackUnitDraft(config.form));
+      }
+    }
+    $('discardUnitAction').addEventListener('click', discardUnitAction);
+    window.addEventListener('beforeunload', event => {
+      refreshUnitDrafts();
+      if (state.saving || state.dirtyForms.size) { event.preventDefault(); event.returnValue = ''; }
+    });
     $('refreshUnits').addEventListener('click', () => loadUnits().catch(error => showToast(error.message, true)));
     await loadUnits();
   } catch (error) {
@@ -112,6 +130,91 @@ function renderUnit(unit) {
 }
 
 let unitRequest = 0;
+function unitFormValue(formId) {
+  return JSON.stringify([...$(formId).querySelectorAll('input, select, textarea')]
+    .filter(field => !field.readOnly)
+    .map(field => [field.id, field.type, field.type === 'checkbox' ? field.checked : field.value]));
+}
+function trackUnitDraft(formId) {
+  if (!state.selectedUnit || state.saving) return;
+  if (unitFormValue(formId) === state.formBaselines.get(formId)) state.dirtyForms.delete(formId);
+  else state.dirtyForms.add(formId);
+  renderUnitDraftNotice();
+}
+function refreshUnitDrafts() {
+  for (const config of Object.values(unitActions)) trackUnitDraft(config.form);
+}
+function markUnitDraftsSaved() {
+  for (const config of Object.values(unitActions)) state.formBaselines.set(config.form, unitFormValue(config.form));
+  state.dirtyForms.clear();
+  renderUnitDraftNotice();
+}
+function renderUnitDraftNotice() {
+  const pending = Object.values(unitActions).filter(config => state.dirtyForms.has(config.form));
+  $('unitDraftNotice').hidden = !pending.length;
+  $('unitDraftMessage').textContent = pending.length ? `Dados ainda não salvos: ${pending.map(config => config.label).join(' e ')}. Trocar de ação mantém os campos preenchidos. Conclua pelo botão de salvar da ação correspondente.` : '';
+  $('discardUnitAction').hidden = !state.unitAction || !state.dirtyForms.has(unitActions[state.unitAction].form);
+}
+function selectUnitAction(action) {
+  if (state.saving || !state.allowedActions[action]) return;
+  refreshUnitDrafts();
+  state.unitAction = action;
+  for (const [key, config] of Object.entries(unitActions)) {
+    $(config.form).hidden = key !== action;
+    $(config.button).setAttribute('aria-pressed', String(key === action));
+  }
+  renderUnitDraftNotice();
+}
+function resetUnitForm(action) {
+  const config = unitActions[action];
+  $(config.form).reset();
+  if (action === 'previous') state.previousSaleEditor?.reset();
+  if (action === 'link') updateProposalPreview();
+  if (action === 'adjust') {
+    const unit = state.selectedUnit;
+    $('adjustDestination').value = unit.destinacao || 'venda';
+    $('adjustStatus').value = ['disponivel','reservada','vendida','bloqueada'].includes(unit.status) ? unit.status : 'bloqueada';
+  }
+  $({previous:'previousError', link:'linkProposalError', adjust:'adjustError'}[action]).textContent = '';
+  state.formBaselines.set(config.form, unitFormValue(config.form));
+  state.dirtyForms.delete(config.form);
+  renderUnitDraftNotice();
+}
+function discardUnitAction() {
+  if (state.saving || !state.unitAction || !state.dirtyForms.has(unitActions[state.unitAction].form)) return;
+  if (window.confirm(`Descartar os dados não salvos de ${unitActions[state.unitAction].label}?`)) resetUnitForm(state.unitAction);
+}
+function confirmLeavingUnit() {
+  refreshUnitDrafts();
+  return !state.saving && (!state.dirtyForms.size || window.confirm('Há dados não salvos nesta unidade. Deseja sair e descartar esses dados?'));
+}
+function closeUnit() {
+  if (!confirmLeavingUnit()) return;
+  ++unitRequest;
+  state.dirtyForms.clear();
+  state.selectedUnit = null;
+  $('unitDialog').close();
+}
+function setUnitSaving(saving) {
+  state.saving = saving;
+  $('closeUnitDialog').disabled = saving;
+  $('discardUnitAction').disabled = saving;
+  for (const [action, config] of Object.entries(unitActions)) {
+    $(config.button).disabled = saving || !state.allowedActions[action];
+    $(config.form).inert = saving;
+    $(config.form).setAttribute('aria-busy', String(saving));
+  }
+}
+function canSaveUnitAction(action, errorId) {
+  if (state.saving || !state.selectedUnit || state.unitAction !== action || !state.allowedActions[action]) return false;
+  refreshUnitDrafts();
+  const pending = Object.values(unitActions).filter(config => config.form !== unitActions[action].form && state.dirtyForms.has(config.form));
+  if (pending.length) {
+    $(errorId).textContent = `Há dados não salvos em ${pending.map(config => config.label).join(' e ')}. Volte a essa ação para concluir ou descartar os dados antes de salvar aqui.`;
+    return false;
+  }
+  return true;
+}
 const proposalStatusLabels = { reservada: 'Reservada', aprovada: 'Aprovada', vendida: 'Vendida', recusada: 'Recusada', cancelada: 'Cancelada', distratada: 'Distratada', expirada: 'Expirada', teste_invalidado: 'Teste invalidado', pendente_correcao: 'Legada — pendente de correção' };
 function proposalHref(id) {
   const encodedId = encodeURIComponent(id);
@@ -129,7 +232,8 @@ function linkedProposalCard(item) {
   const proposal = item.data();
   return `<section class="linked-proposal" aria-label="Proposta vinculada"><h3>Proposta vinculada</h3><p>${escapeHtml(proposalClient(proposal))} · ${escapeHtml(proposalStatusLabels[proposal.statusProposta] || proposal.statusProposta || '')}</p><small>${escapeHtml(item.id)}</small><p><a class="proposal-detail-link" href="${proposalHref(item.id)}">Abrir proposta vinculada</a></p></section>`;
 }
-async function openUnit(id) {
+async function openUnit(id, {afterSave = false} = {}) {
+  if (!afterSave && !confirmLeavingUnit()) return;
   const request = ++unitRequest;
   const dialog = $('unitDialog');
   $('unitDialogTitle').textContent = 'Carregando unidade…';
@@ -137,6 +241,14 @@ async function openUnit(id) {
   $('saveUnitAdjustment').hidden = true;
   $('previousSaleForm').hidden = true;
   $('linkProposalForm').hidden = true;
+  $('unitActionChooser').hidden = true;
+  $('unitDialogHistory').hidden = true;
+  $('unitDialogHistory').open = false;
+  state.unitAction = null;
+  state.allowedActions = {};
+  state.dirtyForms.clear();
+  state.formBaselines.clear();
+  renderUnitDraftNotice();
   state.selectedUnit = null;
   if (!dialog.open) dialog.showModal();
   try {
@@ -157,13 +269,6 @@ async function openUnit(id) {
     proposalRows.push(...linkedSnapshots.filter(item => item.exists()));
     const current = links.length === 1 ? proposalRows.find(item => item.id === links[0]) : null;
     const canRegisterSale = unit.status === 'vendida' && !links.length && ['venda','nao_classificada'].includes(unit.destinacao || 'nao_classificada');
-    $('previousSaleForm').reset();
-    state.previousSaleEditor?.reset();
-    $('previousError').textContent = '';
-    $('previousSaleForm').hidden = !canRegisterSale;
-    $('linkProposalForm').reset();
-    $('linkProposalError').textContent = '';
-    $('linkProposalForm').hidden = !canRegisterSale;
     const candidates = proposalRows.filter(item => item.data().unidadeId === id && item.data().statusProposta === 'vendida');
     $('linkProposalSelect').innerHTML = '<option value="">Selecione a proposta</option>' + candidates.map(item => `<option value="${escapeHtml(item.id)}">${escapeHtml(proposalClient(item.data()))} — ${escapeHtml(item.id)}</option>`).join('');
     $('linkProposalSelect').disabled = !candidates.length;
@@ -171,6 +276,9 @@ async function openUnit(id) {
     $('linkProposalFields').hidden = !candidates.length;
     $('linkProposalEmpty').hidden = candidates.length > 0;
     const hasActiveProposal = proposalRows.some(item => !['recusada','cancelada','expirada','distratada','teste_invalidado'].includes(item.data().statusProposta));
+    state.allowedActions = { previous: canRegisterSale && !hasActiveProposal, link: canRegisterSale && candidates.length > 0, adjust: !links.length && !hasActiveProposal };
+    $('unitActionChooser').hidden = !canRegisterSale;
+    $('existingProposalHint').textContent = candidates.length ? `${candidates.length === 1 ? '1 proposta vendida disponível' : `${candidates.length} propostas vendidas disponíveis`} para esta unidade.` : 'Nenhuma proposta vendida disponível. Cadastre a venda anterior.';
     $('previousSaleConflict').hidden = !hasActiveProposal;
     $('previousSubmit').disabled = hasActiveProposal;
     updateProposalPreview();
@@ -185,19 +293,28 @@ async function openUnit(id) {
     const date = value => millis(value) ? new Date(millis(value)).toLocaleString('pt-BR') : 'Data não informada';
     $('unitDialogTitle').textContent = `Unidade ${unit.unidade || id} — ${statusLabel(unit.status)} — ${destinationLabel(destination(unit))}`;
     const actions = current ? `${linkedProposalCard(current)}${current.data().unidadeId !== id ? '<p role="alert">Confira o vínculo: a proposta aponta para outra unidade ou está sem identificação de unidade.</p>' : ''}`
-      : unit.status === 'disponivel' && (!unit.destinacao || unit.destinacao === 'venda') && !links.length ? `<p><a href="formulario.html?unidade=${encodeURIComponent(id)}&admin=1">Criar nova proposta</a></p>`
+      : unit.status === 'disponivel' && (!unit.destinacao || unit.destinacao === 'venda') && !links.length && !hasActiveProposal ? `<p><a href="formulario.html?unidade=${encodeURIComponent(id)}&admin=1">Criar nova proposta</a></p>`
       : links.length ? '<p role="alert">A proposta vinculada não foi encontrada ou há vínculos conflitantes. Confira os registros antes de alterar a unidade.</p>'
-      : canRegisterSale ? '<p>Esta unidade está vendida e ainda não possui proposta vinculada. Vincule uma proposta existente ou cadastre a venda anterior nos formulários abaixo.</p>'
-      : '<p>Sem proposta vinculada. Use o ajuste administrativo abaixo com motivo e referência; propostas legadas pendentes impedem a alteração.</p>';
+      : canRegisterSale ? `<div class="unit-sale-notice"><strong>Venda sem proposta vinculada</strong><p>${hasActiveProposal && !candidates.length ? 'Há uma proposta ativa ou legada pendente. Consulte as propostas e o histórico antes de continuar.' : 'Registre os dados da venda anterior ou selecione uma proposta existente para completar o cadastro.'}</p></div>`
+      : hasActiveProposal ? '<p role="alert">Há uma proposta ativa ou legada pendente. Consulte as propostas e o histórico antes de alterar a unidade.</p>'
+      : '<p>Sem proposta vinculada. Altere a situação ou a destinação abaixo, informando o motivo e a referência documental.</p>';
     proposalRows.sort((a, b) => millis(b.data().criadoEm) - millis(a.data().criadoEm));
     const events = [...history.docs].sort((a, b) => millis(b.data().data) - millis(a.data().data));
-    $('unitDialogBody').innerHTML = `${actions}<h3>Propostas desta unidade</h3>${proposalRows.length ? `<ul>${proposalRows.map(item => `<li>${proposalLink(item)}<br><small>${escapeHtml(date(item.data().criadoEm))}</small></li>`).join('')}</ul>` : '<p>Nenhuma proposta registrada.</p>'}<h3>Histórico da unidade</h3>${events.length ? `<ul>${events.map(item => { const data = item.data(); return `<li><strong>${escapeHtml(data.acao)}</strong> — ${escapeHtml(date(data.data))}<p>${escapeHtml(data.observacao || '')}</p></li>`; }).join('')}</ul>` : '<p>Nenhum evento registrado.</p>'}`;
-    if (!links.length) {
-      $('saveUnitAdjustment').hidden = false;
-      $('adjustDestination').value = unit.destinacao || 'venda';
-      $('adjustStatus').value = ['disponivel','reservada','vendida','bloqueada'].includes(unit.status) ? unit.status : 'bloqueada';
-      $('adjustReason').value = ''; $('adjustReference').value = ''; $('adjustChecked').checked = false;
-      $('adjustError').textContent = '';
+    $('unitDialogBody').innerHTML = actions;
+    $('unitHistoryContent').innerHTML = `<h3>Propostas desta unidade</h3>${proposalRows.length ? `<ul>${proposalRows.map(item => `<li>${proposalLink(item)}<br><small>${escapeHtml(date(item.data().criadoEm))}</small></li>`).join('')}</ul>` : '<p>Nenhuma proposta registrada.</p>'}<h3>Histórico da unidade</h3>${events.length ? `<ul>${events.map(item => { const data = item.data(); return `<li><strong>${escapeHtml(data.acao)}</strong> — ${escapeHtml(date(data.data))}<p>${escapeHtml(data.observacao || '')}</p></li>`; }).join('')}</ul>` : '<p>Nenhum evento registrado.</p>'}`;
+    $('unitDialogHistory').hidden = false;
+    $('unitDialogHistory').open = hasActiveProposal && !current;
+    for (const action of Object.keys(unitActions)) {
+      resetUnitForm(action);
+      $(unitActions[action].button).setAttribute('aria-pressed', 'false');
+    }
+    setUnitSaving(state.saving);
+    // Selection after a successful save also runs while the dialog is locked.
+    const initialAction = state.allowedActions.link ? 'link' : state.allowedActions.previous ? 'previous' : state.allowedActions.adjust ? 'adjust' : null;
+    if (initialAction) {
+      state.unitAction = initialAction;
+      $(unitActions[initialAction].form).hidden = false;
+      $(unitActions[initialAction].button).setAttribute('aria-pressed', 'true');
     }
   } catch (error) {
     if (request === unitRequest) $('unitDialogBody').textContent = error.message || 'Falha ao consultar unidade.';
@@ -227,15 +344,22 @@ async function saveUnitAdjustment(event) {
   event.preventDefault();
   const unit = state.selectedUnit;
   const button = $('adjustSubmit');
-  if (!unit || !$('adjustChecked').checked) return;
+  if (!canSaveUnitAction('adjust', 'adjustError') || !$('adjustChecked').checked) return;
+  $('adjustError').textContent = '';
+  if ($('adjustStatus').value === unit.status && $('adjustDestination').value === destination(unit)) {
+    $('adjustError').textContent = 'A situação e a destinação já estão assim. ' + (state.allowedActions.previous ? 'Para registrar cliente e contrato de uma venda anterior, selecione Cadastrar venda anterior.' : 'Escolha uma situação ou destinação diferente para salvar o ajuste.');
+    return;
+  }
+  setUnitSaving(true);
   button.disabled = true;
   try {
     await adjustUnit({ id:unit.id, expectedStatus:unit.status, expectedDestination:destination(unit), nextStatus:$('adjustStatus').value,
       nextDestination:$('adjustDestination').value, reason:$('adjustReason').value, reference:$('adjustReference').value, uid:state.uid });
-    await openUnit(unit.id);
-    showToast('Ajuste salvo com histórico. O resumo público refletirá a mudança na próxima atualização.');
+    state.dirtyForms.clear();
+    await openUnit(unit.id, {afterSave: true});
+    showToast('Situação e destinação salvas com histórico. Este ajuste não cadastra uma proposta.');
   } catch (error) { $('adjustError').textContent = error.message; }
-  finally { button.disabled = false; }
+  finally { button.disabled = false; setUnitSaving(false); }
 }
 
 async function reviewAdministration() {
@@ -283,19 +407,22 @@ function showToast(message, isError = false) {
 
 async function savePreviousSale(event) {
   event.preventDefault();
-  if (!state.selectedUnit) return;
+  if (!canSaveUnitAction('previous', 'previousError')) return;
   const unitId = state.selectedUnit.id;
   const button=$('previousSubmit'); button.disabled=true;
   $('previousError').textContent = '';
+  setUnitSaving(true);
   try {
     const proposalId = await registerPreviousSale({id:unitId,uid:state.uid,...state.previousSaleEditor.read()});
+    markUnitDraftsSaved();
+    setUnitSaving(false);
     if ($('unitDialog').open && state.selectedUnit?.id === unitId) {
       window.location.assign(proposalHref(proposalId));
       return;
     }
     showToast('Venda anterior cadastrada e proposta vinculada. O detalhamento está disponível na unidade.');
   } catch(error) { $('previousError').textContent=error.message; }
-  finally { button.disabled=false; }
+  finally { button.disabled=false; setUnitSaving(false); }
 }
 
 function updateProposalPreview() {
@@ -307,15 +434,17 @@ function updateProposalPreview() {
 
 async function saveExistingSaleLink(event) {
   event.preventDefault();
-  if (!state.selectedUnit) return;
+  if (!canSaveUnitAction('link', 'linkProposalError')) return;
   const unitId = state.selectedUnit.id;
   const button = $('linkProposalSubmit'); button.disabled = true;
   $('linkProposalError').textContent = '';
+  setUnitSaving(true);
   try {
     await linkExistingSale({ id: unitId, proposalId: $('linkProposalSelect').value, uid: state.uid,
       reason: $('linkProposalReason').value, reference: $('linkProposalReference').value, confirmed: $('linkProposalChecked').checked });
-    if ($('unitDialog').open && state.selectedUnit?.id === unitId) await openUnit(unitId);
+    state.dirtyForms.clear();
+    if ($('unitDialog').open && state.selectedUnit?.id === unitId) await openUnit(unitId, {afterSave: true});
     showToast('Proposta vinculada. O detalhamento está disponível na unidade.');
   } catch (error) { $('linkProposalError').textContent = error.message; }
-  finally { button.disabled = $('linkProposalSelect').disabled; }
+  finally { button.disabled = $('linkProposalSelect').disabled; setUnitSaving(false); }
 }

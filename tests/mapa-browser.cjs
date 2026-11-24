@@ -9,10 +9,12 @@ const root=path.resolve(__dirname,'..');
   const mock=`
     export const db={},auth={};
     const mode=new URL(location.href).searchParams.get('scenario') || 'reserved';
+    const adminUid=sessionStorage.getItem('mapAdminUid') || (mode==='new-pj' || mode==='existing' ? 'admin-comercial-test' : 'admin-principal-test');
+    sessionStorage.setItem('mapAdminUid',adminUid);
     const unit={unidade:'204 A',tipologia:'2 Quartos',areaM2:78.83,status:mode==='reserved'?'reservada':'vendida',destinacao:'venda',propostaAtualId:['reserved','sold'].includes(mode)?'p1':null};
     const proposal={unidadeId:'204-A',unidadeSnapshot:{unidade:'204 A',tipologia:'2 Quartos'},cliente:{nomeCompleto:'Cliente original'},corretorId:null,corretorSnapshot:{nome:'Corretor original'},statusProposta:unit.status,condicaoProposta:${JSON.stringify(condition)},criadoEm:'2026-09-01T12:00:00Z'};
-    const initial={'admins/admin-test':{ativo:true,tipo:'admin'},'unidades/204-A':unit,'configuracoes/comercial':{descontoMaximoPercentual:15,alertaChavesPercentual:60,prazoReservaDias:7,modoEnvioTeste:false},'disponibilidade_publica/estoque':{unidades:{}}};
-    if(!['new','new-pj'].includes(mode))initial['propostas/p1']=proposal;
+    const initial={['admins/'+adminUid]:{ativo:true,tipo:'admin'},'unidades/204-A':unit,'configuracoes/comercial':{descontoMaximoPercentual:15,alertaChavesPercentual:60,prazoReservaDias:7,modoEnvioTeste:false},'disponibilidade_publica/estoque':{unidades:{}}};
+    if(!['new','new-pj','adjust'].includes(mode))initial['propostas/p1']=proposal;
     initial['propostas/P2tOk0jgBIElnge2AW7T']={...proposal,unidadeId:'old-unit',cliente:{nomeCompleto:'Proposta antiga da sessão'}};
     if(mode==='sequence'){
       delete initial['propostas/p1'];
@@ -33,11 +35,12 @@ const root=path.resolve(__dirname,'..');
     export async function getDoc(ref){return snapshot(ref);}
     export async function getDocs(ref){const docs=Object.keys(store).filter(key=>key.startsWith(ref.name+'/') && (!ref.filters || ref.filters.every(f=>store[key][f.args[0]]===f.args[2]))).map(key=>snapshot({path:key,id:key.split('/')[1],parent:{id:ref.name}}));return {docs,size:docs.length};}
     export function onSnapshot(ref,callback){listeners.push([ref,callback]);getDocs(ref).then(callback);return ()=>{};}
-    export const onAuthStateChanged=(_auth,callback)=>setTimeout(()=>callback({uid:'admin-test'}),0);
+    export const onAuthStateChanged=(_auth,callback)=>setTimeout(()=>callback({uid:adminUid}),0);
     export const serverTimestamp=()=>new Date().toISOString(),Timestamp={fromDate:d=>d};
     export const deleteField=()=>null;
     export async function signOut(){};
     export async function runTransaction(_db,callback){
+      if(window.failMapNextTransaction){window.failMapNextTransaction=false;throw Error('Falha simulada de conexão. Tente novamente.');}
       const pending=[];
       await callback({get:async ref=>snapshot(ref),set:(ref,data)=>pending.push([ref.path,data]),update:(ref,data)=>pending.push([ref.path,{...store[ref.path],...data}])});
       pending.forEach(([key,data])=>store[key]=data);
@@ -58,7 +61,7 @@ const root=path.resolve(__dirname,'..');
   let browser;
   try{
     browser=await chromium.launch({headless:true,channel:'msedge'});
-    for(const scenario of ['reserved','sold','existing','new','new-pj','sequence']){
+    for(const scenario of ['reserved','sold','existing','new','new-pj','adjust','sequence']){
       const context=await browser.newContext({viewport:{width:1440,height:1000}}),errors=[];
       await context.addInitScript(()=>sessionStorage.setItem('cityparkAdminProposalId','P2tOk0jgBIElnge2AW7T'));
       await context.route('**/*',async route=>{
@@ -91,7 +94,24 @@ const root=path.resolve(__dirname,'..');
       }
       await page.goto('http://127.0.0.1:'+server.address().port+'/tabela-admin.html?scenario='+scenario);
       await page.locator('[data-unit-id="204-A"]').click();
-      if(['reserved','sold'].includes(scenario)){
+      if(scenario==='adjust') {
+        await page.locator('#chooseUnitAdjustment').click();
+        await page.locator('#adjustReason').fill('Correção após conferência documental');
+        await page.locator('#adjustReference').fill('Distrato 456');
+        await page.locator('#adjustChecked').check();
+        await page.locator('#adjustSubmit').click();
+        assert.match(await page.locator('#adjustError').innerText(),/já estão assim/);
+        assert.equal(await page.evaluate(()=>Object.keys(window.mapTestStore).filter(key=>key.startsWith('historico_')).length),0);
+        await page.locator('#adjustStatus').selectOption('disponivel');
+        await page.locator('#adjustSubmit').click();
+        await page.getByRole('link',{name:'Criar nova proposta',exact:true}).waitFor();
+        assert.equal(await page.evaluate(()=>window.mapTestStore['unidades/204-A'].status),'disponivel');
+        const histories=await page.evaluate(()=>Object.entries(window.mapTestStore).filter(([key])=>key.startsWith('historico_unidades/')).map(([,data])=>data));
+        assert.equal(histories.length,1);assert.equal(histories[0].acao,'ajuste administrativo');
+        assert.equal(histories[0].propostaId,null);
+        assert.equal(await page.locator('#unitDraftNotice').isVisible(),false);
+        assert.deepEqual(errors,[],scenario);await context.close();continue;
+      }else if(['reserved','sold'].includes(scenario)){
         await page.getByRole('link',{name:'Abrir proposta vinculada',exact:true}).waitFor();
         assert.equal(await page.locator('#previousSaleForm').isVisible(),false);
       }else if(scenario==='existing'){
@@ -109,6 +129,44 @@ const root=path.resolve(__dirname,'..');
       }else{
         await page.locator('#previousSaleForm:not([hidden])').waitFor();
         assert.equal(await page.locator('#linkProposalSubmit').isDisabled(),true);
+        if(scenario==='new') {
+          fs.mkdirSync(path.join(root,'tests/artifacts'),{recursive:true});
+          await page.screenshot({path:path.join(root,'tests/artifacts/mapa-acoes-desktop.png')});
+          await page.setViewportSize({width:390,height:844});
+          assert.equal(await page.locator('#unitDialog').evaluate(el=>el.scrollWidth<=el.clientWidth),true);
+          await page.screenshot({path:path.join(root,'tests/artifacts/mapa-acoes-mobile.png')});
+          await page.setViewportSize({width:1440,height:1000});
+          await page.locator('#previousClient').fill('Dados que devem ser preservados');
+          await page.locator('#unitDraftNotice:not([hidden])').waitFor();
+          const before=await page.evaluate(()=>JSON.stringify(window.mapTestStore));
+          await page.locator('#chooseUnitAdjustment').click();
+          assert.equal(await page.locator('#previousSaleForm').isVisible(),false);
+          await page.locator('#adjustReason').fill('Atualização cadastral');
+          await page.locator('#adjustReference').fill('Contrato');
+          await page.locator('#adjustChecked').check();
+          await page.locator('#adjustStatus').selectOption('disponivel');
+          await page.locator('#adjustSubmit').click();
+          assert.match(await page.locator('#adjustError').innerText(),/cadastro da venda anterior/);
+          assert.equal(await page.evaluate(()=>JSON.stringify(window.mapTestStore)),before);
+          // Explicitly discard only the adjustment; the sale draft stays intact.
+          page.once('dialog',dialog=>dialog.accept());await page.locator('#discardUnitAction').click();
+          await page.locator('#choosePreviousSale').click();
+          assert.equal(await page.locator('#previousClient').inputValue(),'Dados que devem ser preservados');
+          page.once('dialog',dialog=>dialog.dismiss());await page.locator('#closeUnitDialog').click();
+          assert.equal(await page.locator('#unitDialog').evaluate(el=>el.open),true);
+          page.once('dialog',dialog=>dialog.dismiss());await page.keyboard.press('Escape');
+          assert.equal(await page.locator('#previousClient').inputValue(),'Dados que devem ser preservados');
+          const unload=page.waitForEvent('dialog');
+          const navigation=page.reload().catch(()=>null);
+          const unloadDialog=await unload;
+          assert.equal(unloadDialog.type(),'beforeunload');await unloadDialog.dismiss();await navigation;
+          assert.equal(await page.locator('#previousClient').inputValue(),'Dados que devem ser preservados');
+          page.once('dialog',dialog=>dialog.dismiss());await page.locator('#discardUnitAction').click();
+          assert.equal(await page.locator('#previousClient').inputValue(),'Dados que devem ser preservados');
+          page.once('dialog',dialog=>dialog.accept());await page.locator('#discardUnitAction').click();
+          assert.equal(await page.locator('#previousClient').inputValue(),'');
+          assert.equal(await page.locator('#unitDraftNotice').isVisible(),false);
+        }
         if(scenario==='new-pj') {
           await page.locator('#previousClientType').selectOption('PJ');
           await page.locator('#previousCompany').fill('Empresa da venda anterior');
@@ -162,12 +220,27 @@ const root=path.resolve(__dirname,'..');
           await page.locator('#previousError').filter({hasText:'CPF válido'}).waitFor();
           assert.equal(await page.evaluate(()=>!!window.mapTestStore['propostas/venda-anterior-204-A']),false);
           await page.locator('#previousCpf').fill('52998224725');
+          await page.locator('#chooseUnitAdjustment').click();
+          await page.locator('#choosePreviousSale').click();
+          assert.match(await page.locator('#previousValue').inputValue(),/123.456,78/);
+          assert.equal(await page.locator('#previousPayments fieldset').count(),1);
+          await page.evaluate(()=>window.failMapNextTransaction=true);
+          await page.locator('#previousSubmit').click();
+          await page.locator('#previousError').filter({hasText:'Falha simulada de conexão'}).waitFor();
+          assert.equal(await page.locator('#previousClient').inputValue(),'Cliente da venda anterior');
+          assert.equal(await page.locator('#previousReference').inputValue(),'Contrato 456');
+          assert.equal(await page.locator('#unitDraftNotice').isVisible(),true);
+          assert.equal(await page.evaluate(()=>!!window.mapTestStore['propostas/venda-anterior-204-A']),false);
         }
         await page.locator('#previousSubmit').click();
         await page.locator('#proposalApp:not([hidden])').waitFor();
         const saved=await page.evaluate(()=>window.mapTestStore['propostas/venda-anterior-204-A']);
         assert.equal(saved.cliente.nomeCompleto,scenario==='new-pj'?'Empresa da venda anterior':'Cliente da venda anterior');
         assert.equal(saved.cliente.tipoCliente,scenario==='new-pj'?'PJ':'PF');
+        assert.equal(saved.adminId,scenario==='new-pj'?'admin-comercial-test':'admin-principal-test');
+        assert.equal(await page.evaluate(()=>window.mapTestStore['historico_unidades/venda-anterior-204-A'].adminId),saved.adminId);
+        assert.equal(await page.evaluate(()=>window.mapTestStore['historico_propostas/venda-anterior-204-A'].adminId),saved.adminId);
+        assert.equal(await page.evaluate(()=>window.mapTestStore['unidades/204-A'].propostaAtualId),'venda-anterior-204-A');
         assert.equal(saved.corretorSnapshot.creci,'12345-F');
         assert.equal(saved.condicaoProposta.totalCalculadoCentavos,12345678);
         assert.equal(saved.condicaoProposta.componentes.parcelas.grupo01.vencimentos.length,10);
@@ -249,6 +322,6 @@ const root=path.resolve(__dirname,'..');
       assert.deepEqual(errors,[],scenario);
       await context.close();
     }
-    console.log('Mapa: 5 fluxos (incluindo cadastro completo PF/PJ) e sequência de unidades diferentes, redirecionamento sem query, sessão antiga e recarregamento. Desktop/mobile. Firebase isolado.');
+    console.log('Mapa: cadastro PF/PJ, vínculo, venda/reserva vinculada, ajuste válido e sem mudança, preservação ao trocar ação, bloqueio de ajuste com venda pendente, descarte explícito, fechamento/Escape/reload cancelados e falha de gravação com nova tentativa. Navegação entre unidades e detalhamento preservados. Desktop/mobile. Firebase isolado.');
   }finally{if(browser)await browser.close();await new Promise(resolve=>server.close(resolve));}
 })().catch(error=>{console.error(error);process.exitCode=1;});

@@ -7,7 +7,7 @@
   <meta name="robots" content="noindex, nofollow">
   <title>Tabela Administrativa | City Park</title>
   <link rel="stylesheet" href="css/admin-shell.css?v=20260907-comercial">
-  <link rel="stylesheet" href="css/tabela-admin.css?v=20261015-parcelas">
+  <link rel="stylesheet" href="css/tabela-admin.css?v=20261117-acoes">
   <link rel="icon" href="data:,">
   <style>html:not(.page-authorized) body { visibility: hidden; }</style>
 </head>
@@ -101,10 +101,26 @@
   <dialog id="unitDialog" aria-labelledby="unitDialogTitle">
     <header><h2 id="unitDialogTitle">Unidade</h2><button id="closeUnitDialog" type="button">Fechar</button></header>
     <div id="unitDialogBody" aria-live="polite"></div>
+    <section id="unitActionChooser" class="unit-action-chooser" aria-labelledby="unitActionTitle" hidden>
+      <h3 id="unitActionTitle">O que deseja fazer?</h3>
+      <div class="unit-sale-actions">
+        <button id="choosePreviousSale" type="button" class="unit-action" aria-controls="previousSaleForm" aria-pressed="false">
+          <strong>Cadastrar venda anterior</strong><span>Registrar cliente, corretor e condições do contrato e criar a proposta vinculada.</span>
+        </button>
+        <button id="chooseExistingProposal" type="button" class="unit-action" aria-controls="linkProposalForm" aria-pressed="false">
+          <strong>Vincular proposta existente</strong><span id="existingProposalHint">Usar uma proposta já cadastrada para esta unidade.</span>
+        </button>
+      </div>
+      <button id="chooseUnitAdjustment" type="button" class="unit-adjust-action" aria-controls="saveUnitAdjustment" aria-pressed="false">Alterar somente situação ou destinação</button>
+    </section>
+    <aside id="unitDraftNotice" class="unit-draft-notice" role="status" hidden>
+      <p id="unitDraftMessage"></p>
+      <button id="discardUnitAction" type="button" hidden>Descartar dados desta ação</button>
+    </aside>
     <form id="linkProposalForm" hidden>
       <h3>Vincular proposta existente</h3>
       <p>Selecione uma proposta já vendida desta unidade. O vínculo preservará os dados e as condições da proposta.</p>
-      <p id="linkProposalEmpty" hidden>Nenhuma proposta vendida desta unidade disponível para vínculo. Use o cadastro de venda anterior abaixo se a venda ainda não estiver registrada.</p>
+      <p id="linkProposalEmpty" hidden>Nenhuma proposta vendida desta unidade disponível para vínculo. Selecione Cadastrar venda anterior para registrar o contrato.</p>
       <div id="linkProposalFields">
         <label>Proposta<select id="linkProposalSelect" required></select></label>
         <p><a id="linkProposalPreview" hidden>Ver proposta selecionada</a></p>
@@ -112,14 +128,14 @@
         <label>Referência documental<input id="linkProposalReference" required maxlength="300" placeholder="Número do contrato ou referência da venda"></label>
         <label><input id="linkProposalChecked" type="checkbox" required>Conferi a unidade, o cliente e os documentos desta proposta.</label>
         <p id="linkProposalError" role="alert"></p>
-        <button id="linkProposalSubmit" type="submit">Vincular proposta à unidade</button>
+        <button id="linkProposalSubmit" class="unit-primary-action" type="submit">Confirmar vínculo da proposta</button>
       </div>
     </form>
     <form id="previousSaleForm" hidden>
       <h3>Cadastrar venda anterior</h3>
       <p>Cadastre os dados do contrato original para gerar uma proposta vinculada a esta unidade e consultar seu detalhamento. A unidade continuará vendida.</p>
       <p id="previousSaleConflict" hidden>Há uma proposta ativa ou legada pendente nesta unidade. Confira as propostas acima; se a venda já estiver registrada, use o vínculo de proposta existente.</p>
-      <fieldset><legend>Dados do corretor responsável à época</legend>
+      <fieldset class="unit-fields-grid"><legend>Dados do corretor responsável à época</legend>
         <label>Nome completo<input id="previousBroker" required maxlength="200"></label>
         <label>CRECI<input id="previousCreci" required maxlength="50"></label>
         <label>Telefone<input id="previousBrokerPhone" type="tel" required maxlength="30"></label>
@@ -128,13 +144,13 @@
       </fieldset>
       <fieldset><legend>Dados do cliente</legend>
         <label>Tipo de cliente<select id="previousClientType"><option value="PF">Pessoa física</option><option value="PJ">Pessoa jurídica</option></select></label>
-        <div id="previousPF">
+        <div id="previousPF" class="unit-fields-grid">
           <label>Nome completo<input id="previousClient" required maxlength="200"></label>
           <label>CPF<input id="previousCpf" inputmode="numeric" required maxlength="14"></label>
           <label>Telefone<input id="previousClientPhone" type="tel" required maxlength="30"></label>
           <label>E-mail<input id="previousClientEmail" type="email" required maxlength="254"></label>
         </div>
-        <div id="previousPJ" hidden>
+        <div id="previousPJ" class="unit-fields-grid" hidden>
           <label>Razão social<input id="previousCompany" maxlength="200" disabled></label>
           <label>CNPJ<input id="previousCnpj" inputmode="numeric" maxlength="18" disabled></label>
           <label>Telefone comercial<input id="previousCompanyPhone" type="tel" maxlength="30" disabled></label>
@@ -156,24 +172,26 @@
       </fieldset>
       <label>Referência documental<input id="previousReference" required maxlength="300" placeholder="Número do contrato ou referência do registro antigo"></label>
       <label><input id="previousChecked" type="checkbox" required>Conferi o histórico e os documentos. Confirmo que é uma venda comercial anterior.</label>
-      <p id="previousError" role="alert"></p><button id="previousSubmit" type="submit">Cadastrar venda anterior e abrir proposta</button>
+      <div class="unit-form-footer"><p>A conclusão cria a proposta, vincula à unidade e abre o detalhamento da venda.</p><p id="previousError" role="alert"></p><button id="previousSubmit" class="unit-primary-action" type="submit">Salvar venda e abrir proposta</button></div>
     </form>
     <form id="saveUnitAdjustment" hidden>
-      <h3>Ajustar disponibilidade e destinação</h3>
-      <p>Use para unidades sem proposta vinculada. Propostas ativas ou legadas sem encerramento impedem o ajuste.</p>
+      <h3>Alterar situação ou destinação</h3>
+      <p class="unit-adjust-explanation">Este ajuste salva apenas a situação e a destinação da unidade. Os dados do cliente e do contrato são salvos em <strong>Cadastrar venda anterior</strong>.</p>
+      <p>Propostas ativas ou legadas sem encerramento impedem o ajuste.</p>
       <label>Destinação<select id="adjustDestination"><option value="venda">Venda comercial</option><option value="administracao">Administração</option><option value="permuta">Permuta</option></select></label>
       <label>Situação<select id="adjustStatus"><option value="disponivel">Disponível</option><option value="reservada">Reserva externa</option><option value="vendida">Venda ou permuta concluída</option><option value="bloqueada">Bloqueada para propostas</option></select></label>
       <label>Motivo<textarea id="adjustReason" required maxlength="2000"></textarea></label>
       <label>Referência documental<input id="adjustReference" required maxlength="300" placeholder="Contrato, distrato ou registro administrativo"></label>
       <label><input type="checkbox" id="adjustChecked" required>Conferi os documentos e confirmo a alteração da unidade.</label>
-      <p id="adjustError" role="alert"></p><button id="adjustSubmit" type="submit">Salvar ajuste com histórico</button>
+      <p id="adjustError" role="alert"></p><button id="adjustSubmit" type="submit">Salvar somente situação e destinação</button>
     </form>
+    <details id="unitDialogHistory" class="unit-history" hidden><summary>Consultar propostas e histórico da unidade</summary><div id="unitHistoryContent"></div></details>
   </dialog>
   <div id="adminToast" class="admin-toast" role="status" aria-live="polite"></div>
   <script src="js/condicao-venda.js"></script>
   <script src="js/cpf.js"></script>
   <script src="js/venda-anterior-modelo.js?v=20261015-parcelas"></script>
   <script src="js/venda-anterior-form.js?v=20261015-parcelas"></script>
-  <script type="module" src="js/tabela-admin.js?v=20261015-parcelas"></script>
+  <script type="module" src="js/tabela-admin.js?v=20261117-acoes"></script>
 </body>
 </html>
