@@ -123,3 +123,59 @@
 .linked-proposal p { margin: 8px 0; }
 .linked-proposal small { color: #596477; }
 #unitDialog .proposal-detail-link { display: inline-block; margin-top: 8px; padding: 11px 16px; border-radius: 8px; background: #1729a5; color: #fff; text-decoration: none; }
+
+/* One action and one save button at a time, with drafts kept in the modal. */
+#unitDialog { width: min(780px, calc(100% - 32px)); padding: 0 28px 28px; box-sizing: border-box; }
+#unitDialog > header { position: sticky; top: 0; z-index: 2; margin: 0 -28px 20px; padding: 24px 28px 16px; background: #fff; border-bottom: 1px solid #e1e6ef; }
+#unitDialog h2 { margin: 0; font-size: 22px; line-height: 1.4; letter-spacing: -.025em; }
+#closeUnitDialog { flex-shrink: 0; }
+#unitDialog p { line-height: 1.55; }
+#unitDialog button:focus-visible, #unitDialog summary:focus-visible { outline: 3px solid #1729a5; outline-offset: 3px; }
+.unit-sale-notice { padding: 16px 18px; background: #fff9eb; border: 1px solid #e7d29c; border-radius: 12px; }
+.unit-sale-notice > strong { color: #775008; }
+.unit-sale-notice p { margin: 6px 0 0; font-size: 14px; }
+.unit-action-chooser { margin: 24px 0 0; }
+.unit-action-chooser h3 { margin: 0 0 12px; font-size: 17px; }
+.unit-sale-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+#unitDialog .unit-action { display: flex; flex-direction: column; gap: 7px; min-width: 0; padding: 16px; text-align: left; line-height: 1.5; border: 1px solid #cbd3e1; border-radius: 12px; font: inherit; }
+.unit-action strong { font-size: 14px; }
+.unit-action span { color: #596477; font-size: 12px; }
+#unitDialog .unit-action[aria-pressed="true"] { border-color: #1729a5; background: #f0f3ff; box-shadow: inset 0 0 0 1px #1729a5; }
+#unitDialog .unit-action[aria-pressed="true"] strong { color: #1729a5; }
+#unitDialog .unit-adjust-action { margin-top: 12px; padding: 8px 0; border: 0; border-radius: 0; background: transparent; color: #596477; font: inherit; font-size: 13px; text-align: left; text-decoration: underline; text-underline-offset: 3px; }
+#unitDialog .unit-adjust-action[aria-pressed="true"] { color: #1729a5; font-weight: 700; }
+.unit-draft-notice { margin: 16px 0; padding: 12px 16px; background: #f2f6fc; border-left: 3px solid #6176aa; border-radius: 6px; font-size: 13px; }
+.unit-draft-notice p { margin: 0; }
+#unitDialog #discardUnitAction { margin-top: 10px; padding: 6px 10px; font-size: 12px; }
+#unitDialog form { margin-top: 20px; padding-top: 20px; border-top: 1px solid #e1e6ef; }
+#unitDialog form > h3 { margin: 0 0 8px; font-size: 20px; }
+#unitDialog form > p { color: #596477; font-size: 14px; }
+#unitDialog form label { font-size: 13px; font-weight: 600; line-height: 1.5; }
+#unitDialog form input:not([type=checkbox]), #unitDialog form select, #unitDialog form textarea { margin-top: 6px; min-height: 42px; border: 1px solid #b8c3d5; border-radius: 8px; background: #fff; font: inherit; font-weight: 400; }
+#unitDialog form input[readonly] { background: #eef1f5; }
+#unitDialog form textarea { min-height: 90px; resize: vertical; }
+#unitDialog form input[type=checkbox] { width: 17px; height: 17px; margin-right: 7px; vertical-align: middle; accent-color: #1729a5; }
+#unitDialog .unit-fields-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 18px; }
+#unitDialog .unit-fields-grid label { min-width: 0; }
+#unitDialog fieldset { margin: 20px 0; padding: 16px; border-color: #d6deea; border-radius: 10px; }
+#unitDialog legend { padding: 0 6px; font-size: 14px; }
+.unit-form-footer { margin-top: 22px; padding: 18px; border-radius: 12px; background: #f5f7fc; }
+.unit-form-footer > p:first-child { margin: 0 0 14px; font-size: 13px; color: #596477; }
+#unitDialog .unit-primary-action { padding: 13px 20px; background: #1729a5; border-color: #1729a5; color: #fff; font: inherit; font-weight: 700; }
+#unitDialog .unit-primary-action:hover { background: #101f87; }
+#unitDialog #adjustSubmit { background: #e9edf5; border-color: #c7cfdd; font-weight: 700; }
+.unit-adjust-explanation { padding: 14px 16px; background: #f5f7fc; border-radius: 10px; }
+#unitDialog #previousError, #unitDialog #linkProposalError, #unitDialog #adjustError { color: #a32222; font-size: 14px; }
+.unit-history { margin-top: 24px; padding-top: 18px; border-top: 1px solid #e1e6ef; }
+.unit-history > summary { padding: 6px 0; cursor: pointer; font-size: 14px; font-weight: 700; }
+.unit-history h3 { margin-top: 20px; font-size: 16px; }
+.unit-history li { font-size: 13px; }
+@media (max-width: 600px) {
+  #unitDialog { width: calc(100% - 20px); max-height: 92vh; padding: 0 16px 20px; }
+  #unitDialog > header { margin: 0 -16px 16px; padding: 16px; gap: 10px; }
+  #unitDialog h2 { font-size: 18px; }
+  #unitDialog #closeUnitDialog { padding: 8px 10px; }
+  .unit-sale-actions, #unitDialog .unit-fields-grid { grid-template-columns: 1fr; }
+  #unitDialog fieldset { padding: 12px; }
+  #unitDialog .unit-primary-action, #unitDialog #adjustSubmit { width: 100%; }
+}
